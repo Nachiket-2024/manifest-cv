@@ -1,0 +1,90 @@
+# ---------------------------- Python ----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+.env.*
+!.env.example
+*.venv/
+venv/
+.envrc
+.Python
+*.sqlite3
+
+# ---------------------------- Conda ----------------------------
+# Ignore Conda environment directories
+env/
+envs/
+.conda/
+.condarc
+*.conda
+
+# ---------------------------- IDEs / Editors ----------------------------
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# ---------------------------- macOS / Linux ----------------------------
+.DS_Store
+Thumbs.db
+*.swp
+
+# ---------------------------- Docker ----------------------------
+*.log
+docker-compose.override.yml
+*.pid
+*.sock
+*.cache
+
+# ---------------------------- Backend ----------------------------
+backend/__pycache__/
+backend/*.pyc
+backend/*.db
+
+# ---------------------------- Frontend ----------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.DS_Store
+frontend/.cache/
+frontend/coverage/
+
+# ---------------------------- Testing / Coverage ----------------------------
+.coverage
+htmlcov/
+pytest_cache/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.cache/
+.pytest_cache/
+__pypackages__/
+
+# ---------------------------- Celery ----------------------------
+celerybeat-schedule
+celerybeat.pid
+
+# ---------------------------- Redis ----------------------------
+redis-data/
+dump.rdb
+*.rdb
+
+# ---------------------------- Logs ----------------------------
+logs/
+*.log
+
+# ---------------------------- Database backups ----------------------------
+backups/
+
+# ---------------------------- Qdrant (local dev storage) ----------------------------
+/qdrant_storage/
+
+# ---------------------------- AI Assistant / Development Tools ----------------------------
+.claude/
+claude.md

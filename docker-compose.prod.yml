@@ -1,0 +1,163 @@
+# ---------------------------- Production Compose ----------------------------
+# Run with: docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences from docker-compose.yml (dev):
+#   - No bind mounts — images are self-contained, code isn't shared from host
+#   - No --reload on backend/taskiq_worker
+#   - frontend builds docker/frontend.Dockerfile's `production` target
+#     (nginx serving the static Vite build) instead of the Vite dev server
+#   - restart: unless-stopped on long-running services, so they recover from
+#     crashes/host reboots without manual intervention
+#
+# Out of scope (by design — see CLAUDE.md "no unnecessary cloud-specific
+# tooling"): this file assumes a reverse proxy / TLS terminator sits in
+# front of it in a real deployment (e.g. nginx/Caddy/Traefik on the host,
+# or a cloud load balancer) — it does not attempt to provision one.
+services:
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    # See docker-compose.yml for the REDIS_PASSWORD rationale — in a real
+    # production deployment this should always be set, since the whole
+    # point of --requirepass here is defense-in-depth for shared networks.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:-}\" --no-auth-warning ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ManifestCV — self-hosted, free, no signup/API key/cloud account needed.
+  # No healthcheck: the qdrant/qdrant image ships neither curl nor wget to
+  # probe its own HTTP API with, so backend depends on it with the default
+  # service_started condition rather than service_healthy.
+  qdrant:
+    image: qdrant/qdrant
+    restart: unless-stopped
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      alembic:
+        condition: service_completed_successfully   # Don't serve traffic on a schema the migration hasn't applied yet
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      target: production                            # nginx + static build, not the Vite dev server
+      # Vite bakes these in at build time — see frontend.Dockerfile's own
+      # comment on why they must be passed here rather than left to
+      # frontend/.env (excluded from the build context by design). Sourced
+      # from the shell environment, NOT the root .env — Settings (backend/
+      # app/core/settings.py) is strict about unrecognized keys in that
+      # file, so these can't be added there (see .env.example's note).
+      # Export them before building, e.g.:
+      #   export VITE_API_BASE_URL=https://api.example.com VITE_APP_NAME=ManifestCV
+      #   docker compose -f docker-compose.prod.yml up -d --build
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_APP_NAME: ${VITE_APP_NAME}
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  taskiq_worker:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    command: sh -c "taskiq worker app.taskiq_tasks.email_tasks:broker"
+    environment:
+      - REDIS_URL=${REDIS_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      alembic:
+        condition: service_completed_successfully
+    # Override backend.Dockerfile's inherited HEALTHCHECK, which curls
+    # localhost:8000/health/ready — taskiq_worker shares that image but
+    # serves no HTTP at all, so the inherited check always fails and
+    # reports this container as permanently "unhealthy" even when the
+    # worker itself is running fine. This checks the actual worker process
+    # via /proc directly — this slim image has neither `pgrep` nor `ps`.
+    healthcheck:
+      test: ["CMD-SHELL", "for p in /proc/[0-9]*/cmdline; do grep -aq taskiq \"$$p\" 2>/dev/null && exit 0; done; exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # One-shot: runs migrations then exits. No restart policy — restarting it
+  # would just re-apply an already-applied migration in a loop.
+  alembic:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    env_file:
+      - ./.env
+    command: alembic upgrade head
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  qdrant_storage:

@@ -1,0 +1,338 @@
+name: CI
+
+# Runs on every push and pull request targeting main. Four independent jobs
+# (backend, frontend, docker build, real-tectonic) run in parallel.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend (unit + integration)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: manifestcv_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d manifestcv_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      # Test-only values — never real secrets. Settings requires every one
+      # of these to be set, so CI provides them directly as environment
+      # variables instead of using a checked-in .env file.
+      BACKEND_BASE_URL: http://localhost:8000
+      FRONTEND_BASE_URL: http://localhost:5173
+
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/manifestcv_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: manifestcv_ci
+
+      SECRET_KEY: ci-test-secret-key-not-for-production-use-only
+
+      ACCESS_TOKEN_EXPIRE_MINUTES: "15"
+      REFRESH_TOKEN_EXPIRE_MINUTES: "43200"
+      JWT_ALGORITHM: HS256
+      RESET_TOKEN_EXPIRE_MINUTES: "60"
+
+      GOOGLE_CLIENT_ID: ci-test-google-client-id
+      GOOGLE_CLIENT_SECRET: ci-test-google-client-secret
+      GOOGLE_REDIRECT_URI: http://localhost:8000/auth/oauth2/callback/google
+
+      REDIS_URL: redis://localhost:6379/0
+      CACHE_DEFAULT_TTL: "300"
+
+      FROM_EMAIL: ci-test@example.com
+      GMAIL_APP_PASSWORD: ci-test-app-password
+
+      APP_NAME: ManifestCV
+
+      LOGIN_LOCKOUT_TIME: "300"
+      MAX_FAILED_LOGIN_ATTEMPTS: "5"
+      LOGIN_LOCKOUT_TIME_PER_IP: "300"
+      MAX_FAILED_LOGIN_ATTEMPTS_PER_IP: "20"
+
+      MAX_REQUESTS_PER_WINDOW: "100"
+      REQUEST_WINDOW_SECONDS: "60"
+
+      # ManifestCV — GEMINI_API_KEY has no default (Settings refuses to
+      # start without it), so CI needs *something*, same reasoning as every
+      # other required setting above. A placeholder is fine: the
+      # manifestcv integration suite mocks every Gemini/Qdrant call at each
+      # route module's import site rather than calling either service for
+      # real (see tests/backend/manifestcv/integration/*'s module
+      # docstrings), so nothing here ever needs to resolve to a live key or
+      # a reachable Qdrant instance.
+      GEMINI_API_KEY: ci-test-gemini-api-key
+      GEMINI_MODEL: gemini-flash-latest
+      GEMINI_EMBEDDING_MODEL: gemini-embedding-001
+      QDRANT_URL: http://localhost:6333
+
+      PYTHONPATH: ${{ github.workspace }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: pip install --no-cache-dir -r backend/requirements.txt
+
+      - name: Audit Python dependencies for known vulnerabilities
+        run: |
+          pip install --no-cache-dir pip-audit
+          pip-audit -r backend/requirements.txt
+
+      - name: Run database migrations
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Run backend unit tests
+        run: python -m pytest tests/backend/unit tests/backend/manifestcv/unit -q
+
+      # --cov-append accumulates onto the unit run's coverage data rather
+      # than starting fresh, so the threshold below the security step gates
+      # cumulative unit+integration+security coverage (~89% currently), not
+      # any single suite's coverage in isolation.
+      - name: Run backend integration tests
+        run: python -m pytest tests/backend/integration tests/backend/manifestcv/integration -q --cov-append
+
+      # Coverage is currently ~89% (see docs/testing/overview.md); the gate
+      # is set a few points below that as a regression alarm, not a strict
+      # target, so incidental coverage drift doesn't flap CI red.
+      - name: Run backend security tests
+        run: python -m pytest tests/backend/security -q --cov-append --cov-fail-under=80
+
+      # Informational only: these assert generous, regression-alarm-level
+      # thresholds (not a strict SLA) against a real Postgres/Redis, so
+      # timing can be noisy on shared GitHub-hosted runners. A failure here
+      # should prompt a look, not block the merge.
+      - name: Run backend performance tests (non-blocking)
+        continue-on-error: true
+        run: python -m pytest tests/backend/performance -q
+
+  frontend:
+    name: Frontend (typecheck + lint + test + build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # ESLint 10 requires Node ^20.19.0 || ^22.13.0 || >=24, and Vite 7
+          # requires ^20.19.0 || >=22.12.0 — both floors sit above Node 20's
+          # earlier releases, so "20" (major-only) isn't precise enough to
+          # guarantee compatibility on its own. Pinned to an explicit patch
+          # that satisfies both rather than trusting whatever "latest 20.x"
+          # resolves to.
+          node-version: "20.20.2"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --legacy-peer-deps
+
+      - name: Audit npm dependencies for known vulnerabilities
+        working-directory: frontend
+        run: npm audit --audit-level=high
+
+      - name: Type-check
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      # test:coverage (not plain test) so vitest.config.ts's coverage
+      # thresholds are actually evaluated — plain `vitest run` never
+      # collects coverage, so thresholds would silently never be checked.
+      - name: Run tests (with coverage threshold gate)
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  docker-build:
+    name: Docker image build verification
+    runs-on: ubuntu-latest
+
+    # Confirms backend and frontend Dockerfiles still build correctly.
+    # No registry push or deployment is performed in this workflow.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -f docker/backend.Dockerfile -t backend:ci .
+
+      - name: Build frontend production image
+        run: docker build --target production -f docker/frontend.Dockerfile -t frontend:ci .
+
+  real-tectonic:
+    name: Real tectonic PDF compilation
+    runs-on: ubuntu-latest
+
+    # The `backend` job's own tests/backend/manifestcv/integration suite
+    # mocks render_resume_pdf everywhere (see that suite's tests), since
+    # tectonic isn't installed on a bare `ubuntu-latest` runner — only in
+    # docker/backend.Dockerfile. This job builds that exact image and runs
+    # the two tests marked `real_tectonic` inside a container from it, so a
+    # regression in markdown_to_latex.py's LaTeX escaping or a template's
+    # preamble (document_generation/templates.py) — neither of which a
+    # mocked render_resume_pdf can catch — fails CI, not just production.
+    # See tests/backend/manifestcv/integration/test_document_routes_integration.py's
+    # module docstring and docs/concerns/README.md's (removed) "Tectonic
+    # not covered by tests" entry.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: manifestcv_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d manifestcv_ci"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    env:
+      # Same test-only values as the `backend` job above — see its own env
+      # block for why each one is required. Migrations run here via a bare
+      # pip install (same as `backend`), since alembic itself doesn't need
+      # tectonic; only the pytest step below needs the built image.
+      BACKEND_BASE_URL: http://localhost:8000
+      FRONTEND_BASE_URL: http://localhost:5173
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/manifestcv_ci
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: manifestcv_ci
+      SECRET_KEY: ci-test-secret-key-not-for-production-use-only
+      ACCESS_TOKEN_EXPIRE_MINUTES: "15"
+      REFRESH_TOKEN_EXPIRE_MINUTES: "43200"
+      JWT_ALGORITHM: HS256
+      RESET_TOKEN_EXPIRE_MINUTES: "60"
+      GOOGLE_CLIENT_ID: ci-test-google-client-id
+      GOOGLE_CLIENT_SECRET: ci-test-google-client-secret
+      GOOGLE_REDIRECT_URI: http://localhost:8000/auth/oauth2/callback/google
+      REDIS_URL: redis://localhost:6379/0
+      CACHE_DEFAULT_TTL: "300"
+      FROM_EMAIL: ci-test@example.com
+      GMAIL_APP_PASSWORD: ci-test-app-password
+      APP_NAME: ManifestCV
+      LOGIN_LOCKOUT_TIME: "300"
+      MAX_FAILED_LOGIN_ATTEMPTS: "5"
+      LOGIN_LOCKOUT_TIME_PER_IP: "300"
+      MAX_FAILED_LOGIN_ATTEMPTS_PER_IP: "20"
+      MAX_REQUESTS_PER_WINDOW: "100"
+      REQUEST_WINDOW_SECONDS: "60"
+      GEMINI_API_KEY: ci-test-gemini-api-key
+      GEMINI_MODEL: gemini-flash-latest
+      GEMINI_EMBEDDING_MODEL: gemini-embedding-001
+      QDRANT_URL: http://localhost:6333
+      PYTHONPATH: ${{ github.workspace }}
+      # The container runs as the non-root `app` user (see docker/backend.Dockerfile),
+      # but /repo is a bind mount of this job's checkout, owned by the runner's
+      # user — pytest-cov can't create its SQLite .coverage.* file there.
+      # /tmp is writable by any user inside the container.
+      COVERAGE_FILE: /tmp/.coverage
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies (for the migration step only)
+        run: pip install --no-cache-dir -r backend/requirements.txt
+
+      - name: Run database migrations
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Build backend image (has tectonic installed)
+        run: docker build -f docker/backend.Dockerfile -t backend:tectonic-ci .
+
+      # --network host: reaches the postgres/redis service containers via
+      # localhost, exactly as the bare-runner `backend` job's own tests do
+      # — GitHub-hosted ubuntu-latest runners support Docker host
+      # networking. -v .../:/repo -w /repo mirrors exactly how
+      # docker-compose.yml's own dev backend service runs the top-level
+      # test suite locally (`docker compose exec -w /repo backend
+      # pytest ...` — see docs/docker/overview.md), so this is the same
+      # invocation shape a developer already uses, not a CI-only path.
+      - name: Run real-tectonic PDF compilation tests inside the built image
+        # -e VARNAME (no "=value") inherits the value from this step's own
+        # shell environment, i.e. exactly the job-level `env:` block above
+        # — no need to re-list values here, just the names.
+        #
+        # -o addopts=... below fully replaces pytest.ini's `addopts`, which
+        # includes `--cov-report=html`. That report writes to ./htmlcov
+        # under /repo — a bind mount owned by the runner's user, not the
+        # image's non-root `app` user — so appending `--cov-report=term`
+        # alone isn't enough; pytest-cov treats --cov-report as additive, so
+        # the ini's html report would still be attempted and still fail.
+        # This job only needs the terminal coverage summary.
+        run: |
+          docker run --rm --network host \
+            -v "${{ github.workspace }}:/repo" -w /repo \
+            -e BACKEND_BASE_URL -e FRONTEND_BASE_URL -e DATABASE_URL \
+            -e POSTGRES_USER -e POSTGRES_PASSWORD -e POSTGRES_DB \
+            -e SECRET_KEY -e ACCESS_TOKEN_EXPIRE_MINUTES -e REFRESH_TOKEN_EXPIRE_MINUTES \
+            -e JWT_ALGORITHM -e RESET_TOKEN_EXPIRE_MINUTES \
+            -e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET -e GOOGLE_REDIRECT_URI \
+            -e REDIS_URL -e CACHE_DEFAULT_TTL -e FROM_EMAIL -e GMAIL_APP_PASSWORD -e APP_NAME \
+            -e LOGIN_LOCKOUT_TIME -e MAX_FAILED_LOGIN_ATTEMPTS \
+            -e LOGIN_LOCKOUT_TIME_PER_IP -e MAX_FAILED_LOGIN_ATTEMPTS_PER_IP \
+            -e MAX_REQUESTS_PER_WINDOW -e REQUEST_WINDOW_SECONDS \
+            -e GEMINI_API_KEY -e GEMINI_MODEL -e GEMINI_EMBEDDING_MODEL -e QDRANT_URL \
+            -e COVERAGE_FILE \
+            backend:tectonic-ci \
+            pytest tests/backend/manifestcv/integration/test_document_routes_integration.py -k real_tectonic -v \
+            -o addopts="-v --cov=backend/app --cov-report=term"

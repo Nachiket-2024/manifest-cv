@@ -1,0 +1,31 @@
+# ---------------------------- Python / Backend ----------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+*.log
+*.egg-info/
+dist/
+build/
+*.pytest_cache/
+.venv/
+venv/
+
+# ---------------------------- Node / Frontend ----------------------------
+frontend/node_modules/       # Only ignore inside frontend
+frontend/dist/
+frontend/.env
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# ---------------------------- Docker ----------------------------
+.dockerignore                # Don't include this file inside the image
+.git
+.gitignore
+
+# ---------------------------- General ----------------------------
+.DS_Store
+*.swp
