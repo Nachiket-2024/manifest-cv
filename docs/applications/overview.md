@@ -26,6 +26,10 @@ This is deliberate: a tracked application must survive the user later editing or
 
 No PBAC permission required — every route is scoped to the caller's own `user_id` (see [Auth & Authorization](../auth/overview.md#no-pbac-on-manifestcvs-own-routes)). Both the source draft lookup and the application itself are ownership-checked, so a caller can't snapshot another user's finalized resume by guessing a `resume_draft_id`.
 
+## Pagination
+
+`GET /applications/` accepts `limit` (default 20, max 100) and `offset` (default 0) query params, newest-first (`application_date.desc()`, then `created_at.desc()`, then `id.desc()` as a final tie-breaker for a fully stable sort). Same convention as [Resumes' own list endpoint](../resumes/overview.md#pagination) and the inherited audit-log endpoints. The frontend (`ApplicationsPage.tsx`) drives this with the same `ui/Pager.tsx` control.
+
 ## API reference
 
-See [API Reference](../api/reference.md#applications) for the full request/response shapes.
+See [API Reference](../api/reference.md) (Applications section) for the full request/response shapes.

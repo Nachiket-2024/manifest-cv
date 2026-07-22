@@ -1,9 +1,9 @@
 import React from "react";
 import { Badge, Tabs, Text } from "@chakra-ui/react";
 
-import PageContainer from "../components/ui/PageContainer";
-import DataTable, { type DataTableColumn } from "../components/ui/DataTable";
-import { IfCan } from "../components/IfCan";
+import PageContainer from "../ui/PageContainer";
+import DataTable, { type DataTableColumn } from "../ui/DataTable";
+import { IfCan } from "../authorization/IfCan";
 import { PERMISSIONS } from "../authorization/permissions";
 import {
     useMyAuthorizationAuditLogQuery,

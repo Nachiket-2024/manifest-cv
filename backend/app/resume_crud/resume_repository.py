@@ -19,11 +19,17 @@ class ResumeRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def list_by_user(user_id: int, db: AsyncSession) -> list[ResumeDraft]:
+    async def list_by_user(user_id: int, db: AsyncSession, limit: int = 20, offset: int = 0) -> list[ResumeDraft]:
+        # id.desc() as a tie-breaker: created_at alone isn't a stable sort
+        # key when two rows share a timestamp, which would otherwise let
+        # offset pagination skip or duplicate a row across pages — same
+        # reasoning as audit_log_repository's own ordering.
         stmt = (
             select(ResumeDraft)
             .where(ResumeDraft.user_id == user_id)
-            .order_by(ResumeDraft.created_at.desc())
+            .order_by(ResumeDraft.created_at.desc(), ResumeDraft.id.desc())
+            .limit(limit)
+            .offset(offset)
         )
         result = await db.execute(stmt)
         return list(result.scalars().all())

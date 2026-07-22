@@ -3,7 +3,7 @@ import { Input, Button, Stack, Text } from "@chakra-ui/react";
 import { Link } from "react-router-dom";
 
 import { useLoginMutation } from "./useLoginMutation";
-import FormAlert from "../../components/ui/FormAlert";
+import FormAlert from "../../ui/FormAlert";
 
 interface LoginFormProps {
     onSuccess?: () => void;

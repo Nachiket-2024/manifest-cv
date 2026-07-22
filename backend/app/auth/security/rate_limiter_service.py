@@ -22,18 +22,16 @@ class RateLimiterService:
     @staticmethod
     async def record_request(key: str) -> bool:
         try:
-            count = await redis_client.get(key)
+            # INCR creates the key at 0 before incrementing if it doesn't
+            # already exist, and is atomic — unlike a separate GET-then-SET,
+            # this can't let two concurrent requests both read the same
+            # pre-increment count and both be admitted past the limit.
+            new_count = await redis_client.incr(key)
 
-            if count is None:
-                await redis_client.set(key, 1, ex=RateLimiterService.REQUEST_WINDOW_SECONDS)
-                return True
+            if new_count == 1:
+                await redis_client.expire(key, RateLimiterService.REQUEST_WINDOW_SECONDS)
 
-            elif int(count) < RateLimiterService.MAX_REQUESTS_PER_WINDOW:
-                await redis_client.incr(key)
-                return True
-
-            else:
-                return False
+            return new_count <= RateLimiterService.MAX_REQUESTS_PER_WINDOW
 
         except Exception:
             logger.error("Error recording rate-limited request:\n%s", traceback.format_exc())

@@ -206,7 +206,7 @@ class JWTService:
             if exp is not None:
                 ttl = max(1, int(exp - datetime.now(timezone.utc).timestamp()))
 
-            await redis_client.setex(f"revoked:{jti}", ttl, "true")
+            await redis_client.set(f"revoked:{jti}", "true", ex=ttl)
 
             if email:
                 await redis_client.hdel(REFRESH_TOKEN_REGISTRY_KEY.format(email=email), jti)

@@ -8,6 +8,11 @@
 #     (nginx serving the static Vite build) instead of the Vite dev server
 #   - restart: unless-stopped on long-running services, so they recover from
 #     crashes/host reboots without manual intervention
+#   - deploy.resources.limits on every service, so a leak/runaway process in
+#     one container can't starve the host or its siblings. `docker compose`
+#     (Compose V2, not Swarm) enforces these directly via the container
+#     runtime — no orchestrator required. Values are conservative starting
+#     points, not load-tested; tune them against real traffic.
 #
 # Out of scope (by design — see CLAUDE.md "no unnecessary cloud-specific
 # tooling"): this file assumes a reverse proxy / TLS terminator sits in
@@ -26,11 +31,20 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # See docker-compose.yml's identical mount — creates the separate
+      # "bugsink" database the optional Bugsink service below uses, once,
+      # only against a fresh volume.
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
 
   redis:
     image: redis:7
@@ -44,6 +58,11 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   # ManifestCV — self-hosted, free, no signup/API key/cloud account needed.
   # No healthcheck: the qdrant/qdrant image ships neither curl nor wget to
@@ -82,6 +101,11 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
 
   frontend:
     build:
@@ -100,6 +124,8 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
         VITE_APP_NAME: ${VITE_APP_NAME}
+        VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
+        VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT}
     restart: unless-stopped
     ports:
       - "80:80"
@@ -112,6 +138,11 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   taskiq_worker:
     build:
@@ -142,6 +173,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
 
   # One-shot: runs migrations then exits. No restart policy — restarting it
   # would just re-apply an already-applied migration in a loop.
@@ -156,6 +192,60 @@ services:
       - DATABASE_URL=${DATABASE_URL}
     depends_on:
       postgres:
+        condition: service_healthy
+
+  # Optional, self-hosted error monitoring — see docker-compose.yml's
+  # identical service for the full explanation. Same "off unless you
+  # explicitly ask for it" behavior in production:
+  #   docker compose -f docker-compose.prod.yml --profile monitoring up -d --build
+  bugsink:
+    image: bugsink/bugsink:2
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    env_file:
+      - ./.env
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY}
+      CREATE_SUPERUSER: ${BUGSINK_SUPERUSER_EMAIL}:${BUGSINK_SUPERUSER_PASSWORD}
+      PORT: "8000"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
+      # Unlike the dev compose file, this one assumes a reverse proxy/TLS
+      # terminator in front (see the header comment above) — same
+      # assumption as TRUSTED_PROXY_IPS for the backend itself.
+      BEHIND_HTTPS_PROXY: "true"
+      BASE_URL: ${BUGSINK_BASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health/ready').raise_for_status()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+  # One-shot seed — see docker-compose.yml's identical service.
+  seed_bugsink_project:
+    image: bugsink/bugsink:2
+    profiles: ["monitoring"]
+    env_file:
+      - ./.env
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY}
+      PORT: "8000"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
+      BEHIND_HTTPS_PROXY: "true"
+      BASE_URL: ${BUGSINK_BASE_URL}
+    volumes:
+      - ./docker/bugsink-seed/seed_default_project.py:/seed_default_project.py:ro
+    command: sh -c "bugsink-manage shell < /seed_default_project.py"
+    depends_on:
+      bugsink:
         condition: service_healthy
 
 volumes:

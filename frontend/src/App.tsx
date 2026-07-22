@@ -15,7 +15,7 @@ const VerifyAccountPage = lazy(() => import("./auth/verify_account/VerifyAccount
 const PasswordResetRequestPage = lazy(() => import("./auth/password_reset_request/PasswordResetRequestPage"));
 const PasswordResetConfirmPage = lazy(() => import("./auth/password_reset_confirm/PasswordResetConfirmPage"));
 const DashboardPage = lazy(() => import("./dashboard/DashboardPage"));
-const UsersPage = lazy(() => import("./users_admin/UsersPage"));
+const UsersPage = lazy(() => import("./users/UsersPage"));
 const PoliciesPage = lazy(() => import("./policies/PoliciesPage"));
 const AuditLogPage = lazy(() => import("./audit_log/AuditLogPage"));
 const ProfilePage = lazy(() => import("./profile/ProfilePage"));
@@ -27,21 +27,19 @@ const ResumeDraftsPage = lazy(() => import("./resumes/ResumeDraftsPage"));
 const ResumeEditorPage = lazy(() => import("./resumes/ResumeEditorPage"));
 const ApplicationsPage = lazy(() => import("./applications/ApplicationsPage"));
 
-import ProtectedRoute from "./components/ProtectedRoute";
-import AppLayout from "./components/layout/AppLayout";
-import { PERMISSIONS } from "./authorization/permissions";
+import AppLayout from "./layout/AppLayout";
+import { ProtectedRoute, PERMISSIONS, useAuthStore } from "./sdk";
 
 // Mounted once here so any component/thunk can call toaster.create({...})
-// (see components/ui/toaster.tsx)
-import { Toaster } from "./components/ui/toaster";
+// (see ui/toaster.tsx)
+import { Toaster } from "./ui/toaster";
 
 // Runs the current-user query once and mirrors it into the Zustand auth
 // store (see its own docstring for why this must be called exactly once,
 // here at the app root)
 import { useAuthSession } from "./auth/current_user/useCurrentUserQuery";
 
-import { useAuthStore } from "./store/authStore";
-import LoadingState from "./components/ui/LoadingState";
+import LoadingState from "./ui/LoadingState";
 
 const NotFoundPage: React.FC = () => {
     const navigate = useNavigate();
@@ -69,7 +67,7 @@ const NotFoundPage: React.FC = () => {
  * NotAuthorizedPage
  * ----------------------------
  * The 403 page — where ProtectedRoute redirects an authenticated user who
- * lacks a route's required permission (see components/ProtectedRoute.tsx).
+ * lacks a route's required permission (see authorization/ProtectedRoute.tsx).
  * Deliberately a separate page from NotFoundPage: "you don't have
  * permission" and "this page doesn't exist" are different situations a
  * user shouldn't have to guess between.

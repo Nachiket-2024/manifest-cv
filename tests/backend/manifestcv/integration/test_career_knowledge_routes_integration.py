@@ -135,3 +135,52 @@ async def test_search_is_scoped_to_the_caller_and_forwards_query_params(client, 
     assert response.status_code == 200
     assert response.json() == []
     _mock_ai_and_retrieval["search"].assert_awaited_once_with(user.id, "python backend", 3)
+
+
+@pytest.mark.asyncio
+async def test_search_retrieval_failure_surfaces_as_502(client, created_emails, _mock_ai_and_retrieval):
+    from backend.app.retrieval.exceptions import RetrievalError
+
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    _mock_ai_and_retrieval["search"].side_effect = RetrievalError("Qdrant unreachable")
+
+    response = await client.get("/career-knowledge/search", params={"query": "python backend"})
+    assert response.status_code == 502
+
+
+@pytest.mark.asyncio
+async def test_indexing_failure_is_best_effort_and_does_not_fail_create_update_delete(
+    client, created_emails, _mock_ai_and_retrieval
+):
+    """
+    index_knowledge_base/delete_knowledge_base failures must never fail the
+    request that triggers them — the Postgres write is the source of truth
+    and has already committed by the time indexing runs; a Qdrant outage
+    should degrade to "search is stale" (see career_knowledge_routes.py's
+    _reindex_best_effort/_delete_index_best_effort), never a 500 on a save
+    that actually succeeded.
+    """
+    from backend.app.retrieval.exceptions import RetrievalError
+
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    _mock_ai_and_retrieval["index"].side_effect = RetrievalError("Qdrant unreachable")
+
+    create_resp = await client.post("/career-knowledge/", json={"raw_input": "Raw resume text dump."})
+    assert create_resp.status_code == 201
+    assert create_resp.json()["content"] == "# Structured\n\nMarkdown."
+
+    update_resp = await client.put("/career-knowledge/", json={"content": "# Hand-edited"})
+    assert update_resp.status_code == 200
+    assert update_resp.json()["content"] == "# Hand-edited"
+
+    _mock_ai_and_retrieval["delete_index"].side_effect = RetrievalError("Qdrant unreachable")
+
+    delete_resp = await client.delete("/career-knowledge/")
+    assert delete_resp.status_code == 200
+
+    get_after_delete = await client.get("/career-knowledge/")
+    assert get_after_delete.status_code == 404

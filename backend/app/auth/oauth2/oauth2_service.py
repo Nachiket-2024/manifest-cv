@@ -100,7 +100,7 @@ class OAuth2Service:
     @staticmethod
     async def get_user_info(access_token: str) -> dict | None:
         try:
-            userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
+            userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
             headers = {"Authorization": f"Bearer {access_token}"}
 
             async with httpx.AsyncClient() as client:

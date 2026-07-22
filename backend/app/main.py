@@ -25,7 +25,7 @@ from .api.audit_log_routes.audit_log_routes import router as security_audit_rout
 from .api.health_routes.health_routes import router as health_router
 
 # ManifestCV's own domains — mounted the same way as every mystic-auth
-# router above (see mystic_auth_adapter/__init__.py for the loose-coupling
+# router above (see app/sdk.py and app/manifestcv_sdk.py for the loose-coupling
 # boundary these route modules use to reach identity/current-user).
 from .api.career_knowledge_routes.career_knowledge_routes import router as career_knowledge_router
 from .api.resume_routes.resume_routes import router as resume_router
@@ -42,7 +42,14 @@ from .logging.correlation_id_middleware import CorrelationIdMiddleware
 from .auth.security.security_headers_middleware import SecurityHeadersMiddleware
 from .logging.logging_config import get_logger
 
+from .error_monitoring.sentry_service import init_sentry, capture_exception
+
 logger = get_logger("main")
+
+# Before the app starts serving requests — so every request from the very
+# first one onward is covered. A no-op when SENTRY_DSN is unset (see
+# error_monitoring/sentry_service.py and docs/error-monitoring/overview.md).
+init_sentry()
 
 
 @asynccontextmanager
@@ -104,6 +111,7 @@ app.add_middleware(CorrelationIdMiddleware)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.exception(f"Unhandled Exception at {request.url.path}: {str(exc)}")
+    await capture_exception(exc, request=request)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal Server Error"},

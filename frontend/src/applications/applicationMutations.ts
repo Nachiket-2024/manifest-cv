@@ -8,8 +8,7 @@ import {
     type ApplicationUpdatePayload,
     type ApplicationDetailRead,
 } from "../api/application_api";
-import { extractApiErrorMessage } from "../api/apiError";
-import { queryClient } from "../store/queryClient";
+import { extractApiErrorMessage, queryClient } from "../sdk";
 import { APPLICATIONS_QUERY_KEY, applicationQueryKey } from "./applicationQueries";
 
 export function useCreateApplicationMutation() {

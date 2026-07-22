@@ -5,14 +5,23 @@ import { listResumeTemplatesApi, getFinalizedResumeDocumentApi, type TemplateInf
 import axios from "axios";
 
 export const RESUME_DRAFTS_QUERY_KEY = ["resume-drafts"] as const;
+// "list" disambiguates this from resumeDraftQueryKey(draftId) below — both
+// share the "resume-drafts" prefix (so invalidating RESUME_DRAFTS_QUERY_KEY
+// still catches every paginated page, same as before pagination existed),
+// but "list" (a string) never collides with a numeric draftId.
+export const resumeDraftsListQueryKey = (limit: number, offset: number) =>
+    ["resume-drafts", "list", limit, offset] as const;
 export const resumeDraftQueryKey = (draftId: number) => ["resume-drafts", draftId] as const;
 export const resumeTemplatesQueryKey = (draftId: number) => ["resume-drafts", draftId, "templates"] as const;
 export const resumeDocumentQueryKey = (draftId: number) => ["resume-drafts", draftId, "document"] as const;
 
-export function useResumeDraftsQuery() {
+export const RESUME_DRAFTS_PAGE_SIZE = 20;
+
+export function useResumeDraftsQuery(limit = RESUME_DRAFTS_PAGE_SIZE, offset = 0) {
     return useQuery<ResumeDraftRead[]>({
-        queryKey: RESUME_DRAFTS_QUERY_KEY,
-        queryFn: async () => (await listResumeDraftsApi()).data,
+        queryKey: resumeDraftsListQueryKey(limit, offset),
+        queryFn: async () => (await listResumeDraftsApi(limit, offset)).data,
+        placeholderData: (previousData) => previousData,
     });
 }
 

@@ -11,7 +11,7 @@ import {
     type PolicyRead,
 } from "../api/policies_api";
 import { extractApiErrorMessage } from "../api/apiError";
-import { queryClient } from "../store/queryClient";
+import { queryClient } from "../core/queryClient";
 import { useAuthStore } from "../store/authStore";
 import { CURRENT_USER_QUERY_KEY } from "../auth/current_user/useCurrentUserQuery";
 import { POLICIES_QUERY_KEY, userPoliciesQueryKey, MY_POLICIES_QUERY_KEY } from "./policyQueries";

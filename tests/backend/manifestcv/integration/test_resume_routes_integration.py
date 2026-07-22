@@ -83,6 +83,19 @@ async def test_create_resume_draft_rejects_empty_knowledge_base(client, created_
 
 
 @pytest.mark.asyncio
+async def test_create_resume_draft_surfaces_retrieval_failure_as_502(client, created_emails, _mock_ai_and_retrieval):
+    from backend.app.retrieval.exceptions import RetrievalError
+
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+    _mock_ai_and_retrieval["search"].side_effect = RetrievalError("Qdrant unreachable")
+
+    response = await client.post("/resumes/", json={"job_description": "Backend engineer at Acme"})
+    assert response.status_code == 502
+    _mock_ai_and_retrieval["generate"].assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_full_draft_lifecycle(client, created_emails, _mock_ai_and_retrieval):
     email = _unique_email()
     await _create_verified_user(client, created_emails, email)
@@ -159,3 +172,31 @@ async def test_drafts_are_isolated_per_user(client, created_emails, _mock_ai_and
     other_list_resp = await client.get("/resumes/")
     assert other_list_resp.status_code == 200
     assert other_list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_drafts_is_paginated_newest_first(client, created_emails, _mock_ai_and_retrieval):
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    draft_ids = []
+    for job_description in ["Job A", "Job B", "Job C"]:
+        create_resp = await client.post("/resumes/", json={"job_description": job_description})
+        assert create_resp.status_code == 201
+        draft_ids.append(create_resp.json()["id"])
+
+    # Default order is newest first — draft_ids were created oldest to newest.
+    default_resp = await client.get("/resumes/")
+    assert [d["id"] for d in default_resp.json()] == list(reversed(draft_ids))
+
+    page_1 = await client.get("/resumes/", params={"limit": 2, "offset": 0})
+    assert [d["id"] for d in page_1.json()] == list(reversed(draft_ids))[:2]
+
+    page_2 = await client.get("/resumes/", params={"limit": 2, "offset": 2})
+    assert [d["id"] for d in page_2.json()] == list(reversed(draft_ids))[2:]
+
+    out_of_range = await client.get("/resumes/", params={"limit": 2, "offset": 10})
+    assert out_of_range.json() == []
+
+    invalid_limit = await client.get("/resumes/", params={"limit": 0})
+    assert invalid_limit.status_code == 422

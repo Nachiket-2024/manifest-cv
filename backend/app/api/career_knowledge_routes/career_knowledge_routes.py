@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...mystic_auth_adapter import get_current_user, get_user_id_by_email
-from ...database.connection import database
-from ..route_helpers import get_or_404
+from ...sdk import get_current_user, capture_exception, database, get_or_404, get_logger, rate_limiter_service
+from ...manifestcv_sdk import get_user_id_by_email
 
 from ...career_knowledge_crud.career_knowledge_repository import career_knowledge_repository
 from ...career_knowledge_table.career_knowledge_schema import (
@@ -15,7 +14,7 @@ from ...career_knowledge_table.career_knowledge_schema import (
 
 from ...ai_integration.gemini_client import structure_knowledge_base
 from ...ai_integration.exceptions import AIIntegrationError
-from ...auth.security.rate_limiter_service import rate_limiter_service
+from ...retrieval.exceptions import RetrievalError
 from ...retrieval.knowledge_retrieval_service import (
     index_knowledge_base,
     delete_knowledge_base,
@@ -28,6 +27,8 @@ from ...retrieval.knowledge_retrieval_service import (
 # privileged operation, and ownership is enforced server-side by
 # user_id-scoped queries, never by a caller-supplied id).
 router = APIRouter(prefix="/career-knowledge", tags=["Career Knowledge"])
+
+logger = get_logger(__name__)
 
 
 async def _current_user_id(current_user: dict, db: AsyncSession) -> int:
@@ -42,6 +43,34 @@ async def _structure_or_502(raw_input: str) -> str:
         return await structure_knowledge_base(raw_input)
     except AIIntegrationError as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+
+
+async def _reindex_best_effort(user_id: int, content: str) -> None:
+    """
+    The Postgres write this always runs after is the source of truth and
+    has already committed by the time this is called — a Qdrant failure
+    here doesn't mean the caller's save failed, just that search over this
+    knowledge base is stale until the next successful save. Reported to
+    error monitoring so it's visible to an operator, but deliberately never
+    raised: turning this into a 502 would tell the caller their save failed
+    when it didn't, and (for the create route specifically) leave them
+    unable to usefully retry — a second POST would just 409, since the row
+    already exists.
+    """
+    try:
+        await index_knowledge_base(user_id, content)
+    except (AIIntegrationError, RetrievalError) as exc:
+        logger.warning("Career knowledge base saved but re-indexing failed for user_id=%s: %s", user_id, exc)
+        await capture_exception(exc)
+
+
+async def _delete_index_best_effort(user_id: int) -> None:
+    """Same reasoning as _reindex_best_effort — the DB row is already gone."""
+    try:
+        await delete_knowledge_base(user_id)
+    except (AIIntegrationError, RetrievalError) as exc:
+        logger.warning("Career knowledge base deleted but Qdrant cleanup failed for user_id=%s: %s", user_id, exc)
+        await capture_exception(exc)
 
 
 @router.post("/", response_model=CareerKnowledgeBaseRead, status_code=status.HTTP_201_CREATED)
@@ -76,7 +105,7 @@ async def create_career_knowledge_base(
     content = await _structure_or_502(payload.raw_input)
     entry = await career_knowledge_repository.create(user_id, payload.raw_input, content, db)
 
-    await index_knowledge_base(user_id, content)
+    await _reindex_best_effort(user_id, content)
 
     return entry
 
@@ -124,7 +153,7 @@ async def update_my_career_knowledge_base(
         fields["content"] = await _structure_or_502(fields["raw_input"])
 
     updated = await career_knowledge_repository.update(entry, fields, db)
-    await index_knowledge_base(user_id, updated.content)
+    await _reindex_best_effort(user_id, updated.content)
 
     return updated
 
@@ -139,7 +168,7 @@ async def delete_my_career_knowledge_base(
         career_knowledge_repository.get_by_user_id(user_id, db), "Career knowledge base not found"
     )
     await career_knowledge_repository.delete(entry, db)
-    await delete_knowledge_base(user_id)
+    await _delete_index_best_effort(user_id)
     return {"detail": "Career knowledge base deleted"}
 
 
@@ -159,6 +188,6 @@ async def search_my_career_knowledge_base(
     user_id = await _current_user_id(current_user, db)
     try:
         results = await search_knowledge_base(user_id, query, top_k)
-    except AIIntegrationError as exc:
+    except (AIIntegrationError, RetrievalError) as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
     return results

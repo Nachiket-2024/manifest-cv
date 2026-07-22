@@ -3,12 +3,12 @@ import { Stack, Input, Button, Text } from "@chakra-ui/react";
 import { Field as ChakraField } from "@chakra-ui/react";
 
 import { usePasswordResetConfirmMutation } from "./usePasswordResetConfirmMutation";
-import FormAlert from "../../components/ui/FormAlert";
+import FormAlert from "../../ui/FormAlert";
 
 // Shared password policy logic and checklist UI — kept identical to
 // SignupForm so the two flows can't drift apart again.
-import { checkPasswordRules, evaluatePasswordStrength, validatePassword } from "../../hooks/usePasswordPolicy";
-import PasswordRulesChecklist from "../../components/ui/PasswordRulesChecklist";
+import { checkPasswordRules, evaluatePasswordStrength, validatePassword } from "../password_rules/passwordRules";
+import PasswordRulesChecklist from "../password_rules/PasswordRulesChecklist";
 
 interface PasswordResetConfirmFormProps {
     token: string;

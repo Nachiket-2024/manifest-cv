@@ -11,6 +11,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Runs once, only against a fresh/empty data volume — creates the
+      # separate "bugsink" database the optional Bugsink service below
+      # uses, on this same Postgres server rather than a second container.
+      # See docker/postgres-init/init-bugsink-db.sh for the "already-
+      # initialized volume" fallback. Harmless to mount even if you never
+      # enable the "monitoring" profile — an unused empty database costs
+      # nothing.
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     ports:
       # Host-side port intentionally non-default (5432 is the single most
       # common local collision point on dev machines running other Postgres
@@ -70,6 +78,8 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+      alembic:
+        condition: service_completed_successfully   # Don't serve traffic on a schema the migration hasn't applied yet
     volumes:
       - ./backend:/app
       # Whole repo root, additionally — lets `docker compose exec -w /repo
@@ -131,6 +141,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      alembic:
+        condition: service_completed_successfully   # Don't process jobs against a schema the migration hasn't applied yet
     volumes:
       - ./backend:/app
     # Override backend.Dockerfile's inherited HEALTHCHECK, which curls
@@ -162,6 +174,67 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+
+  # Optional, self-hosted error monitoring (Sentry-SDK-compatible — see
+  # docs/error-monitoring/overview.md). Disabled by default: `docker compose up`
+  # never starts this service on its own. Bring it up explicitly with:
+  #   docker compose --profile monitoring up -d
+  # (or add bugsink to an explicit service list: `docker compose up backend
+  # frontend bugsink`, which also works regardless of profiles). This is
+  # infrastructure for local/self-hosted error monitoring, not part of the
+  # application itself — SENTRY_DSN (backend/app/core/settings.py,
+  # frontend .env.example) is what actually turns error reporting on, and
+  # stays unset (fully disabled) whether or not this container is running.
+  bugsink:
+    image: bugsink/bugsink:2
+    restart: always
+    profiles: ["monitoring"]
+    env_file:
+      - ./.env
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY}
+      CREATE_SUPERUSER: ${BUGSINK_SUPERUSER_EMAIL}:${BUGSINK_SUPERUSER_PASSWORD}
+      PORT: "8000"
+      # Same Postgres server this template already runs, different
+      # database (see postgres service's init-bugsink-db.sh above) —
+      # avoids a second Postgres container just for this.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
+      BEHIND_HTTPS_PROXY: "false"
+      BASE_URL: ${BUGSINK_BASE_URL:-http://localhost:8010}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Host-side port intentionally non-default and distinct from the
+      # backend's own 8000 — same "avoid collisions" reasoning as
+      # postgres/redis above.
+      - "8010:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health/ready').raise_for_status()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # One-shot: seeds a default Bugsink Team + Project, then exits. Idempotent
+  # (a no-op once any project exists) — see docs/error-monitoring/overview.md.
+  seed_bugsink_project:
+    image: bugsink/bugsink:2
+    profiles: ["monitoring"]
+    env_file:
+      - ./.env
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY}
+      PORT: "8000"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
+      BEHIND_HTTPS_PROXY: "false"
+      BASE_URL: ${BUGSINK_BASE_URL:-http://localhost:8010}
+    volumes:
+      - ./docker/bugsink-seed/seed_default_project.py:/seed_default_project.py:ro
+    command: sh -c "bugsink-manage shell < /seed_default_project.py"
+    depends_on:
+      bugsink:
+        condition: service_healthy
 
 volumes:
   postgres_data:

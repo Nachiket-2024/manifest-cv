@@ -26,14 +26,18 @@ Tailored resume drafts, one per job description a user is applying to — unlike
 
 No PBAC permission required — every route is scoped to the caller's own `user_id` (see [Auth & Authorization](../auth/overview.md#no-pbac-on-manifestcvs-own-routes)). A draft id belonging to another user 404s.
 
+## Pagination
+
+`GET /resumes/` accepts `limit` (default 20, max 100) and `offset` (default 0) query params, newest-first (`ResumeDraft.created_at.desc()`, with `id.desc()` as a tie-breaker for a fully stable sort when two drafts share a timestamp). Same convention as the inherited audit-log endpoints (`api/audit_log_routes/`). The frontend (`ResumeDraftsPage.tsx`) drives this with a `ui/Pager.tsx` Previous/Next control — a page returning fewer than `limit` rows is treated as the last page, so no separate total-count endpoint is needed.
+
 ## Rate limiting
 
 `POST /resumes/` and `PUT /resumes/{id}` are both rate-limited (`auth.security.rate_limiter_service.rate_limited`, keyed per-account by email), same reasoning as [Career Knowledge's rate limiting](../career-knowledge/overview.md#rate-limiting) — both routes can trigger a real Gemini generation/refinement call. `job_description`/`content` are capped at 50,000 characters and `refinement_prompt` at 2,000 (`ResumeDraftCreate`/`Update` schemas) — a refinement is meant to be a short instruction, not another full document.
 
 ## Failure modes
 
-Both the retrieval step and the Gemini generation/refinement calls can fail; both surface as `502 Bad Gateway` via `AIIntegrationError`, distinct from the `400` returned when retrieval succeeds but finds nothing relevant to generate from. A Gemini call that hangs rather than erroring is also bounded — see [AI & Retrieval: timeouts](../ai-and-retrieval/overview.md#timeouts).
+Both the retrieval step and the Gemini generation/refinement calls can fail; both surface as `502 Bad Gateway` (`AIIntegrationError` for Gemini, `RetrievalError` for Qdrant — see [AI & Retrieval](../ai-and-retrieval/overview.md)), distinct from the `400` returned when retrieval succeeds but finds nothing relevant to generate from. A Gemini/Qdrant call that hangs rather than erroring is also bounded — see [AI & Retrieval: timeouts](../ai-and-retrieval/overview.md#timeouts).
 
 ## API reference
 
-See [API Reference](../api/reference.md#resumes) for the full request/response shapes.
+See [API Reference](../api/reference.md) (Resumes section) for the full request/response shapes.

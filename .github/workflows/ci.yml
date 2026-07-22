@@ -8,6 +8,14 @@ on:
   pull_request:
     branches: [main]
 
+# Least-privilege default: none of these jobs push commits, comment on
+# PRs, or otherwise need write access to the repo — they only check out code
+# and run tests/builds. Explicit here rather than relying on whatever the
+# repo/org's default GITHUB_TOKEN permissions happen to be, so a compromised
+# action dependency in this workflow can't do more than read the checkout.
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend (unit + integration)
@@ -118,12 +126,12 @@ jobs:
 
       # --cov-append accumulates onto the unit run's coverage data rather
       # than starting fresh, so the threshold below the security step gates
-      # cumulative unit+integration+security coverage (~89% currently), not
+      # cumulative unit+integration+security coverage (~87% currently), not
       # any single suite's coverage in isolation.
       - name: Run backend integration tests
         run: python -m pytest tests/backend/integration tests/backend/manifestcv/integration -q --cov-append
 
-      # Coverage is currently ~89% (see docs/testing/overview.md); the gate
+      # Coverage is currently ~87% (see docs/testing/overview.md); the gate
       # is set a few points below that as a regression alarm, not a strict
       # target, so incidental coverage drift doesn't flap CI red.
       - name: Run backend security tests
@@ -146,7 +154,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # ESLint 10 requires Node ^20.19.0 || ^22.13.0 || >=24, and Vite 7
+          # ESLint 10 requires Node ^20.19.0 || ^22.13.0 || >=24, and Vite 8
           # requires ^20.19.0 || >=22.12.0 — both floors sit above Node 20's
           # earlier releases, so "20" (major-only) isn't precise enough to
           # guarantee compatibility on its own. Pinned to an explicit patch
@@ -193,11 +201,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Validates docker-compose.yml and docker-compose.prod.yml still parse
+      # and reference existing service dependencies (e.g. would have caught
+      # dev's `backend` service missing an `alembic: service_completed_successfully`
+      # dependency that prod already had). Uses .env.example only to satisfy
+      # each file's `env_file: ./.env` directive — no real secrets involved.
+      - name: Validate docker-compose configs
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.yml config > /dev/null
+          docker compose -f docker-compose.prod.yml config > /dev/null
+          rm .env
+
       - name: Build backend image
         run: docker build -f docker/backend.Dockerfile -t backend:ci .
 
       - name: Build frontend production image
         run: docker build --target production -f docker/frontend.Dockerfile -t frontend:ci .
+
+      # Regression guard: backend/logs/ (real request data — paths, timestamps,
+      # correlation IDs, written by backend/app/logging/logging_config.py) was
+      # previously getting baked straight into the image by `COPY backend/ .`,
+      # since *.log alone doesn't match TimedRotatingFileHandler's rotated
+      # filenames (access.log.2026-07-19, not access.log.log) — a real privacy
+      # leak, not just wasted space. Fixed via .dockerignore; this catches it
+      # coming back the same way a code regression test would.
+      - name: Verify no local logs leaked into the backend image
+        run: |
+          docker run --rm backend:ci sh -c 'test ! -d /app/logs' \
+            && echo "OK: /app/logs absent from the built image" \
+            || (echo "FAIL: /app/logs was copied into the built image — check .dockerignore" && exit 1)
 
   real-tectonic:
     name: Real tectonic PDF compilation

@@ -2,7 +2,7 @@ import logging
 import os
 
 from logging.handlers import TimedRotatingFileHandler
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger import json as jsonlogger
 
 from ..core.settings import settings
 from .correlation_id_middleware import request_id_ctx_var
@@ -99,5 +99,37 @@ def get_logger(name: str = "base_logger") -> logging.Logger:
     uvicorn_access_logger.setLevel(logging.INFO)
     uvicorn_access_logger.addFilter(HealthCheckFilter())
     uvicorn_access_logger.propagate = True
+
+    return logger
+
+
+def get_startup_logger(name: str = "startup") -> logging.Logger:
+    """
+    Returns a logger for one-time, boot-relevant facts (e.g. whether an
+    optional subsystem like error monitoring is enabled) that should be
+    visible in `docker compose logs`/the terminal immediately — unlike
+    get_logger()'s INFO level, which is deliberately file-only there to
+    keep the terminal free of routine per-request noise (see its own
+    docstring). Fires once per process start (or once per reload in dev
+    with `--reload`, same as uvicorn's own startup lines), never per
+    request, so promoting it to the terminal doesn't reintroduce that noise.
+
+    Use sparingly — a handful of startup facts an operator would want to
+    see without opening a log file, not a general substitute for
+    get_logger(). Still structured JSON via the same formatter, so log
+    aggregation tooling parses it identically either way.
+    """
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    if not logger.handlers:
+        formatter = jsonlogger.JsonFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(formatter)
+
+        logger.addHandler(stream_handler)
 
     return logger

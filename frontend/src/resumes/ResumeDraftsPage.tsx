@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { Badge, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 
-import PageContainer from "../components/ui/PageContainer";
-import Card from "../components/ui/Card";
-import DataTable, { type DataTableColumn } from "../components/ui/DataTable";
-import FormAlert from "../components/ui/FormAlert";
-import ConfirmDialog from "../components/ui/ConfirmDialog";
-import { toaster } from "../components/ui/toasterInstance";
-import { useResumeDraftsQuery } from "./resumeQueries";
+import PageContainer from "../ui/PageContainer";
+import Card from "../ui/Card";
+import DataTable, { type DataTableColumn } from "../ui/DataTable";
+import FormAlert from "../ui/FormAlert";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import Pager from "../ui/Pager";
+import { toaster } from "../ui/toasterInstance";
+import { useResumeDraftsQuery, RESUME_DRAFTS_PAGE_SIZE } from "./resumeQueries";
 import { useCreateResumeDraftMutation, useDeleteResumeDraftMutation } from "./resumeMutations";
 import type { ResumeDraftRead } from "../api/resume_api";
 
@@ -23,7 +24,8 @@ import type { ResumeDraftRead } from "../api/resume_api";
  */
 const ResumeDraftsPage: React.FC = () => {
     const navigate = useNavigate();
-    const { data: drafts, isLoading, isError } = useResumeDraftsQuery();
+    const [offset, setOffset] = useState(0);
+    const { data: drafts, isLoading, isError } = useResumeDraftsQuery(RESUME_DRAFTS_PAGE_SIZE, offset);
     const createMutation = useCreateResumeDraftMutation();
     const deleteMutation = useDeleteResumeDraftMutation();
 
@@ -46,10 +48,15 @@ const ResumeDraftsPage: React.FC = () => {
 
     const handleDeleteConfirm = () => {
         if (!deletingDraft) return;
+        // Deleting the only row on a page beyond the first would otherwise
+        // leave the pager stuck on a now-empty page — step back one page
+        // instead, same as ApplicationsPage's identical handling.
+        const isLastRowOnThisPage = drafts?.length === 1 && offset > 0;
         deleteMutation.mutate(deletingDraft.id, {
             onSuccess: () => {
                 toaster.create({ title: "Resume deleted", type: "success" });
                 setDeletingDraft(null);
+                if (isLastRowOnThisPage) setOffset((prev) => Math.max(0, prev - RESUME_DRAFTS_PAGE_SIZE));
             },
             onError: (error) => toaster.create({ title: error.message, type: "error" }),
         });
@@ -136,6 +143,7 @@ const ResumeDraftsPage: React.FC = () => {
                 errorMessage="Failed to load resumes"
                 emptyMessage="No resumes yet — paste a job description above to generate one"
             />
+            <Pager offset={offset} limit={RESUME_DRAFTS_PAGE_SIZE} rowCount={drafts?.length} onOffsetChange={setOffset} />
 
             <ConfirmDialog
                 isOpen={!!deletingDraft}

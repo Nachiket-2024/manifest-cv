@@ -7,7 +7,7 @@ import LogoutAllButtonComponent from "./LogoutAllButtonComponent";
 // This ends every session on every device immediately, including the
 // caller's own; worth one extra click via a confirmation dialog to avoid
 // an accidental self-logout-everywhere from a stray click.
-import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import ConfirmDialog from "../../ui/ConfirmDialog";
 
 const LogoutAllButton: React.FC = () => {
     const logoutAllMutation = useLogoutAllMutation();

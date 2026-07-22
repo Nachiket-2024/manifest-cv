@@ -69,7 +69,7 @@ class User(Base):
     # apart from "deleted" if that distinction is ever needed, and so
     # reactivation can clear it explicitly. A soft-deleted row is NOT
     # removed — see user_routes.py's soft-delete vs purge (hard delete)
-    # routes, and docs/security-decisions.md for the full rationale.
+    # routes, and docs/security/decisions.md for the full rationale.
     deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

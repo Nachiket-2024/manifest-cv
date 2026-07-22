@@ -10,8 +10,7 @@ import {
     type ResumeDraftRead,
 } from "../api/resume_api";
 import { finalizeResumeDocumentApi, type ResumeDocumentRead } from "../api/document_api";
-import { extractApiErrorMessage } from "../api/apiError";
-import { queryClient } from "../store/queryClient";
+import { extractApiErrorMessage, queryClient } from "../sdk";
 import { RESUME_DRAFTS_QUERY_KEY, resumeDraftQueryKey, resumeDocumentQueryKey } from "./resumeQueries";
 
 export function useCreateResumeDraftMutation() {

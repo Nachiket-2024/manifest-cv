@@ -25,17 +25,22 @@ class LogoutAllHandler:
                     status_code=400
                 )
 
-            payload = await jwt_service.verify_token(refresh_token, expected_type="refresh")
+            # decode_payload, not verify_token — an already-revoked refresh
+            # token (e.g. this device's own session, killed moments ago by a
+            # password change that revokes every refresh token for the
+            # account) must still resolve to its owning email so the rest of
+            # that account's sessions can be revoked and cookies cleared,
+            # instead of failing outright and leaving stale cookies behind.
+            # decode_payload skips the revocation check verify_token does,
+            # but NOT the "type" claim check — a wrong-type token (e.g. an
+            # access token mistakenly presented here) must still be rejected
+            # for revocation purposes, same as refresh_tokens() in
+            # refresh_token_service.py.
+            payload = await jwt_service.decode_payload(refresh_token)
 
-            if not payload or "email" not in payload:
-                return JSONResponse(
-                    content={"error": "Invalid refresh token"},
-                    status_code=400
-                )
+            email = payload.get("email") if payload and payload.get("type") == "refresh" else None
 
-            email = payload["email"]
-
-            revoked_count = await refresh_token_service.revoke_all_tokens_for_user(email)
+            revoked_count = await refresh_token_service.revoke_all_tokens_for_user(email) if email else 0
 
             # Best-effort security audit entry for the logout-all outcome.
             await log_security_event(
@@ -47,12 +52,10 @@ class LogoutAllHandler:
                 metadata={"revoked_count": revoked_count},
             )
 
-            if revoked_count == 0:
-                return JSONResponse(
-                    content={"error": "No tokens to revoke"},
-                    status_code=400
-                )
-
+            # As with plain logout: whether or not there was anything left to
+            # revoke server-side, the caller's goal — no valid session left
+            # in this browser — is met either way, so this always clears
+            # cookies and reports success rather than erroring out.
             resp = JSONResponse(
                 content={"message": f"Logged out from {revoked_count} devices"},
                 status_code=200

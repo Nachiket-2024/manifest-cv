@@ -1,6 +1,8 @@
 # AI & Retrieval
 
-The two pieces that power the AI-assisted parts of career knowledge and resume generation. Backend: `ai_integration/` (Gemini) and `retrieval/` (Qdrant).
+In plain terms: this is the machinery that turns a user's raw career history into a tailored resume for a specific job. One piece (`ai_integration/`) talks to Google's Gemini models to read, write, and rewrite text — structuring a messy career dump into clean notes, drafting a resume, revising it on request. The other piece (`retrieval/`) is a small search engine (Qdrant) that finds which of a user's own notes are actually relevant to the job description in front of it, so Gemini only ever sees the excerpts that matter rather than a user's entire career history crammed into one prompt. Together they're what [Career Knowledge](../career-knowledge/overview.md) and [Resumes](../resumes/overview.md) build on.
+
+The rest of this document is the technical reference for those two pieces. Backend: `ai_integration/` (Gemini) and `retrieval/` (Qdrant).
 
 ## AI integration (`ai_integration/`)
 
@@ -23,13 +25,15 @@ Every text-generation call funnels through one shared `_generate_text` helper: a
 
 ### Timeouts
 
-Every outbound Gemini call (`_generate_text`, `embed_text`) is wrapped in `asyncio.wait_for(..., timeout=30)` — without it, a stalled or unusually slow Gemini response would hang the request (and the coroutine serving it) indefinitely rather than failing visibly. A timeout raises `AIIntegrationError` the same as any other Gemini failure, so it surfaces as the usual `502 Bad Gateway` at the route level, not a distinct error path.
+Every outbound Gemini call (`_generate_text`, `embed_text`) is wrapped in `asyncio.wait_for(..., timeout=30)` — without it, a stalled or unusually slow Gemini response would hang the request (and the coroutine serving it) indefinitely rather than failing visibly. A timeout raises `AIIntegrationError` the same as any other Gemini failure. Every outbound Qdrant call gets the same treatment at `timeout=15` (see "Qdrant client" below), raising `RetrievalError` instead — see [Failure modes](#failure-modes) for what happens with each depending on which route triggered it.
 
 ## Retrieval (`retrieval/`)
 
 ### Qdrant client (`retrieval/qdrant_client.py`)
 
 One shared collection, `career_knowledge_chunks`, for every user's knowledge base chunks — isolated per user via a payload filter (`user_id`), not one Qdrant collection per user (collections are a heavier unit than that, and this scales fine at this data size). `ensure_collection()` creates it idempotently if missing; called once at backend startup (`main.py`'s lifespan), safe on every restart.
+
+Every outbound Qdrant call (`delete`, `upsert`, `query_points`) goes through `knowledge_retrieval_service._call`, which wraps it in `asyncio.wait_for(..., timeout=15)` and turns any failure (timeout or otherwise) into `retrieval.exceptions.RetrievalError` — the same shape as `ai_integration`'s `AIIntegrationError`/Gemini timeout handling, kept as a separate exception type since it's a different upstream dependency (see that module's own docstring).
 
 ### Chunking (`knowledge_retrieval_service.chunk_markdown`)
 
@@ -45,4 +49,9 @@ Embeds the query, then queries Qdrant filtered to that user's own points only �
 
 ## Failure modes
 
-Any Gemini or Qdrant failure during structuring, generation, refinement, indexing, or search surfaces as `AIIntegrationError` → `502 Bad Gateway` at the route level. A resume generation request against an empty or non-matching knowledge base is a distinct case — retrieval *succeeds* but finds nothing, which routes treat as `400 Bad Request` ("Your career knowledge base is empty"), not a provider failure.
+A Gemini failure during structuring/generation/refinement always surfaces as `AIIntegrationError` → `502 Bad Gateway` at the route level — there's no path where the caller's request succeeds without that content. A Qdrant failure is split by which side of the write it's on:
+
+- **Search** (`GET /career-knowledge/search`, and resume generation/refinement's internal retrieval step) — a `RetrievalError` here means the request can't proceed at all, so it surfaces as `502 Bad Gateway` the same as a Gemini failure.
+- **Indexing/deletion** (`index_knowledge_base`/`delete_knowledge_base`, called after `career_knowledge_routes.py`'s create/update/delete already committed to Postgres) — best-effort: a `RetrievalError` here is logged and reported to error monitoring (see [Error Monitoring](../error-monitoring/overview.md)) but never raised. The Postgres write already succeeded and is the source of truth; failing the whole request here would incorrectly tell the caller their save failed when it didn't. The tradeoff is that search can go stale until the next successful save — see `career_knowledge_routes.py`'s `_reindex_best_effort`/`_delete_index_best_effort` for the exact reasoning.
+
+A resume generation request against an empty or non-matching knowledge base is a distinct case from either of the above — retrieval *succeeds* but finds nothing, which routes treat as `400 Bad Request` ("Your career knowledge base is empty"), not a provider failure.

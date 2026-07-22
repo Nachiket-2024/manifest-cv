@@ -25,7 +25,7 @@ Only one knowledge base per user: a second `POST` while one already exists is a 
 
 ## Ownership and access
 
-No PBAC permission is required for any of these routes — see [Auth & Authorization](../auth/overview.md#no-pbac-on-manifestcvs-own-routes) for why. Every operation is scoped to the caller's own `user_id`, resolved from their session via `mystic_auth_adapter.get_user_id_by_email`.
+No PBAC permission is required for any of these routes — see [Auth & Authorization](../auth/overview.md#no-pbac-on-manifestcvs-own-routes) for why. Every operation is scoped to the caller's own `user_id`, resolved from their session via `manifestcv_sdk.get_user_id_by_email`.
 
 ## Rate limiting
 

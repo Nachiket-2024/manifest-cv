@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Badge, Button, HStack, Text, Wrap } from "@chakra-ui/react";
 
-import PageContainer from "../components/ui/PageContainer";
-import DataTable, { type DataTableColumn } from "../components/ui/DataTable";
-import ConfirmDialog from "../components/ui/ConfirmDialog";
-import { IfCan } from "../components/IfCan";
+import PageContainer from "../ui/PageContainer";
+import DataTable, { type DataTableColumn } from "../ui/DataTable";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import { IfCan } from "../authorization/IfCan";
 import { PERMISSIONS } from "../authorization/permissions";
-import { toaster } from "../components/ui/toasterInstance";
+import { toaster } from "../ui/toasterInstance";
 import { usePoliciesQuery } from "./policyQueries";
 import { useCreatePolicyMutation, useUpdatePolicyMutation, useDeletePolicyMutation } from "./policyMutations";
 import PolicyFormDialog, { type PolicyFormValues } from "./PolicyFormDialog";

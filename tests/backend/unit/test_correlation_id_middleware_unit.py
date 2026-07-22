@@ -58,3 +58,28 @@ def test_echoes_an_upstream_supplied_request_id():
 
 def test_contextvar_resets_to_default_outside_a_request():
     assert request_id_ctx_var.get() == "-"
+
+
+def test_rejects_malformed_upstream_request_id_and_generates_a_fresh_one():
+    # An upstream-supplied ID is persisted verbatim into the audit log and
+    # structured logs, so anything outside the safe charset/length must be
+    # replaced with a generated UUID rather than trusted through.
+    app, seen_context_ids = _build_app()
+    client = TestClient(app)
+
+    response = client.get("/", headers={REQUEST_ID_HEADER: "not valid! <script>"})
+
+    request_id = response.headers[REQUEST_ID_HEADER]
+    uuid.UUID(request_id)
+    assert seen_context_ids == [request_id]
+
+
+def test_rejects_oversized_upstream_request_id():
+    app, seen_context_ids = _build_app()
+    client = TestClient(app)
+
+    response = client.get("/", headers={REQUEST_ID_HEADER: "a" * 500})
+
+    request_id = response.headers[REQUEST_ID_HEADER]
+    uuid.UUID(request_id)
+    assert seen_context_ids == [request_id]

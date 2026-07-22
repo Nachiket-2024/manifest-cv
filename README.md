@@ -74,6 +74,7 @@ See [`docs/README.md`](docs/README.md) for the full documentation set — archit
 - **PDF Document Generation** — once approved, compile a resume to a polished PDF via a Markdown→LaTeX pipeline and a self-contained `tectonic` engine — no LaTeX installation required, and multiple visual templates to choose from. See [Document Generation](docs/document-generation/overview.md).
 - **Application Tracking** — save a finalized resume against a job application; the resume content, template, and PDF are snapshotted at that moment, so tracked applications survive later edits to the source draft. See [Applications](docs/applications/overview.md).
 - **Real authentication, not a demo login** — email+password with Argon2 hashing, Google OAuth2/PKCE, JWT access+refresh tokens as httpOnly cookies, refresh-token rotation with reuse detection, rate limiting, and audit logging — all inherited from mystic-auth. See [Auth & Authorization](docs/auth/overview.md).
+- **Error monitoring, opt-in** — backend and frontend exceptions reportable to self-hosted Bugsink (or Sentry's hosted free tier) via the Sentry SDK protocol; zero SDK calls and zero added frontend bytes until you turn it on. See [Error Monitoring](docs/error-monitoring/overview.md).
 
 ---
 
@@ -88,6 +89,7 @@ See [`docs/README.md`](docs/README.md) for the full documentation set — archit
 - **State Management:** Zustand (client/session state) + TanStack Query (server state/caching)
 - **Database:** PostgreSQL (async)
 - **Caching & Tasks:** Redis + Taskiq (async background email delivery)
+- **Error monitoring:** Sentry SDK protocol, self-hosted Bugsink by default (or Sentry's hosted free tier) — optional, opt-in, disabled unless explicitly configured
 - **Deployment:** Docker (dev and production Compose files)
 
 ---
@@ -156,6 +158,12 @@ Once the services are running:
 - **Taskiq worker:** Automatically listens for async tasks (email sending)
 - **Alembic migrations:** Run automatically on stack startup via the dedicated `alembic` service (`alembic upgrade head`) — applies mystic-auth's inherited schema and ManifestCV's own tables in one pass
 
+> **`docker compose up` never starts error monitoring (Bugsink).** It's a separate, opt-in Docker Compose profile — disabled by default so the stack's footprint doesn't grow for anyone who doesn't want it, whether you run the rest of the app via Docker or locally (Path 2 below):
+> ```bash
+> docker compose --profile monitoring up -d
+> ```
+> This adds Bugsink (`localhost:8010`) and a one-shot project-seeding container to whatever's already running — it doesn't replace or restart the rest of the stack. See [Error Monitoring](docs/error-monitoring/overview.md) for the full setup (env vars, DSN wiring, verifying it actually works). The app runs identically with or without it — `SENTRY_DSN`/`VITE_SENTRY_DSN` stay unset either way, so nothing calls out to it until you deliberately turn it on.
+
 See [Docker Overview](docs/docker/overview.md) for the full service breakdown and [Deployment Guide](docs/deployment/guide.md) for production Compose usage and free/low-cost hosting options.
 
 ---
@@ -198,6 +206,8 @@ npm run dev
 
 - **Frontend:** [http://localhost:5173](http://localhost:5173)
 
+> **Error monitoring (Bugsink) still requires Docker even in this local-run path** — it only ships as a container in this template (`docker compose --profile monitoring up -d`), with no bare-metal install documented. See [Error Monitoring](docs/error-monitoring/overview.md) if you want it running alongside a locally-run backend/frontend.
+
 ---
 
 ## 🔑 First-Time Setup — Creating the System Superuser
@@ -228,8 +238,9 @@ You will be prompted to enter a name, email, and password interactively. This on
 - **Redis + Taskiq** are used for async email delivery, caching, and rate limiting
 - **Qdrant** is used for semantic search over each user's career knowledge base
 - OAuth2 setup requires Google Cloud credentials; AI features require a Gemini API key
+- Error monitoring (self-hosted Bugsink) is opt-in — `docker compose up` alone never starts it; see [Error Monitoring](docs/error-monitoring/overview.md)
 - **Zustand** manages client-side session state; **TanStack Query** manages all server-state caching
-- **Type Safety:** Full TypeScript support across the frontend (components, hooks, store)
+- **Type Safety:** Full TypeScript support across the frontend (`ui/`, `authorization/`, `store/`, and every feature domain)
 
 ---
 
@@ -245,6 +256,7 @@ Full documentation lives in [`docs/`](docs/README.md), organized by feature/doma
 - [API Reference](docs/api/reference.md)
 - [Background Workers](docs/background-workers/taskiq.md)
 - [Testing](docs/testing/overview.md)
+- [Error Monitoring](docs/error-monitoring/overview.md) — optional, disabled by default; self-hosted Bugsink or Sentry's hosted tier
 - [Docker](docs/docker/overview.md)
 - [CI/CD](docs/cicd/overview.md)
 - [Deployment](docs/deployment/guide.md)

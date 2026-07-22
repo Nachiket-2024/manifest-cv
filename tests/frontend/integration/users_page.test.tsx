@@ -8,7 +8,7 @@ import MockAdapter from 'axios-mock-adapter';
 
 import api from '@/api/axiosInstance';
 import { useAuthStore } from '@/store/authStore';
-import UsersPage from '@/users_admin/UsersPage';
+import UsersPage from '@/users/UsersPage';
 
 const mock = new MockAdapter(api);
 const initialAuthState = useAuthStore.getState();

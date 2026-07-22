@@ -2,9 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...mystic_auth_adapter import get_current_user, get_user_id_by_email
-from ...database.connection import database
-from ..route_helpers import get_or_404
+from ...sdk import get_current_user, database, get_or_404
+from ...manifestcv_sdk import get_user_id_by_email
 
 from ...resume_crud.resume_repository import resume_repository
 from ...resume_document_crud.resume_document_repository import resume_document_repository

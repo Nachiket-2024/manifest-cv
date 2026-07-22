@@ -1,16 +1,15 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...mystic_auth_adapter import get_current_user, get_user_id_by_email
-from ...database.connection import database
-from ..route_helpers import get_or_404
+from ...sdk import get_current_user, database, get_or_404, rate_limiter_service
+from ...manifestcv_sdk import get_user_id_by_email
 
 from ...resume_crud.resume_repository import resume_repository
 from ...resume_table.resume_schema import ResumeDraftCreate, ResumeDraftUpdate, ResumeDraftRead
 
 from ...ai_integration.gemini_client import generate_resume, refine_resume
 from ...ai_integration.exceptions import AIIntegrationError
-from ...auth.security.rate_limiter_service import rate_limiter_service
+from ...retrieval.exceptions import RetrievalError
 from ...retrieval.knowledge_retrieval_service import search_knowledge_base
 
 # Self-service only, one user's own resume drafts — no PBAC permission
@@ -33,7 +32,7 @@ async def _current_user_id(current_user: dict, db: AsyncSession) -> int:
 async def _matching_chunks(user_id: int, query: str) -> list[str]:
     try:
         results = await search_knowledge_base(user_id, query, _RETRIEVAL_TOP_K)
-    except AIIntegrationError as exc:
+    except (AIIntegrationError, RetrievalError) as exc:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
     if not results:
@@ -76,11 +75,14 @@ async def create_resume_draft(
 
 @router.get("/", response_model=list[ResumeDraftRead])
 async def list_my_resume_drafts(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
+    """Newest first, paginated — see docs/resumes/overview.md#pagination."""
     user_id = await _current_user_id(current_user, db)
-    return await resume_repository.list_by_user(user_id, db)
+    return await resume_repository.list_by_user(user_id, db, limit=limit, offset=offset)
 
 
 @router.get("/{draft_id}", response_model=ResumeDraftRead)

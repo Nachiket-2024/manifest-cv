@@ -489,6 +489,130 @@ async def test_self_password_change_revokes_existing_sessions(client, created_em
 
 
 @pytest.mark.asyncio
+async def test_logout_after_self_password_change_still_succeeds_and_clears_cookies(client, created_emails):
+    # Regression guard for the actual bug report: PUT /users/me revokes the
+    # session's own refresh token (see test above), but never rotates or
+    # clears its cookies — so the browser is still holding that now-revoked
+    # refresh_token cookie. Clicking Logout right after a password-change
+    # toast must not surface "invalid refresh token or already revoked" and
+    # leave the user stuck looking logged in; it must still succeed and
+    # actually clear both cookies, exactly like a logout with a live token.
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    update_resp = await client.put(
+        "/users/me", json={"password": "NewStrongPass456!", "current_password": PASSWORD}
+    )
+    assert update_resp.status_code == 200
+    assert any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
+
+    logout_resp = await client.post("/auth/logout")
+
+    assert logout_resp.status_code == 200
+    assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
+
+
+@pytest.mark.asyncio
+async def test_logout_all_after_self_password_change_still_succeeds_and_clears_cookies(client, created_emails):
+    # Same regression, logout-all variant: logout_all_handler previously
+    # rejected an already-revoked refresh token outright (it couldn't even
+    # recover the owning email to revoke the account's *other* sessions),
+    # unlike plain logout's revoke-then-fail path.
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    update_resp = await client.put(
+        "/users/me", json={"password": "NewStrongPass456!", "current_password": PASSWORD}
+    )
+    assert update_resp.status_code == 200
+    assert any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
+
+    logout_all_resp = await client.post("/auth/logout/all")
+
+    assert logout_all_resp.status_code == 200
+    assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
+
+
+@pytest.mark.asyncio
+async def test_logout_after_admin_password_change_for_another_user_still_succeeds_and_clears_cookies(
+    client, created_emails
+):
+    # "Other users" variant of the bug report: an admin-driven password
+    # change (PUT /users/{email}) revokes the TARGET account's sessions,
+    # not the admin's own — so the target, still holding their own
+    # now-revoked refresh_token cookie from before the admin acted, must
+    # be able to log out cleanly too, not just the self-service path.
+    target_email = _unique_email("target")
+    target_login = await _create_verified_user(client, created_emails, target_email)
+    target_refresh_token = target_login.cookies["refresh_token"]
+
+    admin_email = _unique_email("admin")
+    # Logs in as admin on the same shared client, replacing the cookie jar
+    # — mirrors a real second browser/session, not the target's own tab.
+    await _create_admin(client, created_emails, admin_email)
+
+    admin_update_resp = await client.put(
+        f"/users/{target_email}", json={"password": "NewStrongPass456!"}
+    )
+    assert admin_update_resp.status_code == 200
+
+    # The target's own now-revoked cookie, explicitly presented — the jar
+    # currently holds the admin's session, not the target's.
+    logout_resp = await client.post("/auth/logout", cookies={"refresh_token": target_refresh_token})
+
+    assert logout_resp.status_code == 200
+    # The response's Set-Cookie deletes "refresh_token" at path=/auth
+    # regardless of whose value the jar currently holds under that same
+    # (name, path) key — so this also proves the admin's own still-live
+    # refresh_token cookie doesn't survive the target's logout call.
+    assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
+
+
+@pytest.mark.asyncio
+async def test_repeated_logout_calls_with_the_same_token_both_succeed(client, created_emails):
+    # Simulates two tabs, or a client retrying a request it never saw the
+    # response for — the same refresh_token value presented twice. The
+    # second call's token is already revoked by the first and must still
+    # succeed rather than error, exactly like the post-password-change case.
+    email = _unique_email()
+    login_resp = await _create_verified_user(client, created_emails, email)
+    refresh_token = login_resp.cookies["refresh_token"]
+
+    first_logout = await client.post("/auth/logout", cookies={"refresh_token": refresh_token})
+    assert first_logout.status_code == 200
+
+    second_logout = await client.post("/auth/logout", cookies={"refresh_token": refresh_token})
+    assert second_logout.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_logout_with_malformed_refresh_token_cookie_still_succeeds_and_clears_cookies(client, created_emails):
+    # Not just "a real but revoked token" — a cookie value that isn't even
+    # a decodable JWT at all (corrupted, truncated, tampered) must be
+    # handled the same lenient way, not treated as a different error class.
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    logout_resp = await client.post("/auth/logout", cookies={"refresh_token": "not-a-real-jwt"})
+
+    assert logout_resp.status_code == 200
+    assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
+
+
+@pytest.mark.asyncio
+async def test_logout_all_with_malformed_refresh_token_cookie_still_succeeds_and_clears_cookies(
+    client, created_emails
+):
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    logout_all_resp = await client.post("/auth/logout/all", cookies={"refresh_token": "not-a-real-jwt"})
+
+    assert logout_all_resp.status_code == 200
+    assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
+
+
+@pytest.mark.asyncio
 async def test_self_password_change_requires_current_password(client, created_emails):
     email = _unique_email()
     await _create_verified_user(client, created_emails, email)
@@ -514,6 +638,36 @@ async def test_self_password_change_rejects_wrong_current_password(client, creat
     # The old password must still work — the rejected change had no effect.
     login_resp = await client.post("/auth/login", json={"email": email, "password": PASSWORD})
     assert login_resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_self_password_change_rejects_same_password(client, created_emails):
+    email = _unique_email()
+    await _create_verified_user(client, created_emails, email)
+
+    resp = await client.put(
+        "/users/me", json={"password": PASSWORD, "current_password": PASSWORD}
+    )
+
+    assert resp.status_code == 400
+    assert "different from the current password" in resp.json()["detail"].lower()
+
+    # No session revocation happened — the old password still works.
+    login_resp = await client.post("/auth/login", json={"email": email, "password": PASSWORD})
+    assert login_resp.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_admin_password_change_rejects_same_password(client, created_emails):
+    admin_email = _unique_email("admin")
+    target_email = _unique_email("target")
+    await _create_verified_user(client, created_emails, target_email)
+    await _create_admin(client, created_emails, admin_email)
+
+    resp = await client.put(f"/users/{target_email}", json={"password": PASSWORD})
+
+    assert resp.status_code == 400
+    assert "different from the current password" in resp.json()["detail"].lower()
 
 
 @pytest.mark.asyncio

@@ -4,7 +4,7 @@ import { Box, Button, Flex } from "@chakra-ui/react";
 // Shared error/success feedback component — replaces the ad hoc
 // <p style={{ color: "red"/"green" }}> pattern, which also carried no
 // role="alert"/aria-live so screen readers never announced login failures.
-import FormAlert from "../../components/ui/FormAlert";
+import FormAlert from "../../ui/FormAlert";
 
 interface OAuth2LoginButtonComponentProps {
     error: string | null;

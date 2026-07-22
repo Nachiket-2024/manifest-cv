@@ -8,8 +8,7 @@ import {
     type CareerKnowledgeBaseUpdatePayload,
     type CareerKnowledgeBaseRead,
 } from "../api/career_knowledge_api";
-import { extractApiErrorMessage } from "../api/apiError";
-import { queryClient } from "../store/queryClient";
+import { extractApiErrorMessage, queryClient } from "../sdk";
 import { CAREER_KNOWLEDGE_QUERY_KEY } from "./careerKnowledgeQueries";
 
 export function useCreateCareerKnowledgeBaseMutation() {

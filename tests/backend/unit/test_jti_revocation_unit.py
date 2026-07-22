@@ -56,7 +56,7 @@ async def test_get_all_refresh_tokens_for_user_empty(mocker):
 
 @pytest.mark.asyncio
 async def test_revoke_token_blacklists_by_jti_and_clears_registry_entry(mocker):
-    setex_mock = mocker.patch(f"{MODULE}.redis_client.setex", new_callable=AsyncMock)
+    set_mock = mocker.patch(f"{MODULE}.redis_client.set", new_callable=AsyncMock)
     hdel_mock = mocker.patch(f"{MODULE}.redis_client.hdel", new_callable=AsyncMock)
 
     token = await jwt_service.create_access_token(email="user@example.com")
@@ -65,10 +65,10 @@ async def test_revoke_token_blacklists_by_jti_and_clears_registry_entry(mocker):
     result = await jwt_service.revoke_token(token, email="user@example.com")
 
     assert result is True
-    setex_mock.assert_awaited_once()
-    args, _ = setex_mock.call_args
+    set_mock.assert_awaited_once()
+    args, kwargs = set_mock.call_args
     assert args[0] == f"revoked:{payload['jti']}"
-    assert args[1] >= 1
+    assert kwargs["ex"] >= 1
     # The blacklist key must be the jti, never the raw token itself
     assert token not in args[0]
     hdel_mock.assert_awaited_once_with("refresh_token_registry:user@example.com", payload["jti"])
@@ -76,7 +76,7 @@ async def test_revoke_token_blacklists_by_jti_and_clears_registry_entry(mocker):
 
 @pytest.mark.asyncio
 async def test_revoke_token_without_email_skips_registry_cleanup(mocker):
-    mocker.patch(f"{MODULE}.redis_client.setex", new_callable=AsyncMock)
+    mocker.patch(f"{MODULE}.redis_client.set", new_callable=AsyncMock)
     hdel_mock = mocker.patch(f"{MODULE}.redis_client.hdel", new_callable=AsyncMock)
 
     token = await jwt_service.create_access_token(email="user@example.com")
@@ -88,20 +88,20 @@ async def test_revoke_token_without_email_skips_registry_cleanup(mocker):
 
 @pytest.mark.asyncio
 async def test_revoke_token_by_jti_uses_minimum_ttl_of_one_for_already_expired_tokens(mocker):
-    setex_mock = mocker.patch(f"{MODULE}.redis_client.setex", new_callable=AsyncMock)
+    set_mock = mocker.patch(f"{MODULE}.redis_client.set", new_callable=AsyncMock)
     mocker.patch(f"{MODULE}.redis_client.hdel", new_callable=AsyncMock)
 
     # exp far in the past would otherwise compute a negative TTL, which Redis rejects
     result = await jwt_service.revoke_token_by_jti("some-jti", exp=0, email="user@example.com")
 
     assert result is True
-    args, _ = setex_mock.call_args
-    assert args[1] == 1
+    _, kwargs = set_mock.call_args
+    assert kwargs["ex"] == 1
 
 
 @pytest.mark.asyncio
 async def test_revoke_token_without_jti_fails_gracefully(mocker):
-    setex_mock = mocker.patch(f"{MODULE}.redis_client.setex", new_callable=AsyncMock)
+    set_mock = mocker.patch(f"{MODULE}.redis_client.set", new_callable=AsyncMock)
 
     legacy_token = pyjwt.encode(
         {"email": "user@example.com", "exp": 9999999999}, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
@@ -110,7 +110,7 @@ async def test_revoke_token_without_jti_fails_gracefully(mocker):
     result = await jwt_service.revoke_token(legacy_token, email="user@example.com")
 
     assert result is False
-    setex_mock.assert_not_called()
+    set_mock.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -118,12 +118,12 @@ async def test_revoke_token_rejects_garbage_token_via_decode_payload(mocker):
     # revoke_token delegates decoding to decode_payload rather than a second,
     # separately-maintained jwt.decode call — an undecodable token must fail
     # the same way decode_payload does, not raise.
-    setex_mock = mocker.patch(f"{MODULE}.redis_client.setex", new_callable=AsyncMock)
+    set_mock = mocker.patch(f"{MODULE}.redis_client.set", new_callable=AsyncMock)
 
     result = await jwt_service.revoke_token("not-a-real-token", email="user@example.com")
 
     assert result is False
-    setex_mock.assert_not_called()
+    set_mock.assert_not_called()
 
 
 # ---------------------------- is_token_revoked / is_token_revoked_by_jti ----------------------------
@@ -188,13 +188,13 @@ async def test_revoke_all_tokens_for_user_revokes_each_jti_in_registry(mocker):
         new_callable=AsyncMock,
         return_value={"jti-1": "1111111111", "jti-2": "2222222222"},
     )
-    setex_mock = mocker.patch(f"{MODULE}.redis_client.setex", new_callable=AsyncMock)
+    set_mock = mocker.patch(f"{MODULE}.redis_client.set", new_callable=AsyncMock)
     hdel_mock = mocker.patch(f"{MODULE}.redis_client.hdel", new_callable=AsyncMock)
 
     revoked_count = await refresh_token_service.revoke_all_tokens_for_user("user@example.com")
 
     assert revoked_count == 2
-    assert setex_mock.await_count == 2
+    assert set_mock.await_count == 2
     assert hdel_mock.await_count == 2
     hdel_mock.assert_any_call("refresh_token_registry:user@example.com", "jti-1")
     hdel_mock.assert_any_call("refresh_token_registry:user@example.com", "jti-2")

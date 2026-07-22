@@ -13,7 +13,7 @@ export const CURRENT_USER_QUERY_KEY = ["currentUser"] as const;
 /**
  * Fetches GET /auth/me. A 401 (no valid session) is the normal, expected
  * "logged out" outcome, not a retryable failure — retry is disabled
- * app-wide on the shared queryClient (see store/queryClient.ts).
+ * app-wide on the shared queryClient (see core/queryClient.ts).
  */
 export function useCurrentUserQuery() {
     return useQuery({

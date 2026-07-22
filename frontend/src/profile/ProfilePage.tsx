@@ -1,18 +1,18 @@
 import React, { useState } from "react";
 import { Badge, Button, Field, Heading, Input, Stack, Text, Wrap } from "@chakra-ui/react";
 
-import PageContainer from "../components/ui/PageContainer";
-import Card from "../components/ui/Card";
-import LoadingState from "../components/ui/LoadingState";
-import FormAlert from "../components/ui/FormAlert";
-import PasswordRulesChecklist from "../components/ui/PasswordRulesChecklist";
+import PageContainer from "../ui/PageContainer";
+import Card from "../ui/Card";
+import LoadingState from "../ui/LoadingState";
+import FormAlert from "../ui/FormAlert";
+import PasswordRulesChecklist from "../auth/password_rules/PasswordRulesChecklist";
 import { useAuthStore } from "../store/authStore";
 import { useMyPoliciesQuery } from "../policies/policyQueries";
 import { useUpdateMyProfileMutation } from "./useUpdateMyProfileMutation";
 import LogoutAllButton from "../auth/logout_all/LogoutAllButton";
-import { checkPasswordRules, evaluatePasswordStrength, validatePassword } from "../hooks/usePasswordPolicy";
-import { useUnsavedChangesWarning } from "../hooks/useUnsavedChangesWarning";
-import { toaster } from "../components/ui/toasterInstance";
+import { checkPasswordRules, evaluatePasswordStrength, validatePassword } from "../auth/password_rules/passwordRules";
+import { useUnsavedChangesWarning } from "./useUnsavedChangesWarning";
+import { toaster } from "../ui/toasterInstance";
 
 /**
  * ProfilePage

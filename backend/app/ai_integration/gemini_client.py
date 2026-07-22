@@ -3,7 +3,7 @@ import asyncio
 from google import genai
 from google.genai import types
 
-from ..core.settings import settings
+from ..sdk import settings
 from .prompts import (
     build_structure_knowledge_base_prompt,
     build_generate_resume_prompt,

@@ -32,12 +32,15 @@ class LogoutHandler:
             # Best-effort security audit entry for the logout outcome.
             await log_security_event(LOGOUT, db, success=success, request=request)
 
-            if not success:
-                return JSONResponse(
-                    content={"error": "Invalid refresh token or already revoked"},
-                    status_code=400
-                )
-
+            # Whether or not the presented refresh token was still live to
+            # revoke (it may already be invalid/expired/revoked — e.g. this
+            # device's session was killed by a password change moments ago,
+            # which revokes every refresh token for the account), the
+            # caller's actual goal — "no valid session left in this browser"
+            # — is met either way. Returning an error here instead of
+            # clearing cookies used to leave the frontend stuck showing
+            # "logged in" with a dead refresh-token cookie it could never
+            # successfully log out of.
             resp = JSONResponse(
                 content={"message": "Logged out successfully"},
                 status_code=200

@@ -20,11 +20,23 @@ class ApplicationRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def list_by_user(user_id: int, db: AsyncSession) -> list[ApplicationRecord]:
+    async def list_by_user(
+        user_id: int, db: AsyncSession, limit: int = 20, offset: int = 0
+    ) -> list[ApplicationRecord]:
+        # id.desc() as a final tie-breaker — application_date/created_at
+        # alone aren't a stable sort key when two rows share both (e.g.
+        # several applications logged the same day), which would otherwise
+        # let offset pagination skip or duplicate a row across pages.
         stmt = (
             select(ApplicationRecord)
             .where(ApplicationRecord.user_id == user_id)
-            .order_by(ApplicationRecord.application_date.desc(), ApplicationRecord.created_at.desc())
+            .order_by(
+                ApplicationRecord.application_date.desc(),
+                ApplicationRecord.created_at.desc(),
+                ApplicationRecord.id.desc(),
+            )
+            .limit(limit)
+            .offset(offset)
         )
         result = await db.execute(stmt)
         return list(result.scalars().all())

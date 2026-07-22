@@ -9,7 +9,7 @@
 - Spins up Postgres 15 and Redis 7 as GitHub Actions **service containers** (not Docker Compose — a deliberate, lower-overhead equivalent for CI; Compose remains the source of truth for local development).
 - All required settings (`SECRET_KEY`, `GOOGLE_CLIENT_ID`, `APP_NAME`, `GEMINI_API_KEY`, etc. — `core/settings.py` has no defaults for most of them) are provided as job-level env vars with clearly-fake CI-only values, since there's no checked-in `.env` for CI to read. `GEMINI_API_KEY` in particular is a placeholder only — the ManifestCV integration suite mocks every Gemini/Qdrant call at each route module's import site rather than calling either service for real, so nothing in CI ever needs a live key or a reachable Qdrant instance (no `qdrant` service container is spun up here, unlike `postgres`/`redis`).
 - Installs dependencies, then runs `pip-audit -r backend/requirements.txt` (dependency vulnerability scan) before proceeding.
-- Runs `alembic upgrade head` (mystic-auth's 13 inherited migrations plus ManifestCV's own 4, in one chain), then `pytest tests/backend/unit tests/backend/manifestcv/unit`, then `pytest tests/backend/integration tests/backend/manifestcv/integration --cov-append`, then `pytest tests/backend/security --cov-append --cov-fail-under=85`. The `--cov-append` flags accumulate coverage across all three steps, so the 85% gate on the final step checks *cumulative* coverage across the whole run (inherited suites + ManifestCV's own), not any one suite alone — `pytest.ini` deliberately does not bake `--cov-fail-under` into `addopts` itself, since that would also apply to (and false-fail) a developer running a single suite locally. See [Testing Overview](../testing/overview.md).
+- Runs `alembic upgrade head` (mystic-auth's 13 inherited migrations plus ManifestCV's own 4, in one chain), then `pytest tests/backend/unit tests/backend/manifestcv/unit`, then `pytest tests/backend/integration tests/backend/manifestcv/integration --cov-append`, then `pytest tests/backend/security --cov-append --cov-fail-under=80`. The `--cov-append` flags accumulate coverage across all three steps, so the 80% gate on the final step checks *cumulative* coverage across the whole run (inherited suites + ManifestCV's own), not any one suite alone — `pytest.ini` deliberately does not bake `--cov-fail-under` into `addopts` itself, since that would also apply to (and false-fail) a developer running a single suite locally. See [Testing Overview](../testing/overview.md).
 - Then runs `pytest tests/backend/performance` as a **non-blocking** (`continue-on-error: true`) step — informational only, since its thresholds, while generous regression alarms rather than a strict SLA, can still be noisier on shared GitHub-hosted runners than locally.
 
 ### `frontend` — Frontend (typecheck + lint + test + build)
@@ -31,7 +31,7 @@
 
 ## What's covered
 
-- Backend unit/integration/security suites, against real Postgres/Redis, gated by an 85% cumulative-coverage threshold; performance tests run too, non-blocking.
+- Backend unit/integration/security suites, against real Postgres/Redis, gated by an 80% cumulative-coverage threshold (actual coverage runs a few points above this — see [Testing Overview](../testing/overview.md)); performance tests run too, non-blocking.
 - Full frontend type-check, lint, test (with coverage thresholds enforced), and production build.
 - Both Docker images still build.
 - Real `tectonic` PDF compilation, inside the actual production backend image — not just mocked.

@@ -52,4 +52,4 @@ Most of `test_document_routes_integration.py` mocks `render_resume_pdf` (fast, d
 
 ## API reference
 
-See [API Reference](../api/reference.md#document-generation) for the full request/response shapes.
+See [API Reference](../api/reference.md) (Document Generation section) for the full request/response shapes.

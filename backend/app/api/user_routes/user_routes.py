@@ -110,6 +110,14 @@ async def update_my_profile(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Current password is incorrect",
             )
+        # Same check password_reset_service.py already does for the forgot-
+        # password flow — a "change" that doesn't change anything shouldn't
+        # succeed, and shouldn't revoke every other session for no reason.
+        if await password_service.verify_password(update_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be different from the current password",
+            )
 
     prepared_data = await _prepare_update_data(update_data)
     updated_user = await user_crud.update(db_obj=user, update_data=prepared_data, db=db)
@@ -153,6 +161,13 @@ async def update_any_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="System user cannot be modified"
         )
+
+    if update_data.password is not None and user.hashed_password is not None:
+        if await password_service.verify_password(update_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be different from the current password",
+            )
 
     prepared_data = await _prepare_update_data(update_data)
     updated_user = await user_crud.update(db_obj=user, update_data=prepared_data, db=db)

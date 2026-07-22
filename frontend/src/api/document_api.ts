@@ -1,4 +1,4 @@
-import api from "./axiosInstance";
+import { api } from "../sdk";
 
 export interface TemplateInfo {
     id: string;

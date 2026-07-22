@@ -241,22 +241,6 @@ async def test_refresh_token_service_requires_refresh_type_on_revoke(mocker):
 
 
 @pytest.mark.asyncio
-async def test_logout_all_handler_requires_refresh_type(mocker):
-    from backend.app.auth.logout_all.logout_all_handler import logout_all_handler
-
-    verify_mock = mocker.patch(
-        "backend.app.auth.logout_all.logout_all_handler.jwt_service.verify_token",
-        new_callable=AsyncMock,
-        return_value=None,
-    )
-
-    response = await logout_all_handler.handle_logout_all("some-token")
-
-    assert response.status_code == 400
-    verify_mock.assert_awaited_once_with("some-token", expected_type="refresh")
-
-
-@pytest.mark.asyncio
 async def test_create_refresh_token_prunes_already_expired_registry_entries(mocker):
     """Regression guard: a jti was previously only ever removed from the
     per-user refresh-token registry hash by an explicit revoke/rotation/

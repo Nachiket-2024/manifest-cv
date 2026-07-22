@@ -1,0 +1,117 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
+import { MemoryRouter } from 'react-router-dom';
+import MockAdapter from 'axios-mock-adapter';
+
+import api from '@/api/axiosInstance';
+import { queryClient } from '@/core/queryClient';
+import ResumeDraftsPage from '@/resumes/ResumeDraftsPage';
+import type { ResumeDraftRead } from '@/api/resume_api';
+
+const mock = new MockAdapter(api);
+
+function draft(id: number, status: ResumeDraftRead['status'] = 'draft'): ResumeDraftRead {
+  return {
+    id,
+    job_description: `Job description ${id}`,
+    resume_content: null,
+    status,
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  };
+}
+
+function renderPage() {
+  // Same reasoning as resume_editor_page.test.tsx: mutations write into the
+  // app's own singleton queryClient, so the Provider here must use that
+  // same instance, not a fresh one, for cache invalidation to be visible.
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ChakraProvider value={defaultSystem}>
+        <MemoryRouter>
+          <ResumeDraftsPage />
+        </MemoryRouter>
+      </ChakraProvider>
+    </QueryClientProvider>
+  );
+}
+
+describe('ResumeDraftsPage pagination', () => {
+  beforeEach(() => {
+    mock.reset();
+    queryClient.clear();
+  });
+
+  it('does not render a pager when the first page is not full', async () => {
+    mock.onGet('/resumes/').reply((config) => {
+      expect(config.params).toEqual({ limit: 20, offset: 0 });
+      return [200, [draft(1), draft(2)]];
+    });
+
+    renderPage();
+
+    await screen.findByText('Job description 1');
+    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
+  });
+
+  it('advances to the next page and back, requesting the right offset each time', async () => {
+    const fullPage = Array.from({ length: 20 }, (_, i) => draft(20 - i));
+    mock.onGet('/resumes/').reply((config) => {
+      if (config.params.offset === 0) return [200, fullPage];
+      if (config.params.offset === 20) return [200, [draft(21)]];
+      return [200, []];
+    });
+
+    renderPage();
+    const user = userEvent.setup();
+
+    await screen.findByText('Job description 20');
+    expect(screen.getByText('Page 1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+
+    await screen.findByText('Job description 21');
+    expect(screen.getByText('Page 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Previous' }));
+
+    await screen.findByText('Job description 20');
+    expect(screen.getByText('Page 1')).toBeInTheDocument();
+  });
+
+  it('steps back a page after deleting the only row on a non-first page', async () => {
+    const fullPage = Array.from({ length: 20 }, (_, i) => draft(20 - i));
+    let secondPageDeleted = false;
+    mock.onGet('/resumes/').reply((config) => {
+      if (config.params.offset === 0) return [200, fullPage];
+      if (config.params.offset === 20) return [200, secondPageDeleted ? [] : [draft(21)]];
+      return [200, []];
+    });
+    mock.onDelete('/resumes/21').reply(() => {
+      secondPageDeleted = true;
+      return [200];
+    });
+
+    renderPage();
+    const user = userEvent.setup();
+
+    await screen.findByText('Job description 20');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await screen.findByText('Job description 21');
+
+    const rows = screen.getAllByRole('row');
+    const targetRow = rows.find((r) => r.textContent?.includes('Job description 21'));
+    await user.click(within(targetRow as HTMLElement).getByRole('button', { name: /delete/i }));
+
+    // Confirm dialog
+    await user.click(await screen.findByRole('button', { name: /^delete$/i }));
+
+    // Back on page 1, offset reset to 0.
+    await waitFor(() => expect(screen.getByText('Page 1')).toBeInTheDocument());
+    await screen.findByText('Job description 20');
+  });
+});

@@ -23,8 +23,6 @@ export interface UserUpdatePayload {
     current_password?: string;
 }
 
-export const updateMyProfileApi = (payload: UserUpdatePayload) => api.put<AdminUserRead>("/users/me", payload);
-
 export const listUsersApi = () => api.get<AdminUserRead[]>("/users/");
 
 export const updateUserApi = (userEmail: string, payload: UserUpdatePayload) =>

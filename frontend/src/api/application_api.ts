@@ -1,4 +1,4 @@
-import api from "./axiosInstance";
+import { api } from "../sdk";
 
 export interface ApplicationRead {
     id: number;
@@ -30,7 +30,8 @@ export interface ApplicationUpdatePayload {
     status?: string;
 }
 
-export const listApplicationsApi = () => api.get<ApplicationRead[]>("/applications/");
+export const listApplicationsApi = (limit = 20, offset = 0) =>
+    api.get<ApplicationRead[]>("/applications/", { params: { limit, offset } });
 
 export const getApplicationApi = (applicationId: number) =>
     api.get<ApplicationDetailRead>(`/applications/${applicationId}`);

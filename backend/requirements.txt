@@ -33,6 +33,12 @@ aiosmtplib==5.1.2
 
 python-json-logger==4.1.0
 
+# Speaks the same wire protocol against Sentry itself or any self-hosted
+# Sentry-SDK-compatible server (e.g. Bugsink — see docs/error-monitoring/overview.md).
+# The [fastapi] extra pulls in the FastAPI/Starlette integration; a no-op
+# import-time cost when SENTRY_DSN is unset (see error_monitoring/sentry_service.py).
+sentry-sdk[fastapi]==2.66.0
+
 pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0

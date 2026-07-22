@@ -6,9 +6,9 @@ import { Box, Heading, Stack, Container, Text, Flex, EmptyState } from "@chakra-
 // the GET /auth/me network call or its own loading/error state machine.
 import { useCurrentUserQuery } from "../auth/current_user/useCurrentUserQuery";
 
-import Card from "../components/ui/Card";
-import LoadingState from "../components/ui/LoadingState";
-import FormAlert from "../components/ui/FormAlert";
+import Card from "../ui/Card";
+import LoadingState from "../ui/LoadingState";
+import FormAlert from "../ui/FormAlert";
 
 /**
  * DashboardPage

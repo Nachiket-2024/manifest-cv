@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query";
 import { logoutApi } from "../../api/auth_api";
 import { extractApiErrorMessage } from "../../api/apiError";
 import { useAuthStore } from "../../store/authStore";
-import { queryClient } from "../../store/queryClient";
+import { queryClient } from "../../core/queryClient";
 import { CURRENT_USER_QUERY_KEY } from "../current_user/useCurrentUserQuery";
 import type { LogoutResponse } from "./logout_types";
 

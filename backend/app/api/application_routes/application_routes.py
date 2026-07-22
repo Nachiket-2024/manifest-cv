@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...mystic_auth_adapter import get_current_user, get_user_id_by_email
-from ...database.connection import database
-from ..route_helpers import get_or_404
+from ...sdk import get_current_user, database, get_or_404
+from ...manifestcv_sdk import get_user_id_by_email
 
 from ...resume_crud.resume_repository import resume_repository
 from ...resume_document_crud.resume_document_repository import resume_document_repository
@@ -55,11 +54,14 @@ async def create_application(
 
 @router.get("/", response_model=list[ApplicationRead])
 async def list_my_applications(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
+    """Newest first, paginated — see docs/applications/overview.md#pagination."""
     user_id = await _current_user_id(current_user, db)
-    return await application_repository.list_by_user(user_id, db)
+    return await application_repository.list_by_user(user_id, db, limit=limit, offset=offset)
 
 
 @router.get("/{application_id}", response_model=ApplicationDetailRead)

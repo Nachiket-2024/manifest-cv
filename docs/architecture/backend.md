@@ -4,7 +4,7 @@
 
 FastAPI application (`backend/app/`), async throughout — SQLAlchemy async engine, async Redis client, async SMTP, async Qdrant client. One codebase, three container roles (`backend`, `taskiq_worker`, `alembic`) built from the same image with different `command:` overrides — see [Docker Overview](../docker/overview.md).
 
-The app is two layers: an identity/authorization foundation vendored from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) (`api/auth_routes/`, `api/pbac_routes/`, `api/user_routes/`, `auth/`, `authorization/`, `user_crud/`, `user_table/`, `audit_log/`), and ManifestCV's own product domains built on top of it (`career_knowledge_*`, `resume_*`, `application_*`, `document_generation/`, `ai_integration/`, `retrieval/`). The only bridge between the two is `mystic_auth_adapter/` — see [Auth & Authorization](../auth/overview.md).
+The app is two layers: an identity/authorization foundation vendored from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) (`api/auth_routes/`, `api/pbac_routes/`, `api/user_routes/`, `auth/`, `authorization/`, `user_crud/`, `user_table/`, `audit_log/`), and ManifestCV's own product domains built on top of it (`career_knowledge_*`, `resume_*`, `application_*`, `document_generation/`, `ai_integration/`, `retrieval/`). The only bridge between the two is mystic-auth's own `sdk.py` extension surface plus ManifestCV's small `manifestcv_sdk.py` id-resolution helper — see [Auth & Authorization](../auth/overview.md).
 
 ## Module layout
 
@@ -24,6 +24,8 @@ The app is two layers: an identity/authorization foundation vendored from [mysti
 | `scripts/` | `create_system_user.py` — one-off interactive CLI to bootstrap the reserved system account |
 | `taskiq_tasks/` | The async email-sending task and its broker — see [Background Workers](../background-workers/taskiq.md) |
 | `user_crud/`, `user_table/` | CRUD orchestration and SQLAlchemy model/schema for the `users` table |
+| `error_monitoring/` | `sentry_service.py` — optional, disabled unless `SENTRY_DSN` is set; a no-op otherwise — see [Error Monitoring](../error-monitoring/overview.md) |
+| `sdk.py` | mystic-auth's own public extension surface for downstream code (`get_current_user`, `require_authorization`, `Permission`, `database`, `settings`, `capture_exception`, etc.) — ManifestCV route modules import `get_current_user` from here rather than mystic-auth's internal path directly, see [Auth & Authorization](../auth/overview.md) |
 
 For how any of these actually work internally, see [mystic-auth's own docs](https://github.com/Nachiket-2024/mystic-auth/tree/main/docs) — this repo doesn't duplicate that documentation, only what ManifestCV adds on top of it or depends on from it.
 
@@ -31,7 +33,7 @@ For how any of these actually work internally, see [mystic-auth's own docs](http
 
 | Module | Purpose |
 |---|---|
-| `mystic_auth_adapter/` | The only door ManifestCV code is allowed to use into mystic-auth's identity system — see [Auth & Authorization](../auth/overview.md) |
+| `manifestcv_sdk.py` | ManifestCV's own id-resolution helper (`get_user_id_by_email`) — the only other piece, alongside mystic-auth's own `sdk.py`, ManifestCV routes use to reach identity — see [Auth & Authorization](../auth/overview.md) |
 | `career_knowledge_table/`, `career_knowledge_crud/`, `api/career_knowledge_routes/` | One knowledge base per user — see [Career Knowledge](../career-knowledge/overview.md) |
 | `resume_table/`, `resume_crud/`, `api/resume_routes/` | Tailored resume drafts per job description — see [Resumes](../resumes/overview.md) |
 | `resume_document_table/`, `resume_document_crud/`, `document_generation/`, `api/document_routes/` | Compiled PDF resumes — see [Document Generation](../document-generation/overview.md) |

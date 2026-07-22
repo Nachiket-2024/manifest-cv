@@ -3,7 +3,7 @@ import { Stack, Input, Button } from "@chakra-ui/react";
 import { Field as ChakraField } from "@chakra-ui/react";
 
 import { usePasswordResetRequestMutation } from "./usePasswordResetRequestMutation";
-import FormAlert from "../../components/ui/FormAlert";
+import FormAlert from "../../ui/FormAlert";
 
 const PasswordResetRequestForm: React.FC = () => {
     const [email, setEmail] = useState("");

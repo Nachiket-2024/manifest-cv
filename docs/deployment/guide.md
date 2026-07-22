@@ -70,6 +70,16 @@ docker compose exec postgres pg_dump -U $POSTGRES_USER $POSTGRES_DB > backup-$(d
 docker compose exec -T postgres psql -U $POSTGRES_USER $POSTGRES_DB < backup-2026-07-13.sql
 ```
 
+## Error monitoring
+
+Optional, opt-in — `docker compose -f docker-compose.prod.yml up -d` never starts Bugsink on its own, same as the dev compose file. Bring it up alongside the rest of the production stack with:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile monitoring up -d
+```
+
+`docker-compose.prod.yml` exposes no host port for `bugsink` by default (unlike `backend`/`frontend`, which are meant to be internet-facing) — reaching it in production means an SSH tunnel, a VPN, or a reverse-proxy route you add deliberately. See [Error Monitoring](../error-monitoring/overview.md) for the full setup (env vars, DSN wiring — including the internal-vs-browser DSN split that matters even more once the backend isn't on `localhost`, self-hosted Bugsink vs. Sentry's hosted tier).
+
 ## Graceful shutdown
 
 `backend/app/main.py` registers a FastAPI `lifespan` handler that runs on shutdown (e.g. `docker stop`, or a rolling restart under an orchestrator): it disposes the SQLAlchemy connection pool and closes the Redis client cleanly instead of relying on the process dying and the OS reclaiming the sockets.
@@ -112,5 +122,5 @@ Backend + worker + Qdrant on Render (three services from the same repo, two from
 ## Limitations of this deployment approach
 
 - No infrastructure-as-code (Terraform/Pulumi/etc.) is provided — the steps above are manual, per-provider console/CLI actions.
-- No automated backups or monitoring/alerting are wired up anywhere in this repo — see [Concerns](../concerns/README.md).
+- No automated backups, uptime/infrastructure monitoring, or alerting are wired up anywhere in this repo — see [Concerns](../concerns/README.md). (Error tracking is available — [Error Monitoring](../error-monitoring/overview.md) above — but it's opt-in, only captures application exceptions, not infra health/uptime, and doesn't send alerts anywhere on its own; you still have to check Bugsink's Issues list, or wire its notifications up yourself.)
 - Free tiers on the providers above typically have cold-start latency, storage caps, and request-volume limits not suitable for real production traffic — treat this section as a starting point for a demo/side-project deployment, not a scaling plan.

@@ -12,13 +12,13 @@ import {
     Textarea,
 } from "@chakra-ui/react";
 
-import PageContainer from "../components/ui/PageContainer";
-import Card from "../components/ui/Card";
-import LoadingState from "../components/ui/LoadingState";
-import FormAlert from "../components/ui/FormAlert";
-import { toaster } from "../components/ui/toasterInstance";
-import { useUnsavedChangesWarning } from "../hooks/useUnsavedChangesWarning";
-import settings from "../core/settings";
+import PageContainer from "../ui/PageContainer";
+import Card from "../ui/Card";
+import LoadingState from "../ui/LoadingState";
+import FormAlert from "../ui/FormAlert";
+import { toaster } from "../ui/toasterInstance";
+import { useUnsavedChangesWarning } from "../profile/useUnsavedChangesWarning";
+import { settings } from "../sdk";
 
 import { useResumeDraftQuery, useResumeTemplatesQuery, useFinalizedResumeDocumentQuery } from "./resumeQueries";
 import {
@@ -177,7 +177,7 @@ const ResumeEditorPage: React.FC = () => {
                             onChange={(e) => setContent(e.target.value)}
                             rows={20}
                             fontFamily="mono"
-                            disabled={isApproved}
+                            disabled={isApproved || updateMutation.isPending}
                         />
                         {updateMutation.isError && <FormAlert status="error">{updateMutation.error.message}</FormAlert>}
                         {!isApproved && (
@@ -246,6 +246,10 @@ const ResumeEditorPage: React.FC = () => {
 
                         {templatesQuery.isLoading && <LoadingState message="Loading templates..." />}
 
+                        {templatesQuery.isError && (
+                            <FormAlert status="error">Failed to load templates — try reloading the page</FormAlert>
+                        )}
+
                         {templatesQuery.data && (
                             <Stack gap={4}>
                                 <NativeSelect.Root w="200px">
@@ -282,6 +286,12 @@ const ResumeEditorPage: React.FC = () => {
                                 </Button>
                             </Stack>
                         )}
+                    </Card>
+                )}
+
+                {isApproved && documentQuery.isError && (
+                    <Card p={6}>
+                        <FormAlert status="error">Failed to check for a finalized PDF — try reloading the page</FormAlert>
                     </Card>
                 )}
 

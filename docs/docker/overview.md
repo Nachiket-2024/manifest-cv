@@ -10,14 +10,16 @@
 | `backend` | `docker/backend.Dockerfile` | FastAPI app (uvicorn). Also bundles `tectonic` (LaTeX engine) for PDF resume compilation — see [Document Generation](../document-generation/overview.md) |
 | `frontend` | `docker/frontend.Dockerfile` (`dev` target locally, `production` target in prod) | React SPA — Vite dev server locally, nginx-served static build in prod |
 | `taskiq_worker` | `docker/backend.Dockerfile` (same image as `backend`, different `command:`) | Consumes the email-sending task queue — see [Background Workers](../background-workers/taskiq.md) |
-| `alembic` | `docker/backend.Dockerfile` (same image, one-shot) | Runs `alembic upgrade head` then exits — applies both mystic-auth's inherited migrations and ManifestCV's own four; `backend`/`taskiq_worker` wait on its success in prod |
+| `alembic` | `docker/backend.Dockerfile` (same image, one-shot) | Runs `alembic upgrade head` then exits — applies both mystic-auth's inherited migrations and ManifestCV's own four; `backend`/`taskiq_worker` wait on its success |
+| `bugsink` | `bugsink/bugsink:2` | Optional, self-hosted error monitoring — behind the `monitoring` Compose profile, so `docker compose up` never starts it on its own. See [Error Monitoring](../error-monitoring/overview.md) |
+| `seed_bugsink_project` | `bugsink/bugsink:2` (same image, one-shot, `monitoring` profile) | Runs once after `bugsink` reports healthy, then exits — idempotently seeds a default Team + Project so a first-time Bugsink login isn't an empty shell. See [Error Monitoring: Default project & team](../error-monitoring/overview.md#default-project--team) |
 
-`backend`, `taskiq_worker`, and `alembic` all build from the **same** `docker/backend.Dockerfile` image with different `command:` overrides — keeps dependency versions and application code identical across all three roles by construction.
+`backend`, `taskiq_worker`, and `alembic` all build from the **same** `docker/backend.Dockerfile` image with different `command:` overrides — keeps dependency versions and application code identical across all three roles by construction. `bugsink` and `seed_bugsink_project` share the same relationship using `bugsink/bugsink:2`.
 
 ## Dockerfiles
 
 - **`docker/backend.Dockerfile`** — two-stage build: a `builder` stage compiles native dependencies (`gcc`, `libpq-dev`) into an isolated venv; the runtime stage is `python:3.11-slim` with `libpq5` plus a statically-linked `tectonic` binary (fetched at build time, not full TeX Live — several GB smaller), running as a non-root `app` user. Ships a `HEALTHCHECK` against `/health/ready` as a fallback for when the image runs outside Compose.
-- **`docker/frontend.Dockerfile`** — three stages: `dev` (default target — `node:20-bullseye`, Vite dev server with HMR, port 5173), `builder` (compiles the production bundle), `production` (`nginx:1.27-alpine` serving the static build as a non-root `nginx` user, port 80, `HEALTHCHECK` via `wget`). The `builder` stage takes `VITE_API_BASE_URL`/`VITE_APP_NAME` as build `ARG`s — Vite bakes them into the bundle at build time, and `frontend/.env` is deliberately excluded from the build context (`.dockerignore`), so without these args every production build would ship both as `undefined`. `docker-compose.prod.yml` passes them through as `build.args`, sourced from the shell environment (not the root `.env` — see [Deployment Guide: production](../deployment/guide.md)).
+- **`docker/frontend.Dockerfile`** — three stages: `dev` (default target — `node:20.20.2-bullseye`, Vite dev server with HMR, port 5173), `builder` (compiles the production bundle), `production` (`nginx:1.27-alpine` serving the static build as a non-root `nginx` user, port 80, `HEALTHCHECK` via `wget`). The `builder` stage takes `VITE_API_BASE_URL`/`VITE_APP_NAME`/`VITE_SENTRY_DSN`/`VITE_SENTRY_ENVIRONMENT` as build `ARG`s — Vite bakes them into the bundle at build time, and `frontend/.env` is deliberately excluded from the build context (`.dockerignore`), so without these args every production build would ship them as `undefined`. `docker-compose.prod.yml` passes them through as `build.args`, sourced from the shell environment (not the root `.env` — see [Deployment Guide: production](../deployment/guide.md)).
 - **`docker/nginx.frontend.conf`** — SPA fallback to `index.html`, gzip, security headers. `frame-src http: https:` in its CSP specifically (rather than the `default-src 'self'` fallback) is what lets the resume template preview `<iframe>` (see [Document Generation](../document-generation/overview.md)) embed a PDF from the backend's different origin — the SPA's own CSP would otherwise block that embed independently of whatever the backend's response headers allow. No HSTS at this layer — by design, since TLS terminates in front of this container in a real deployment, not here.
 
 ## Dev vs. production compose
@@ -28,13 +30,13 @@
 | Backend/worker | `--reload`, bind-mounted `./backend:/app`; also mounts `./tests:/tests` alongside `frontend`'s `.:/repo`-equivalent so `docker compose exec` can run the top-level test suites | No reload, code baked into the image |
 | Restart policy | `restart: always` (postgres/redis/qdrant only; backend/frontend/worker have none) | `unless-stopped` on every long-running service |
 | Ports exposed | 5433 (postgres), 6380 (redis), 6333 (qdrant), 8000 (backend), 5173 (frontend) all published to host — non-default DB/cache host ports deliberately chosen to dodge the common local 5432/6379 collision; containers still reach each other at `postgres:5432`/`redis:6379`/`qdrant:6333` over the Docker network regardless | Only 8000 (backend) and 80 (frontend) published; `qdrant` uses a named volume, no host port |
-| `backend`/`taskiq_worker` startup gate | `postgres`/`redis` healthy, `qdrant` started | `postgres`/`redis` healthy, `qdrant` started, **and** `alembic: service_completed_successfully` |
+| `backend`/`taskiq_worker` startup gate | `postgres`/`redis` healthy, `qdrant` started, `alembic: service_completed_successfully` | Same |
 
 Both compose files assume a reverse proxy / TLS terminator sits in front of the stack in a real deployment — neither attempts to provision TLS itself. See [Deployment Guide](../deployment/guide.md).
 
 ## Test suite mounts
 
-`backend` mounts the whole repo root additionally (`.:/repo`), and `frontend` mounts `./tests:/tests` — both let `docker compose exec` run the top-level `tests/backend/` and `tests/frontend/` suites from inside the Docker network (reaching Postgres/Redis/Qdrant via their container hostnames) without needing a host-side Python/Node environment. See [Testing Overview](../testing/overview.md#running) for the exact commands.
+`backend` mounts the whole repo root additionally (`.:/repo`), and `frontend` mounts `./tests:/tests` — both let `docker compose exec` run the top-level `tests/backend/` and `tests/frontend/` suites from inside the Docker network (reaching Postgres/Redis/Qdrant via their container hostnames) without needing a host-side Python/Node environment. See [Testing Overview](../testing/overview.md) ("Running" under each suite) for the exact commands.
 
 ## Healthchecks
 
@@ -48,6 +50,7 @@ Both compose files assume a reverse proxy / TLS terminator sits in front of the 
 | `frontend` (dev) | none | Acceptable for local dev — Vite's own dev server failure is immediately visible in the terminal |
 | `taskiq_worker` | greps `/proc/*/cmdline` for `taskiq` | Overrides the inherited HTTP healthcheck from `backend.Dockerfile`, since the worker serves no HTTP and would otherwise always report unhealthy |
 | `alembic` | none | One-shot; `service_completed_successfully` is the signal other services wait on, not a healthcheck |
+| `seed_bugsink_project` | none | One-shot, same reasoning as `alembic` — waits on `bugsink: service_healthy` rather than exposing its own check |
 
 ## Validation results
 
@@ -59,8 +62,8 @@ Ran `docker compose up --build` (dev compose) from the repo root after vendoring
 - The full route inventory (`GET /openapi.json`) confirmed all four ManifestCV route groups mounted alongside every inherited mystic-auth route.
 - `curl http://localhost:6333/collections` confirmed the `career_knowledge_chunks` Qdrant collection was created automatically by the backend's startup lifespan hook (`ensure_collection()`).
 - Frontend responded `200` on `http://localhost:5173/` with `<title>ManifestCV</title>`, confirming `VITE_APP_NAME` reached the running container via Vite's `%VITE_APP_NAME%` substitution.
-- `docker compose exec -w /repo backend pytest tests/backend` — all 599 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/backend/manifestcv/`).
-- `docker compose exec frontend npm test` — all 246 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/frontend/manifestcv/`).
+- `docker compose exec -w /repo backend pytest tests/backend` — all 651 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/backend/manifestcv/`); re-confirmed after a later SDK-boundary review (see [Auth & Authorization](../auth/overview.md)) that touched `sdk.py` and two ManifestCV route modules.
+- `docker compose exec frontend npm test` — all 278 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/frontend/manifestcv/`).
 
 `docker-compose.yml` doesn't hardcode `container_name`s or the default `5432`/`6379` host ports for `postgres`/`redis` (`5433`/`6380` instead) — those are the two most common local collision points, and the stack should come up cleanly next to other local projects. Containers still reach each other at `postgres:5432`/`redis:6379`/`qdrant:6333` over the Docker network regardless of host port mappings.
 

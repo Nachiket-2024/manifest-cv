@@ -9,8 +9,8 @@ import api from '@/api/axiosInstance';
 import { useAuthStore } from '@/store/authStore';
 import { useLoginMutation } from '@/auth/login/useLoginMutation';
 import { useAuthSession } from '@/auth/current_user/useCurrentUserQuery';
-import { Authorized } from '@/components/Authorized';
-import { IfCan } from '@/components/IfCan';
+import { Authorized } from '@/authorization/Authorized';
+import { IfCan } from '@/authorization/IfCan';
 
 const mock = new MockAdapter(api);
 const PASSWORD = 'StrongPass123!';

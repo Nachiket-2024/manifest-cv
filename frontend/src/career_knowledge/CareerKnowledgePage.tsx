@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { Button, Heading, Stack, Text, Textarea } from "@chakra-ui/react";
 
-import PageContainer from "../components/ui/PageContainer";
-import Card from "../components/ui/Card";
-import LoadingState from "../components/ui/LoadingState";
-import FormAlert from "../components/ui/FormAlert";
-import ConfirmDialog from "../components/ui/ConfirmDialog";
-import { toaster } from "../components/ui/toasterInstance";
-import { useUnsavedChangesWarning } from "../hooks/useUnsavedChangesWarning";
+import PageContainer from "../ui/PageContainer";
+import Card from "../ui/Card";
+import LoadingState from "../ui/LoadingState";
+import FormAlert from "../ui/FormAlert";
+import ConfirmDialog from "../ui/ConfirmDialog";
+import { toaster } from "../ui/toasterInstance";
+import { useUnsavedChangesWarning } from "../profile/useUnsavedChangesWarning";
 import { useCareerKnowledgeBaseQuery } from "./careerKnowledgeQueries";
 import {
     useCreateCareerKnowledgeBaseMutation,

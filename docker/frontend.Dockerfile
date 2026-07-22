@@ -1,7 +1,7 @@
 # Runs the Vite dev server with HMR — used by docker-compose.yml for local
 # development. This is the default build target so existing `docker compose
 # build`/`up` (no --target flag) keeps working unchanged.
-FROM node:20-bullseye AS dev
+FROM node:20.20.2-bullseye AS dev
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ CMD ["npm", "run", "dev", "--", "--host"]
 # Produces the static production bundle (frontend/dist). Only reached when
 # building with --target production (or production's stage below, which
 # depends on it) — docker-compose.yml's dev service never builds this far.
-FROM node:20-bullseye AS builder
+FROM node:20.20.2-bullseye AS builder
 
 WORKDIR /app
 
@@ -31,19 +31,25 @@ COPY frontend/package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY frontend/ .
 
-# Vite bakes VITE_* env vars into the bundle at build time, not read at
-# container runtime — and frontend/.env is deliberately excluded from the
-# Docker build context (.dockerignore), so npm run build would otherwise
-# see neither VITE_API_BASE_URL nor VITE_APP_NAME and ship both as
-# `undefined` (every API call pointed at the wrong origin, blank branding).
-# docker-compose.prod.yml passes these as build args, sourced from the
-# root .env (see .env.example) — the same two values frontend/.env.example
-# documents, just also needed one level up for Compose's own ${...}
-# substitution in build.args to reach them.
+# VITE_* vars are inlined into the static bundle at build time (Vite's
+# import.meta.env / %VITE_APP_NAME% index.html substitution both resolve
+# here, never at container runtime) — unlike the dev target, this stage has
+# no bind-mounted frontend/.env to read them from, so they must arrive as
+# build args (wired from docker-compose.prod.yml, sourced from the repo
+# root .env — see .env.example). Declaring them ARG then re-exporting as
+# ENV is what makes `npm run build`'s child `vite build` process actually
+# see them, since ARG alone isn't inherited by RUN's subprocesses.
+# None of these are secrets: all four end up readable in the shipped
+# JS bundle regardless of how they reach the build, so having them pass
+# through `docker history` as build args is not a meaningful exposure.
 ARG VITE_API_BASE_URL
 ARG VITE_APP_NAME
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-ENV VITE_APP_NAME=${VITE_APP_NAME}
+ARG VITE_SENTRY_DSN
+ARG VITE_SENTRY_ENVIRONMENT
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+    VITE_APP_NAME=${VITE_APP_NAME} \
+    VITE_SENTRY_DSN=${VITE_SENTRY_DSN} \
+    VITE_SENTRY_ENVIRONMENT=${VITE_SENTRY_ENVIRONMENT}
 
 RUN npm run build
 

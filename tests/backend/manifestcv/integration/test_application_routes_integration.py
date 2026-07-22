@@ -175,3 +175,40 @@ async def test_applications_are_isolated_per_user(client, created_emails):
     other_list_resp = await client.get("/applications/")
     assert other_list_resp.status_code == 200
     assert other_list_resp.json() == []
+
+
+@pytest.mark.asyncio
+async def test_list_applications_is_paginated_newest_first(client, created_emails):
+    email = _unique_email()
+    user_id = await _create_verified_user(client, created_emails, email)
+
+    application_ids = []
+    for i, company in enumerate(["Company A", "Company B", "Company C"]):
+        draft_id = await _seed_finalized_resume(user_id)
+        create_resp = await client.post(
+            "/applications/",
+            json={
+                "resume_draft_id": draft_id,
+                "company_name": company,
+                "application_date": f"2026-07-{19 + i}",
+                "status": "applied",
+            },
+        )
+        assert create_resp.status_code == 201
+        application_ids.append(create_resp.json()["id"])
+
+    # Default order is newest first — application_ids were created oldest to newest.
+    default_resp = await client.get("/applications/")
+    assert [a["id"] for a in default_resp.json()] == list(reversed(application_ids))
+
+    page_1 = await client.get("/applications/", params={"limit": 2, "offset": 0})
+    assert [a["id"] for a in page_1.json()] == list(reversed(application_ids))[:2]
+
+    page_2 = await client.get("/applications/", params={"limit": 2, "offset": 2})
+    assert [a["id"] for a in page_2.json()] == list(reversed(application_ids))[2:]
+
+    out_of_range = await client.get("/applications/", params={"limit": 2, "offset": 10})
+    assert out_of_range.json() == []
+
+    invalid_limit = await client.get("/applications/", params={"limit": 0})
+    assert invalid_limit.status_code == 422

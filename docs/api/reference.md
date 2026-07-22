@@ -6,7 +6,7 @@ Every request/response body is a Pydantic schema (`*_schema.py` beside each feat
 
 ## Conventions
 
-- **Auth requirement** `session` means "a valid `access_token` cookie, no specific permission" (`Depends(get_current_user)`, reached through `mystic_auth_adapter` — see [Auth & Authorization](../auth/overview.md)). None of ManifestCV's own routes use PBAC (`permission:action`) — every one is `session` + server-side `user_id` scoping.
+- **Auth requirement** `session` means "a valid `access_token` cookie, no specific permission" (`Depends(get_current_user)`, imported from mystic-auth's `app.sdk` — see [Auth & Authorization](../auth/overview.md)). None of ManifestCV's own routes use PBAC (`permission:action`) — every one is `session` + server-side `user_id` scoping.
 - All cookies are httpOnly; the API is never called with a bearer token/header.
 - **Rate limited** (marked below) routes are gated by `auth.security.rate_limiter_service.rate_limited(...)`, keyed per-account — see each route's own feature doc for why.
 
@@ -33,7 +33,7 @@ See [Resumes](../resumes/overview.md) for the full flow.
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | POST | `/resumes/` | session, **rate limited** | Retrieves matching knowledge base excerpts, generates via Gemini. `400` if the knowledge base has no matching content |
-| GET | `/resumes/` | session | Caller's own drafts |
+| GET | `/resumes/?limit=&offset=` | session | Caller's own drafts, newest first, paginated (`limit` 1–100, default 20; `offset` default 0) — see [Resumes: pagination](../resumes/overview.md#pagination) |
 | GET | `/resumes/{draft_id}` | session | `404` if not found or not owned by the caller |
 | PUT | `/resumes/{draft_id}` | session, **rate limited** | `refinement_prompt` re-matches + regenerates via AI; `content` alone is a direct edit. `400` if the draft is already approved |
 | POST | `/resumes/{draft_id}/approve` | session | Locks content. `400` if there's no content to approve |
@@ -58,7 +58,7 @@ See [Applications](../applications/overview.md) for the full flow.
 | Method | Path | Auth | Notes |
 |---|---|---|---|
 | POST | `/applications/` | session | Snapshots the finalized resume for `resume_draft_id`. `400` if that draft has no finalized document yet |
-| GET | `/applications/` | session | Summary schema — excludes the resume/PDF snapshot |
+| GET | `/applications/?limit=&offset=` | session | Summary schema (excludes the resume/PDF snapshot), newest first, paginated (`limit` 1–100, default 20; `offset` default 0) — see [Applications: pagination](../applications/overview.md#pagination) |
 | GET | `/applications/{application_id}` | session | Full schema — includes the Markdown snapshot |
 | GET | `/applications/{application_id}/pdf` | session | Raw PDF snapshot bytes as an attachment |
 | PATCH | `/applications/{application_id}` | session | Tracking fields only (company/date/time/status) — the resume snapshot is read-only |
@@ -66,4 +66,4 @@ See [Applications](../applications/overview.md) for the full flow.
 
 ## Error responses
 
-Every route shares one global exception handler (`main.py`'s `@app.exception_handler(Exception)`): any unhandled exception is logged with a stack trace and returned as a generic `500 {"detail": "Internal Server Error"}` — no internal exception detail ever reaches the client. Expected failures use FastAPI's normal `HTTPException` mechanism (`400`/`401`/`404`/`409`/`422`) with a specific `detail` message per case. ManifestCV's AI-backed routes additionally return `502 Bad Gateway` when Gemini or Qdrant fails (`AIIntegrationError`) — see [AI & Retrieval](../ai-and-retrieval/overview.md#failure-modes).
+Every route shares one global exception handler (`main.py`'s `@app.exception_handler(Exception)`): any unhandled exception is logged with a stack trace and returned as a generic `500 {"detail": "Internal Server Error"}` — no internal exception detail ever reaches the client. Expected failures use FastAPI's normal `HTTPException` mechanism (`400`/`401`/`404`/`409`/`422`) with a specific `detail` message per case. ManifestCV's AI-backed routes additionally return `502 Bad Gateway` when Gemini (`AIIntegrationError`) or Qdrant (`RetrievalError`) fails on a call the request can't proceed without (structuring/generation/refinement/search) — indexing/deletion failures after a successful save are handled differently (best-effort, never surfaced as an error) — see [AI & Retrieval](../ai-and-retrieval/overview.md#failure-modes).

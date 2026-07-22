@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button, Dialog, Field, Input, Portal, Stack, Textarea } from "@chakra-ui/react";
 
 import type { PolicyRead } from "../api/policies_api";
-import FormAlert from "../components/ui/FormAlert";
+import FormAlert from "../ui/FormAlert";
 
 export interface PolicyFormValues {
     name: string;

@@ -6,10 +6,10 @@ import PasswordResetConfirmForm from "./PasswordResetConfirmForm";
 
 // Shared surface styling (theme surface/border tokens) — replaces this
 // page's own hand-rolled bg="white"/boxShadow="lg" card.
-import Card from "../../components/ui/Card";
+import Card from "../../ui/Card";
 
 // Shared brand header + footer shell for every unauthenticated page.
-import AuthLayout from "../../components/layout/AuthLayout";
+import AuthLayout from "../../layout/AuthLayout";
 
 const PasswordResetConfirmPage: React.FC = () => {
     const [searchParams] = useSearchParams();

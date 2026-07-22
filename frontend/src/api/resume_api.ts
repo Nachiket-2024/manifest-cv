@@ -1,4 +1,4 @@
-import api from "./axiosInstance";
+import { api } from "../sdk";
 
 export interface ResumeDraftRead {
     id: number;
@@ -18,7 +18,8 @@ export interface ResumeDraftUpdatePayload {
     content?: string;
 }
 
-export const listResumeDraftsApi = () => api.get<ResumeDraftRead[]>("/resumes/");
+export const listResumeDraftsApi = (limit = 20, offset = 0) =>
+    api.get<ResumeDraftRead[]>("/resumes/", { params: { limit, offset } });
 
 export const getResumeDraftApi = (draftId: number) => api.get<ResumeDraftRead>(`/resumes/${draftId}`);
 

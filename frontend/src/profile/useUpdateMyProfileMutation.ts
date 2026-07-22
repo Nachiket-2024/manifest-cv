@@ -1,8 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 
-import { updateMyProfileApi, type UserUpdatePayload, type AdminUserRead } from "../api/users_api";
+import { updateMyProfileApi } from "../api/profile_api";
+import type { UserUpdatePayload, AdminUserRead } from "../api/users_api";
 import { extractApiErrorMessage } from "../api/apiError";
-import { queryClient } from "../store/queryClient";
+import { queryClient } from "../core/queryClient";
 import { CURRENT_USER_QUERY_KEY } from "../auth/current_user/useCurrentUserQuery";
 
 /**
