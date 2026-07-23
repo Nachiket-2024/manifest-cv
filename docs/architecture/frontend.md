@@ -2,11 +2,11 @@
 
 ## Purpose
 
-React 19 + TypeScript SPA (`frontend/src/`), built with Vite, styled with Chakra UI v3. Feature-organized to mirror the backend's domain split, with a PBAC-aware UI layer that mirrors the backend's permission vocabulary. As with the backend, the identity/authorization UI is vendored from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth); ManifestCV's own domains (`career_knowledge/`, `resumes/`, `applications/`) are added on top and never import from `auth/`, `authorization/`, or `store/authStore` directly — they import through `sdk.ts` instead, see [Auth & Authorization](../auth/overview.md).
+React 19 + TypeScript SPA (`frontend/src/`), built with Vite, styled with Chakra UI v3. Feature-organized to mirror the backend's domain split, with a PBAC-aware UI layer that mirrors the backend's permission vocabulary. As with the backend, the identity/authorization UI is vendored from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) into its own top-level folder, `frontend/src/mystic_auth/`; ManifestCV's own domains (`career_knowledge/`, `resumes/`, `applications/`, plus `api/` and `ui/` — see below) live directly under `frontend/src/` and never import from `mystic_auth/auth/`, `mystic_auth/authorization/`, or `mystic_auth/store/authStore` directly — they import through `mystic_auth/sdk.ts` instead, see [Auth & Authorization](../auth/overview.md).
 
 ## Module layout
 
-### Inherited from mystic-auth
+### `frontend/src/mystic_auth/` — inherited from mystic-auth
 
 | Module | Purpose |
 |---|---|
@@ -18,37 +18,39 @@ React 19 + TypeScript SPA (`frontend/src/`), built with Vite, styled with Chakra
 | `profile/` | Self-service profile view/update, plus `useUnsavedChangesWarning` (also used by ManifestCV's resume editor, see below) |
 | `users/` | Admin user management (list, mutate, assign policies) |
 | `store/` | Zustand: `authStore.ts` (session/profile/permissions), `themeStore.ts` (light/dark) — client state only, no Redux |
-| `core/` | `queryClient.ts` (the shared TanStack Query client, also used by ManifestCV's own query hooks) and `errorMonitoring.ts` (optional, disabled unless `VITE_SENTRY_DSN` is set — see [Error Monitoring](../error-monitoring/overview.md)). `core/settings.ts` (`APP_NAME`, `VITE_API_BASE_URL`) is ManifestCV's own file, not vendored — see below. |
+| `core/` | `queryClient.ts` (the shared TanStack Query client, also used by ManifestCV's own query hooks) and `errorMonitoring.ts` (optional, disabled unless `VITE_SENTRY_DSN` is set — see [Error Monitoring](../error-monitoring/overview.md)). ManifestCV's own app-wide settings live in `frontend/src/core/settings.ts` instead (not vendored) — see below. |
 | `layout/` | App shell: `AppLayout`, `Navbar`, `Sidebar`, `ThemeToggle`, `navItems.ts` (customized — see below) |
-| `ui/` | Generic reusable UI kit, no feature ownership: `DataTable`, `ConfirmDialog`, `FormAlert`, `PageContainer`, `Card`, `LoadingState`, `Pager`, `toaster`/`toasterInstance`, `ErrorBoundary` — ManifestCV's own pages reuse these directly. `Pager` is a ManifestCV addition to this folder (offset-pagination Previous/Next control, used by `resumes/ResumeDraftsPage.tsx`/`applications/ApplicationsPage.tsx`) — no identity concept, so it's imported directly rather than through `sdk.ts` |
+| `api/` | `axiosInstance.ts`, `apiError.ts`, plus mystic-auth's own per-domain typed call functions (`auth_api`, `users_api`, `profile_api`, `policies_api`, `audit_api`) |
+| `ui/` | Generic reusable UI kit, no feature ownership: `DataTable`, `ConfirmDialog`, `FormAlert`, `PageContainer`, `Card`, `LoadingState`, `toaster`/`toasterInstance`, `ErrorBoundary` — ManifestCV's own pages reuse these directly |
 | `theme/` | `system.ts` — Chakra UI v3 design tokens |
 | `sdk.ts` | Public extension surface for feature code built on top of the template (`PERMISSIONS`, `useAuthorization`, `useCan`, `Authorized`, `IfCan`, `ProtectedRoute`, `authorizationService`, `api`, `extractApiErrorMessage`, `useAuthStore`, `queryClient`, `settings`/`APP_NAME`, `reportError`) — the intended single import point, rather than reaching into the internal modules above directly. ManifestCV's own domains import from here; see [Auth & Authorization](../auth/overview.md). |
 
 `layout/navItems.ts` (single source of truth for the sidebar's link list) carries one ManifestCV-specific addition on top of the vendored file: entries for `/career-knowledge`, `/resumes`, and `/applications`, alongside the inherited Dashboard/Users/Policies/Audit Log/Profile links.
 
-### ManifestCV's own domains
+### `frontend/src/` — ManifestCV's own domains
 
 | Module | Purpose |
 |---|---|
 | `career_knowledge/` | `CareerKnowledgePage.tsx` + query/mutation hooks — the caller's own knowledge base — see [Career Knowledge](../career-knowledge/overview.md) |
 | `resumes/` | `ResumeDraftsPage.tsx`, `ResumeEditorPage.tsx` + query/mutation hooks — resume drafts and template finalization — see [Resumes](../resumes/overview.md) and [Document Generation](../document-generation/overview.md) |
 | `applications/` | `ApplicationsPage.tsx` + query/mutation hooks — tracked applications — see [Applications](../applications/overview.md) |
-| `api/application_api.ts`, `api/career_knowledge_api.ts`, `api/document_api.ts`, `api/resume_api.ts` | Axios-based typed call functions for the four ManifestCV route groups, alongside mystic-auth's own `api/*.ts` files (`auth_api`, `users_api`, `profile_api`, `policies_api`, `audit_api`, `axiosInstance.ts`, `apiError.ts`) |
-| `core/settings.ts` | App-wide settings (`APP_NAME`, `VITE_API_BASE_URL`) — a ManifestCV-authored file (not vendored from mystic-auth), re-exported from `sdk.ts` the same way the vendored pieces are |
+| `api/application_api.ts`, `api/career_knowledge_api.ts`, `api/document_api.ts`, `api/resume_api.ts` | Axios-based typed call functions for the four ManifestCV route groups — a ManifestCV-owned `api/` folder, sibling to mystic-auth's own `mystic_auth/api/` |
+| `ui/Pager.tsx` | Offset-pagination Previous/Next control, used by `resumes/ResumeDraftsPage.tsx`/`applications/ApplicationsPage.tsx` — no identity concept, so it lives in ManifestCV's own `ui/` (not `mystic_auth/ui/`, since no mystic-auth page uses it) and is imported directly rather than through `sdk.ts` |
+| `core/settings.ts` | App-wide settings (`APP_NAME`, `VITE_API_BASE_URL`) — a ManifestCV-authored file (not vendored from mystic-auth), re-exported from `mystic_auth/sdk.ts` the same way the vendored pieces are |
 
-This layout deliberately mirrors the backend's own domain split (`backend/app/auth/`, `backend/app/authorization/`, `backend/app/core/`, etc.) rather than a layer-first (`components/`/`hooks`/`services`) MVC structure — a file's folder tells you which backend domain it serves, not what kind of file it is. `api/`, `store/`, `core/`, `layout/`, `ui/`, and `theme/` are the exceptions: infrastructure/cross-cutting concerns with no single feature owner, kept as their own top-level folders rather than scattered into every feature that touches them.
+This layout deliberately mirrors the backend's own domain split (`backend/mystic_auth/auth/`, `backend/mystic_auth/authorization/`, `backend/mystic_auth/core/`, etc.) rather than a layer-first (`components/`/`hooks`/`services`) MVC structure — a file's folder tells you which backend domain it serves, not what kind of file it is. `api/`, `store/`, `core/`, `layout/`, `ui/`, and `theme/` are the exceptions: infrastructure/cross-cutting concerns with no single feature owner, kept as their own top-level folders (split between `mystic_auth/` and ManifestCV's own root the same way the rest of the tree is) rather than scattered into every feature that touches them.
 
 ## State management
 
-- **Zustand** for client state — `store/authStore.ts` (`isAuthenticated`, `name`, `email`, `role`, `permissions`, `hasPassword`) and `store/themeStore.ts` (light/dark). No Redux.
-- **TanStack Query** for all server state/caching, via one shared `QueryClient` (`core/queryClient.ts`, re-exported from `sdk.ts`).
+- **Zustand** for client state — `mystic_auth/store/authStore.ts` (`isAuthenticated`, `name`, `email`, `role`, `permissions`, `hasPassword`) and `mystic_auth/store/themeStore.ts` (light/dark). No Redux.
+- **TanStack Query** for all server state/caching, via one shared `QueryClient` (`mystic_auth/core/queryClient.ts`, re-exported from `mystic_auth/sdk.ts`).
 - `authStore.isAuthenticated` starts as `null` ("not checked yet") — `App.tsx` blocks rendering the router behind a loading screen until `useAuthSession()` resolves it to `true`/`false`, avoiding a flash of unauthenticated content.
 
 ## API layer
 
-`api/axiosInstance.ts` — a single Axios instance, `withCredentials: true` (cookie-based session; the JWT itself is never stored in JS-accessible state), base URL from `VITE_API_BASE_URL`. Per-domain typed call functions live in `api/*.ts` (`auth_api`, `users_api`, `profile_api`, `policies_api`, `audit_api`, plus ManifestCV's own `application_api`, `career_knowledge_api`, `document_api`, `resume_api`); `api/apiError.ts` shapes error responses uniformly.
+`mystic_auth/api/axiosInstance.ts` — a single Axios instance, `withCredentials: true` (cookie-based session; the JWT itself is never stored in JS-accessible state), base URL from `VITE_API_BASE_URL`. mystic-auth's own per-domain typed call functions live in `mystic_auth/api/*.ts` (`auth_api`, `users_api`, `profile_api`, `policies_api`, `audit_api`); ManifestCV's own live in `api/*.ts` at the project root (`application_api`, `career_knowledge_api`, `document_api`, `resume_api`), importing the shared `api` instance from `../mystic_auth/sdk` rather than `../mystic_auth/api/axiosInstance` directly. `mystic_auth/api/apiError.ts` shapes error responses uniformly.
 
-`auth/setupAuthInterceptor.ts` implements silent-refresh-on-401: a single in-flight refresh call is shared across concurrently-failing requests (no thundering herd of refresh calls), and login/signup/refresh/logout/reset/verify/oauth2 endpoints are excluded from the retry-after-refresh logic to avoid infinite loops. On an unrecoverable 401, it marks `authStore` unauthenticated and clears the cached `GET /auth/me` query. It does not handle `403` — permission failures are left entirely to route/component-level guards (`ProtectedRoute`, `Authorized`, `IfCan`).
+`mystic_auth/auth/setupAuthInterceptor.ts` implements silent-refresh-on-401: a single in-flight refresh call is shared across concurrently-failing requests (no thundering herd of refresh calls), and login/signup/refresh/logout/reset/verify/oauth2 endpoints are excluded from the retry-after-refresh logic to avoid infinite loops. On an unrecoverable 401, it marks `authStore` unauthenticated and clears the cached `GET /auth/me` query. It does not handle `403` — permission failures are left entirely to route/component-level guards (`ProtectedRoute`, `Authorized`, `IfCan`).
 
 ## Routing
 
@@ -72,16 +74,16 @@ All protected routes are wrapped in `ProtectedRoute` (redirects unauthenticated 
 
 ## Authorization on the frontend (PBAC-aware UI)
 
-- `authorization/permissions.ts` mirrors the backend's `Permission` enum as string constants, so route/component gates reference `PERMISSIONS.USERS_LIST_ALL` rather than a hand-typed string.
-- `authorization/useAuthorization.ts` reads `authStore.permissions` and exposes `can(action)`, failing closed (`false`) when unauthenticated or still loading. This is a **client-side UX convenience only** — the backend independently enforces every action via `require_authorization`; a hidden button is not a security boundary.
-- `authorization/ProtectedRoute.tsx`, `Authorized.tsx`, `IfCan.tsx` — route-level and in-page conditional gates built on `useAuthorization`.
-- `authorization/authorizationService.ts` layers real per-resource/conditional checks (`POST /authorization/batch-check`) on top of the cached flat permission list for cases that need it.
+- `mystic_auth/authorization/permissions.ts` mirrors the backend's `Permission` enum as string constants, so route/component gates reference `PERMISSIONS.USERS_LIST_ALL` rather than a hand-typed string.
+- `mystic_auth/authorization/useAuthorization.ts` reads `authStore.permissions` and exposes `can(action)`, failing closed (`false`) when unauthenticated or still loading. This is a **client-side UX convenience only** — the backend independently enforces every action via `require_authorization`; a hidden button is not a security boundary.
+- `mystic_auth/authorization/ProtectedRoute.tsx`, `Authorized.tsx`, `IfCan.tsx` — route-level and in-page conditional gates built on `useAuthorization`.
+- `mystic_auth/authorization/authorizationService.ts` layers real per-resource/conditional checks (`POST /authorization/batch-check`) on top of the cached flat permission list for cases that need it.
 - `role` is explicitly treated as metadata only on the frontend too — never used in a gating decision, mirroring the backend's own design.
 - ManifestCV's own routes (`/career-knowledge`, `/resumes`, `/applications`) deliberately carry no `permission` prop — they're self-service, ownership-scoped resources, not PBAC-gated ones. See [Auth & Authorization](../auth/overview.md).
 
 ## Theming
 
-Chakra UI v3 (`@chakra-ui/react` + Emotion). `theme/system.ts` defines the design tokens; `store/themeStore.ts` + `layout/ThemeToggle.tsx` handle light/dark switching, independent of the OS-level `prefers-color-scheme`.
+Chakra UI v3 (`@chakra-ui/react` + Emotion). `mystic_auth/theme/system.ts` defines the design tokens; `mystic_auth/store/themeStore.ts` + `mystic_auth/layout/ThemeToggle.tsx` handle light/dark switching, independent of the OS-level `prefers-color-scheme`.
 
 ## Build & bundling
 
@@ -93,13 +95,13 @@ Chakra UI v3 (`@chakra-ui/react` + Emotion). `theme/system.ts` defines the desig
 
 ## Configuration requirements
 
-`frontend/.env.example` — `VITE_API_BASE_URL` (the backend's base URL), `VITE_APP_NAME` (the product name shown in the UI — navbar, auth pages, document title via `index.html`'s `%VITE_APP_NAME%` substitution), and the optional `VITE_SENTRY_DSN`/`VITE_SENTRY_ENVIRONMENT` pair (see [Error Monitoring](../error-monitoring/overview.md)). All are Vite build-time env vars, read through `core/settings.ts`/`core/errorMonitoring.ts`. Support email shown in emails is backend-driven (`SUPPORT_EMAIL`) and only ever appears in server-rendered email templates, not in the frontend build.
+Root `.env.example` — `VITE_API_BASE_URL` (the backend's base URL), `VITE_APP_NAME` (the product name shown in the UI — navbar, auth pages, document title via `index.html`'s `%VITE_APP_NAME%` substitution), and the optional `VITE_SENTRY_DSN`/`VITE_SENTRY_ENVIRONMENT` pair (see [Error Monitoring](../error-monitoring/overview.md)). All are Vite build-time env vars, read through `core/settings.ts`/`mystic_auth/core/errorMonitoring.ts`. `vite.config.ts`'s `envDir: '..'` is what points the dev server at the repo root instead of `frontend/` for these — one `.env` for both the dev server and the production build (whose build args come from the same file via Compose interpolation, not a separate `frontend/.env`). Support email shown in emails is backend-driven (`SUPPORT_EMAIL`) and only ever appears in server-rendered email templates, not in the frontend build.
 
 ## Edge cases / error handling
 
 - A 401 mid-session (expired access token) triggers one silent refresh-and-retry; a second failure marks the session invalid and, per route, redirects to `/login`.
 - A 403 (authorization denial) is a normal API response the calling component/page is responsible for handling — typically a toast or an inline `FormAlert`, not a global redirect (except at the route level via `ProtectedRoute`).
-- An uncaught render-time error anywhere in the tree is caught by `ui/ErrorBoundary.tsx`, mounted once at the app root in `main.tsx` (outside the router, so it also catches an error thrown before routing itself renders). Shows a "Something went wrong" fallback with a full-page reload action instead of React unmounting the entire tree to a blank white screen. Always logs to the console; also reports to `core/errorMonitoring.ts` (a no-op unless `VITE_SENTRY_DSN` is set — see [Error Monitoring](../error-monitoring/overview.md)).
+- An uncaught render-time error anywhere in the tree is caught by `mystic_auth/ui/ErrorBoundary.tsx`, mounted once at the app root in `main.tsx` (outside the router, so it also catches an error thrown before routing itself renders). Shows a "Something went wrong" fallback with a full-page reload action instead of React unmounting the entire tree to a blank white screen. Always logs to the console; also reports to `mystic_auth/core/errorMonitoring.ts` (a no-op unless `VITE_SENTRY_DSN` is set — see [Error Monitoring](../error-monitoring/overview.md)).
 
 ## Testing coverage
 

@@ -1,18 +1,18 @@
 # Documentation
 
-Documentation for ManifestCV, organized by feature/domain to mirror the actual code layout (`backend/app/<domain>/`, `frontend/src/<domain>/`). If something here disagrees with the code, the code wins — file an issue or update the doc.
+Documentation for ManifestCV, organized by feature/domain to mirror the actual code layout (`backend/app/<domain>/` + `backend/mystic_auth/<domain>/`, `frontend/src/<domain>/` + `frontend/src/mystic_auth/<domain>/`). If something here disagrees with the code, the code wins — file an issue or update the doc.
 
 ManifestCV is built on [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) for identity/authorization — this doc set covers ManifestCV's own product features and how they're wired to that foundation. See [Auth & Authorization](auth/overview.md) for the boundary between the two, and the [Foundation (mystic-auth)](#foundation-mystic-auth) section below for the inherited template's own deep-dive docs (login, signup, OAuth2, PBAC policies, audit logging, JWT/cookie mechanics) — copied in locally, verified byte-identical to upstream, rather than only linked out to GitHub.
 
 ## Architecture
 
 - [System Overview](architecture/system-overview.md) — whole-stack component diagram, why the stack is split this way, request lifecycle
-- [Backend Architecture](architecture/backend.md) — `backend/app/` module layout (inherited + ManifestCV's own), request pipeline, middleware
-- [Frontend Architecture](architecture/frontend.md) — `frontend/src/` module layout (inherited + ManifestCV's own), state management, routing, theming
+- [Backend Architecture](architecture/backend.md) — `backend/app/` (ManifestCV) + `backend/mystic_auth/` (inherited) module layout, request pipeline, middleware
+- [Frontend Architecture](architecture/frontend.md) — `frontend/src/` (ManifestCV) + `frontend/src/mystic_auth/` (inherited) module layout, state management, routing, theming
 
 ## Auth & Authorization
 
-- [Auth & Authorization](auth/overview.md) — the `app.sdk` / `manifestcv_sdk.py` boundary, why it's loosely coupled, and why ManifestCV's own routes skip PBAC in favor of `user_id` scoping
+- [Auth & Authorization](auth/overview.md) — the `mystic_auth.sdk` / `manifestcv_sdk.py` boundary, why it's loosely coupled, and why ManifestCV's own routes skip PBAC in favor of `user_id` scoping
 
 ## Foundation (mystic-auth)
 
@@ -81,4 +81,4 @@ Anyone adding a new ManifestCV feature, integrating a new frontend page against 
 
 ## Source of truth
 
-This documentation describes the code as it exists in `backend/app/` and `frontend/src/` at the time of writing. If something here disagrees with the code, the code wins.
+This documentation describes the code as it exists in `backend/app/`/`backend/mystic_auth/` and `frontend/src/`/`frontend/src/mystic_auth/` at the time of writing. If something here disagrees with the code, the code wins.

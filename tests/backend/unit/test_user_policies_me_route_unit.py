@@ -8,9 +8,9 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.app.api.pbac_routes.policy_assignment_routes import list_my_policies
+from mystic_auth.api.pbac_routes.policy_assignment_routes import list_my_policies
 
-MODULE = "backend.app.api.pbac_routes.policy_assignment_routes"
+MODULE = "mystic_auth.api.pbac_routes.policy_assignment_routes"
 
 
 def _make_policy(name="self_service"):

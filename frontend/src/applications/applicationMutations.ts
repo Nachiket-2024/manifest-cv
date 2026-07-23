@@ -8,7 +8,7 @@ import {
     type ApplicationUpdatePayload,
     type ApplicationDetailRead,
 } from "../api/application_api";
-import { extractApiErrorMessage, queryClient } from "../sdk";
+import { extractApiErrorMessage, queryClient } from "../mystic_auth/sdk";
 import { APPLICATIONS_QUERY_KEY, applicationQueryKey } from "./applicationQueries";
 
 export function useCreateApplicationMutation() {

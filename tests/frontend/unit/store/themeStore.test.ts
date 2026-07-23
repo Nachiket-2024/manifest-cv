@@ -14,7 +14,7 @@ describe('themeStore', () => {
   });
 
   it('defaults to light when there is no stored preference and matchMedia is unavailable (jsdom)', async () => {
-    const { useThemeStore } = await import('@/store/themeStore');
+    const { useThemeStore } = await import('@/mystic_auth/store/themeStore');
 
     expect(useThemeStore.getState().colorMode).toBe('light');
     expect(document.documentElement.classList.contains('dark')).toBe(false);
@@ -23,7 +23,7 @@ describe('themeStore', () => {
   it('respects a stored "dark" preference and applies the dark class on load', async () => {
     window.localStorage.setItem('color-mode', 'dark');
 
-    const { useThemeStore } = await import('@/store/themeStore');
+    const { useThemeStore } = await import('@/mystic_auth/store/themeStore');
 
     expect(useThemeStore.getState().colorMode).toBe('dark');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
@@ -33,13 +33,13 @@ describe('themeStore', () => {
   it('falls back to the OS preference via matchMedia when nothing is stored', async () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia;
 
-    const { useThemeStore } = await import('@/store/themeStore');
+    const { useThemeStore } = await import('@/mystic_auth/store/themeStore');
 
     expect(useThemeStore.getState().colorMode).toBe('dark');
   });
 
   it('toggleColorMode flips the mode, persists it, and updates the DOM class', async () => {
-    const { useThemeStore } = await import('@/store/themeStore');
+    const { useThemeStore } = await import('@/mystic_auth/store/themeStore');
     expect(useThemeStore.getState().colorMode).toBe('light');
 
     useThemeStore.getState().toggleColorMode();
@@ -56,7 +56,7 @@ describe('themeStore', () => {
   });
 
   it('setColorMode sets an explicit mode and persists it', async () => {
-    const { useThemeStore } = await import('@/store/themeStore');
+    const { useThemeStore } = await import('@/mystic_auth/store/themeStore');
 
     useThemeStore.getState().setColorMode('dark');
 

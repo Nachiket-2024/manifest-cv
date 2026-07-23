@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
-import api from '@/api/axiosInstance';
+import api from '@/mystic_auth/api/axiosInstance';
 import {
   getAuthorizationAuditLogApi,
   getMyAuthorizationAuditLogApi,
   getUserAuthorizationAuditLogApi,
   getSecurityAuditLogApi,
   getMySecurityAuditLogApi,
-} from '@/api/audit_api';
+} from '@/mystic_auth/api/audit_api';
 
 const mock = new MockAdapter(api);
 

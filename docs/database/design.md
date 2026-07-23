@@ -1,6 +1,6 @@
 # Database Design
 
-PostgreSQL, accessed via async SQLAlchemy (`backend/app/database/`). Schema managed entirely through Alembic migrations (`backend/alembic/versions/`) — no `create_all()` in application startup.
+PostgreSQL, accessed via async SQLAlchemy (`backend/mystic_auth/database/`). Schema managed entirely through Alembic migrations (`backend/alembic/versions/`) — no `create_all()` in application startup.
 
 The `users`/`policies`/`user_policies`/`policy_history`/`authorization_audit_log`/`security_audit_log` tables below are inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) — see its own docs for the full authorization/audit design rationale. ManifestCV's own tables (`career_knowledge_bases`, `resume_drafts`, `resume_documents`, `application_records`) are documented in [ManifestCV's own tables](#manifestcvs-own-tables) below, and chain directly after mystic-auth's migration history rather than branching from it — see [Migrations](#migrations).
 
@@ -8,7 +8,7 @@ The `users`/`policies`/`user_policies`/`policy_history`/`authorization_audit_log
 
 ### `users`
 
-The single, unified identity table — password and OAuth2 (Google) accounts share it; there is no separate "oauth_accounts" table. See `backend/app/user_table/user_model.py`.
+The single, unified identity table — password and OAuth2 (Google) accounts share it; there is no separate "oauth_accounts" table. See `backend/mystic_auth/user_table/user_model.py`.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -40,7 +40,7 @@ One row per `authorize()`/`authorize_with_decision()`/`authorize_batch()` call �
 
 ### `security_audit_log`
 
-Separate audit vocabulary from the table above — login/logout/signup/OAuth2/password-reset/lockout/refresh-token-reuse events, plus the account lifecycle events (`account_deleted`/`account_purged`/`account_reactivated` — see below). Also `user_email` as a nullable **snapshot string**, not a foreign key, for the identical reason: this table must survive a purge. See `backend/app/audit_log/audit_log_model.py`.
+Separate audit vocabulary from the table above — login/logout/signup/OAuth2/password-reset/lockout/refresh-token-reuse events, plus the account lifecycle events (`account_deleted`/`account_purged`/`account_reactivated` — see below). Also `user_email` as a nullable **snapshot string**, not a foreign key, for the identical reason: this table must survive a purge. See `backend/mystic_auth/audit_log/audit_log_model.py`.
 
 ## Why two audit tables, not one
 

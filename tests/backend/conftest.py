@@ -22,7 +22,7 @@ from pathlib import Path
 # ---------------------------- Environment Setup ----------------------------
 # Must run before any `backend.app...` import: app.core.settings builds its
 # Settings() singleton at import time from the process environment, and
-# backend.app.database.connection / backend.app.redis.client build their
+# mystic_auth.database.connection / mystic_auth.redis.client build their
 # engine/client singletons eagerly at import time too. Both are read once
 # and cached for the life of the process.
 #
@@ -67,9 +67,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine  # noqa: E4
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 from sqlalchemy.pool import NullPool  # noqa: E402
 
-from backend.app.database.connection import database  # noqa: E402
+from mystic_auth.database.connection import database  # noqa: E402
 from backend.app.main import app  # noqa: E402
-from backend.app.redis.client import redis_client  # noqa: E402
+from mystic_auth.redis.client import redis_client  # noqa: E402
 
 # pytest-asyncio hands each test function its own event loop, but
 # `database.engine`'s connection pool is a module-level singleton shared

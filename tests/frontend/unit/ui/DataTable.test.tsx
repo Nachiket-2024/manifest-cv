@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
-import DataTable, { type DataTableColumn } from '@/ui/DataTable';
+import DataTable, { type DataTableColumn } from '@/mystic_auth/ui/DataTable';
 
 interface Row {
   id: number;

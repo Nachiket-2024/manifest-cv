@@ -18,6 +18,21 @@
 # tooling"): this file assumes a reverse proxy / TLS terminator sits in
 # front of it in a real deployment (e.g. nginx/Caddy/Traefik on the host,
 # or a cloud load balancer) — it does not attempt to provision one.
+
+# Every service uses Docker's default json-file log driver, which has no
+# built-in size cap — without one, a busy production stack (this dev
+# compose file's own backend even enables --access-log) fills the host's
+# disk over weeks/months, and a full disk stops every container from
+# writing, not just the noisy one. 10MB x 3 files per service is a small,
+# conservative cap; raise it if you need longer local log retention (this
+# has no bearing on Bugsink/Sentry-based error monitoring, which is
+# separate — see docs/error-monitoring/overview.md).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
 
   postgres:
@@ -40,6 +55,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -49,15 +65,20 @@ services:
   redis:
     image: redis:7
     restart: unless-stopped
-    # See docker-compose.yml for the REDIS_PASSWORD rationale — in a real
-    # production deployment this should always be set, since the whole
-    # point of --requirepass here is defense-in-depth for shared networks.
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}"]
+    # See docker-compose.yml for the REDIS_PASSWORD rationale. Unlike the
+    # dev compose file, this one requires it outright (":?" fails the whole
+    # `up` with a clear error if unset/empty) rather than silently falling
+    # back to an unauthenticated Redis — Redis backs rate limiting, login
+    # lockout, and the taskiq broker, so an operator who forgets to set it
+    # before a real deployment should find out immediately, not run
+    # unauthenticated indefinitely with no signal anything is wrong.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set for production}"]
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:-}\" --no-auth-warning ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:?REDIS_PASSWORD must be set for production}\" --no-auth-warning ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -73,6 +94,17 @@ services:
     restart: unless-stopped
     volumes:
       - qdrant_storage:/qdrant/storage
+    logging: *default-logging
+    # Its in-memory vector index can grow unbounded with knowledge-base
+    # ingestion — without a cap, an unexpectedly large index can OOM the
+    # host and take down every co-located container with it, not just this
+    # one. Same conservative-starting-point caveat as every other limit in
+    # this file: tune against real usage, not load-tested.
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
 
   backend:
     build:
@@ -101,6 +133,7 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -113,14 +146,12 @@ services:
       dockerfile: docker/frontend.Dockerfile
       target: production                            # nginx + static build, not the Vite dev server
       # Vite bakes these in at build time — see frontend.Dockerfile's own
-      # comment on why they must be passed here rather than left to
-      # frontend/.env (excluded from the build context by design). Sourced
-      # from the shell environment, NOT the root .env — Settings (backend/
-      # app/core/settings.py) is strict about unrecognized keys in that
-      # file, so these can't be added there (see .env.example's note).
-      # Export them before building, e.g.:
-      #   export VITE_API_BASE_URL=https://api.example.com VITE_APP_NAME=ManifestCV
-      #   docker compose -f docker-compose.prod.yml up -d --build
+      # comment on why they must be passed here rather than read at runtime.
+      # Compose interpolates ${VAR} below from root .env (the same file
+      # backend/mystic_auth/core/settings.py reads via env_file — it ignores
+      # unrecognized keys, so VITE_-prefixed ones being in there too is
+      # fine), or from the shell environment if exported there instead
+      # (overrides .env — useful for a CI pipeline with no checked-out .env).
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
         VITE_APP_NAME: ${VITE_APP_NAME}
@@ -138,6 +169,7 @@ services:
       timeout: 3s
       retries: 5
       start_period: 5s
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -151,7 +183,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env
-    command: sh -c "taskiq worker app.taskiq_tasks.email_tasks:broker"
+    command: sh -c "taskiq worker mystic_auth.taskiq_tasks.email_tasks:broker"
     environment:
       - REDIS_URL=${REDIS_URL}
     depends_on:
@@ -173,6 +205,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -193,6 +226,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    logging: *default-logging
 
   # Optional, self-hosted error monitoring — see docker-compose.yml's
   # identical service for the full explanation. Same "off unless you
@@ -223,6 +257,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+    logging: *default-logging
     deploy:
       resources:
         limits:
@@ -247,6 +282,7 @@ services:
     depends_on:
       bugsink:
         condition: service_healthy
+    logging: *default-logging
 
 volumes:
   postgres_data:

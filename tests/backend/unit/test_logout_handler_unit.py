@@ -2,9 +2,9 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.logout.logout_handler import logout_handler
+from mystic_auth.auth.logout.logout_handler import logout_handler
 
-MODULE = "backend.app.auth.logout.logout_handler"
+MODULE = "mystic_auth.auth.logout.logout_handler"
 
 
 def _set_cookie_headers(response) -> list[str]:

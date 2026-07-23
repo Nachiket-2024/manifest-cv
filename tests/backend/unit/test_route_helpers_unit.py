@@ -7,7 +7,7 @@
 import pytest
 from fastapi import HTTPException
 
-from backend.app.api.route_helpers import get_or_404
+from mystic_auth.api.route_helpers import get_or_404
 
 
 async def _fetch(value):

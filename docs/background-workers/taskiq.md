@@ -6,7 +6,7 @@ Offloads slow, failure-prone I/O — sending email via SMTP — off the request/
 
 ## Architecture
 
-`backend/app/taskiq_tasks/email_tasks.py` defines a single [Taskiq](https://taskiq-python.github.io/) broker:
+`backend/mystic_auth/taskiq_tasks/email_tasks.py` defines a single [Taskiq](https://taskiq-python.github.io/) broker:
 
 ```python
 broker: AsyncBroker = RedisStreamBroker(url=settings.REDIS_URL).with_result_backend(
@@ -18,7 +18,7 @@ async def send_email_task(to_email: str, subject: str, body: str, is_html: bool 
     ...
 ```
 
-Redis is both the broker (a Redis Stream) and the result backend — no separate message-queue infrastructure. The `taskiq_worker` container consumes the same broker, running from the identical `docker/backend.Dockerfile` image as the `backend` service, just with a different `command:` (`taskiq worker app.taskiq_tasks.email_tasks:broker`, no `--reload` — the worker doesn't need file-watch) — see [Backend Architecture](../architecture/backend.md) for why one image serves three roles (`backend`, `taskiq_worker`, `alembic`).
+Redis is both the broker (a Redis Stream) and the result backend — no separate message-queue infrastructure. The `taskiq_worker` container consumes the same broker, running from the identical `docker/backend.Dockerfile` image as the `backend` service, just with a different `command:` (`taskiq worker mystic_auth.taskiq_tasks.email_tasks:broker`, no `--reload` — the worker doesn't need file-watch) — see [Backend Architecture](../architecture/backend.md) for why one image serves three roles (`backend`, `taskiq_worker`, `alembic`).
 
 ## Tasks
 

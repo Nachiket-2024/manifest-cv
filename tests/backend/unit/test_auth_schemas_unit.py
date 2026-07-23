@@ -10,12 +10,12 @@
 import pytest
 from pydantic import ValidationError
 
-from backend.app.auth.login.login_schema import LoginSchema
-from backend.app.auth.password_reset_confirm.password_reset_confirm_schema import PasswordResetConfirmSchema
-from backend.app.auth.password_reset_request.password_reset_request_schema import PasswordResetRequestSchema
-from backend.app.auth.signup.signup_schema import SignupSchema
-from backend.app.auth.verify_account.verify_account_schema import VerifyAccountSchema
-from backend.app.user_table.user_schema import UserCreate, UserUpdate
+from mystic_auth.auth.login.login_schema import LoginSchema
+from mystic_auth.auth.password_reset_confirm.password_reset_confirm_schema import PasswordResetConfirmSchema
+from mystic_auth.auth.password_reset_request.password_reset_request_schema import PasswordResetRequestSchema
+from mystic_auth.auth.signup.signup_schema import SignupSchema
+from mystic_auth.auth.verify_account.verify_account_schema import VerifyAccountSchema
+from mystic_auth.user_table.user_schema import UserCreate, UserUpdate
 
 
 def test_signup_rejects_name_over_max_length():

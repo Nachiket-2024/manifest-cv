@@ -15,7 +15,7 @@ from .conftest import (
     create_system_user,
     create_user_with_custom_policy,
 )
-from backend.app.authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
+from mystic_auth.authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
 
 
 @pytest.mark.asyncio

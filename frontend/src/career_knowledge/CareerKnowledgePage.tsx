@@ -1,13 +1,15 @@
 import React, { useState } from "react";
 import { Button, Heading, Stack, Text, Textarea } from "@chakra-ui/react";
 
-import PageContainer from "../ui/PageContainer";
-import Card from "../ui/Card";
-import LoadingState from "../ui/LoadingState";
-import FormAlert from "../ui/FormAlert";
-import ConfirmDialog from "../ui/ConfirmDialog";
-import { toaster } from "../ui/toasterInstance";
-import { useUnsavedChangesWarning } from "../profile/useUnsavedChangesWarning";
+import {
+    PageContainer,
+    Card,
+    LoadingState,
+    FormAlert,
+    ConfirmDialog,
+    toaster,
+    useUnsavedChangesWarning,
+} from "../mystic_auth/sdk";
 import { useCareerKnowledgeBaseQuery } from "./careerKnowledgeQueries";
 import {
     useCreateCareerKnowledgeBaseMutation,

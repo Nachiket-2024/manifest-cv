@@ -2,8 +2,8 @@
 import pytest
 from fastapi.responses import JSONResponse
 
-from backend.app.auth.token_logic.token_cookie_handler import token_cookie_handler
-from backend.app.auth.token_logic.token_schema import TokenPairResponseSchema
+from mystic_auth.auth.token_logic.token_cookie_handler import token_cookie_handler
+from mystic_auth.auth.token_logic.token_schema import TokenPairResponseSchema
 
 TOKENS = TokenPairResponseSchema(access_token="access-value", refresh_token="refresh-value")
 

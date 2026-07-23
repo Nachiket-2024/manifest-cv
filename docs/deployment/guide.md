@@ -18,15 +18,10 @@ docker compose up
 Production:
 
 ```bash
-# VITE_API_BASE_URL/VITE_APP_NAME are Vite build-time vars, baked into the
-# frontend bundle — they must be in the shell environment (not the root
-# .env; see .env.example's note) before building, or the production
-# frontend ships with both undefined.
-export VITE_API_BASE_URL=https://api.example.com
-export VITE_APP_NAME=ManifestCV
-
 docker compose -f docker-compose.prod.yml up -d --build
 ```
+
+`VITE_API_BASE_URL`/`VITE_APP_NAME`/`VITE_SENTRY_DSN`/`VITE_SENTRY_ENVIRONMENT` are Vite build-time vars, baked into the frontend bundle — set their real production values in root `.env` before building (Compose interpolates `${VAR}` for the frontend's `build.args` from the same `.env` it reads everything else from — see `.env.example`). Exporting them in the shell instead (`export VITE_API_BASE_URL=...`) works too and overrides `.env`, useful for a CI pipeline that shouldn't have a checked-out `.env` at all. Either way, a production build with these unset ships the frontend bundle with `undefined` baked in.
 
 `docker-compose.prod.yml` assumes a reverse proxy / TLS terminator (nginx, Caddy, Traefik, or a cloud load balancer) sits in front of it — it exposes plain HTTP on ports 80 (frontend) and 8000 (backend) and does not attempt to provision TLS itself. See [Docker Overview](../docker/overview.md).
 
@@ -36,16 +31,30 @@ Same variables as `.env.example`, with these called out specifically for product
 
 - `ENVIRONMENT=production` — disables `/docs`, `/redoc`, and `/openapi.json` on the backend (see `backend/app/main.py`).
 - `SECRET_KEY`, `GOOGLE_CLIENT_SECRET`, `GMAIL_APP_PASSWORD`, `POSTGRES_PASSWORD` — generate/rotate these for production; never reuse the values from local `.env` files or CI.
+- `REDIS_PASSWORD` — `docker-compose.prod.yml` refuses to start (`REDIS_PASSWORD must be set for production`) if this is unset or empty, unlike the dev compose file, where an empty value is a deliberate local-only convenience. Redis backs rate limiting, login lockout, and the taskiq broker, so running it unauthenticated in production is never acceptable even on an isolated network.
 - `FRONTEND_BASE_URL` / `BACKEND_BASE_URL` — must point at the real production hostnames; CORS (`main.py`) only allows the single origin configured here.
 - `TRUSTED_PROXY_IPS` — set this to your reverse proxy's own address(es) if you deploy one in front of the backend, so per-IP rate limiting/lockout resolve the real client IP from `X-Forwarded-For` instead of collapsing onto the proxy's IP for every request. Leave unset (default) for a direct deployment with no reverse proxy.
 - `GEMINI_API_KEY` — required; without it the backend fails to start (`core/settings.py` has no default). Get one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 - `QDRANT_URL` — must point at a reachable Qdrant instance; see [Qdrant](#qdrant) below for hosting options.
+
+### Tighten the frontend's CSP to your real API origin
+
+`docker/nginx.frontend.conf`'s `Content-Security-Policy` header ships with `connect-src 'self' http: https:` and `frame-src http: https:` — deliberately permissive because the real backend origin (`VITE_API_BASE_URL`) is a runtime-configurable build arg nginx's static config can't know ahead of time. As shipped, this means CSP provides close to no protection against a `fetch()`/frame to an arbitrary third-party origin if an XSS bug is ever introduced elsewhere. **Before a real deployment**, edit `docker/nginx.frontend.conf` to replace `http: https:` in both directives with your actual API origin (e.g. `connect-src 'self' https://api.example.com; frame-src https://api.example.com;`) and rebuild the frontend image — this is a config-file edit, not an env var, since nginx's config is baked into the image at build time.
 
 ## Database migrations
 
 The `alembic` service runs `alembic upgrade head` once and exits; `backend` and `taskiq_worker` both wait on it (`depends_on: alembic: condition: service_completed_successfully` in `docker-compose.prod.yml`) so nothing serves traffic against a schema that hasn't been migrated yet.
 
 Before applying a migration in production, review the generated migration script under `backend/alembic/versions/` — especially anything that drops or alters a column/table. Alembic's autogenerate is a starting point, not a guarantee of safety; a destructive migration should be reviewed like any other schema change before `alembic upgrade head` runs against production data.
+
+### Rolling back a bad deploy or migration
+
+Two independent things can go wrong with a release, and they're rolled back differently:
+
+- **Bad application code, schema unaffected**: redeploy the previous image tag/commit (`docker compose -f docker-compose.prod.yml up -d --build` against the prior revision, or `docker service update --rollback` / your orchestrator's equivalent if not using bare Compose). Since `backend`, `taskiq_worker`, and `alembic` all build from the same image, redeploying is a single image swap — no separate rollback step per service.
+- **Bad migration**: `alembic downgrade -1` (or a specific revision — `alembic downgrade <revision>`) reverses the most recent migration, run the same way `alembic upgrade head` is (`docker compose -f docker-compose.prod.yml run --rm alembic alembic downgrade -1`). This only works if the migration's own `downgrade()` is correct and non-destructive-in-reverse (e.g. a dropped column's data is gone regardless of downgrading the schema back) — which is exactly why the migration review step above matters *before* `upgrade head` runs, not just after something breaks. If the migration already ran a destructive `downgrade()`-unsafe change (e.g. a `DROP COLUMN`), the real recovery path is the database backup above, not `alembic downgrade`.
+
+In both cases, take a fresh `db_backup.sh` snapshot before attempting the rollback itself — a rollback that goes wrong should never be the only copy of "what the data looked like right before this."
 
 ## Backups
 
@@ -108,7 +117,7 @@ This stack has four pieces that need hosting: backend (containerized FastAPI), f
 
 ### Background worker (taskiq)
 
-Needs a long-running process, not a request-driven serverless function — Render's/Railway's "background worker" service type (pointed at the same image, `command: taskiq worker app.taskiq_tasks.email_tasks:broker`) is the most direct fit among the free-tier options above.
+Needs a long-running process, not a request-driven serverless function — Render's/Railway's "background worker" service type (pointed at the same image, `command: taskiq worker mystic_auth.taskiq_tasks.email_tasks:broker`) is the most direct fit among the free-tier options above.
 
 ### Qdrant
 

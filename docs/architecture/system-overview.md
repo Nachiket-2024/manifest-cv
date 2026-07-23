@@ -47,8 +47,8 @@ High-level overview of the whole stack. For deployment/runtime topology, see [..
 
 1. Browser sends a request with `access_token`/`refresh_token` httpOnly cookies (never accessible to frontend JS).
 2. `SecurityHeadersMiddleware` and `CorrelationIdMiddleware`/`LoggingMiddleware` wrap every request (see `backend/app/main.py`).
-3. `Depends(get_current_user)` (mystic-auth's dependency, imported by ManifestCV's own routes from mystic-auth's `app.sdk` extension surface — see [Auth & Authorization](../auth/overview.md)) verifies the JWT and re-queries the user row. For PBAC-gated mystic-auth routes, `Depends(require_authorization(action, resource_type))` additionally resolves the caller's current permissions from their assigned policies. ManifestCV's own routes (career knowledge, resumes, applications) skip PBAC entirely — every result is scoped by `user_id` at the query level instead.
-4. On a 401 specifically, `frontend/src/auth/setupAuthInterceptor.ts` attempts one silent refresh-and-retry before giving up and marking the session invalid.
+3. `Depends(get_current_user)` (mystic-auth's dependency, imported by ManifestCV's own routes from mystic-auth's `mystic_auth.sdk` extension surface — see [Auth & Authorization](../auth/overview.md)) verifies the JWT and re-queries the user row. For PBAC-gated mystic-auth routes, `Depends(require_authorization(action, resource_type))` additionally resolves the caller's current permissions from their assigned policies. ManifestCV's own routes (career knowledge, resumes, applications) skip PBAC entirely — every result is scoped by `user_id` at the query level instead.
+4. On a 401 specifically, `frontend/src/mystic_auth/auth/setupAuthInterceptor.ts` attempts one silent refresh-and-retry before giving up and marking the session invalid.
 5. The route handler runs. For ManifestCV's AI-backed routes, this may include a Gemini call (text generation/embedding) and/or a Qdrant call (index/search) before the response is returned — both wrapped so a provider failure surfaces as `502 Bad Gateway`, not an unhandled `500`.
 
 ## Database design

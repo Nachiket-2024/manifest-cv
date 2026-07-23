@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...sdk import get_current_user, capture_exception, database, get_or_404, get_logger, rate_limiter_service
+from mystic_auth.sdk import get_current_user, capture_exception, database, get_or_404, get_logger, rate_limiter_service
 from ...manifestcv_sdk import get_user_id_by_email
 
 from ...career_knowledge_crud.career_knowledge_repository import career_knowledge_repository
@@ -173,7 +173,14 @@ async def delete_my_career_knowledge_base(
 
 
 @router.get("/search", response_model=list[CareerKnowledgeSearchResult])
+# Every call embeds `query` via a real Gemini call, same cost profile as the
+# create/update routes above — rate-limited the same way rather than left
+# open just because it's a GET. See docs/concerns/README.md.
+@rate_limiter_service.rate_limited(
+    "career_knowledge_search", account_key_func=lambda kwargs: kwargs["current_user"]["email"]
+)
 async def search_my_career_knowledge_base(
+    request: Request,
     query: str = Query(min_length=1),
     top_k: int = Query(default=5, ge=1, le=20),
     current_user: dict = Depends(get_current_user),

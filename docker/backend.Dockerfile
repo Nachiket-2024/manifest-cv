@@ -52,9 +52,13 @@ ENV PATH="/opt/venv/bin:$PATH"
 # once the download is done. tectonic fetches the actual LaTeX format
 # bundle it needs over the network on first compile, caching it under
 # $HOME/.cache/Tectonic (the "app" user's home is /app, already owned by
-# app:app below).
+# app:app below). The sha256sum check pins the exact release asset — HTTPS
+# alone only protects the transport, not against a compromised/replaced
+# release asset at the source; a version bump means recomputing this hash
+# (`curl -fsSL <url> | sha256sum`) deliberately, not just editing the URL.
 RUN apt-get update && apt-get install -y curl ca-certificates \
     && curl -fsSL https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.16.9/tectonic-0.16.9-x86_64-unknown-linux-musl.tar.gz -o /tmp/tectonic.tar.gz \
+    && echo "60b13a0826ae7ad9ce34b4a2df06bff2cfcfa6dda8a915477c0cbb84e1a4a902  /tmp/tectonic.tar.gz" | sha256sum -c - \
     && tar -xzf /tmp/tectonic.tar.gz -C /usr/local/bin \
     && rm /tmp/tectonic.tar.gz \
     && apt-get purge -y curl && apt-get autoremove -y \

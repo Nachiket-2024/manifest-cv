@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
-import PasswordRulesChecklist from '@/auth/password_rules/PasswordRulesChecklist';
+import PasswordRulesChecklist from '@/mystic_auth/auth/password_rules/PasswordRulesChecklist';
 
 function renderChecklist(rules: Partial<React.ComponentProps<typeof PasswordRulesChecklist>['rules']> = {}) {
   return render(

@@ -7,9 +7,9 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.api.pbac_routes.pbac_audit_log_routes import list_my_audit_log
+from mystic_auth.api.pbac_routes.pbac_audit_log_routes import list_my_audit_log
 
-MODULE = "backend.app.api.pbac_routes.pbac_audit_log_routes"
+MODULE = "mystic_auth.api.pbac_routes.pbac_audit_log_routes"
 
 
 @pytest.mark.asyncio

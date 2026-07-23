@@ -16,7 +16,7 @@ Adding a new condition type **never** requires touching `PolicyEvaluationEngine`
 
 ## 1. Create the handler class
 
-New file, `backend/app/authorization/conditions/device_trust_condition.py` (example — a hypothetical new condition):
+New file, `backend/mystic_auth/authorization/conditions/device_trust_condition.py` (example — a hypothetical new condition):
 
 ```python
 from .condition_handler import ConditionHandler
@@ -51,7 +51,7 @@ class DeviceTrustCondition(ConditionHandler):
 
 ## 2. Register it with the registry
 
-Edit `backend/app/authorization/conditions/condition_registry.py`:
+Edit `backend/mystic_auth/authorization/conditions/condition_registry.py`:
 
 ```python
 from .device_trust_condition import DeviceTrustCondition
@@ -63,7 +63,7 @@ This is the **only** place a new condition type needs to be wired in for evaluat
 
 ## 3. Add validation
 
-Edit `backend/app/authorization/conditions/condition_validator.py` — add both the key and its validator function, so a malformed `device_trust` block is rejected at `POST`/`PUT /authorization/policies` time rather than only failing safe at evaluation time:
+Edit `backend/mystic_auth/authorization/conditions/condition_validator.py` — add both the key and its validator function, so a malformed `device_trust` block is rejected at `POST`/`PUT /authorization/policies` time rather than only failing safe at evaluation time:
 
 ```python
 def _validate_device_trust(value) -> list[str]:

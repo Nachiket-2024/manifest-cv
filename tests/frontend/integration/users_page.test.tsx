@@ -6,9 +6,9 @@ import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { MemoryRouter } from 'react-router-dom';
 import MockAdapter from 'axios-mock-adapter';
 
-import api from '@/api/axiosInstance';
-import { useAuthStore } from '@/store/authStore';
-import UsersPage from '@/users/UsersPage';
+import api from '@/mystic_auth/api/axiosInstance';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
+import UsersPage from '@/mystic_auth/users/UsersPage';
 
 const mock = new MockAdapter(api);
 const initialAuthState = useAuthStore.getState();

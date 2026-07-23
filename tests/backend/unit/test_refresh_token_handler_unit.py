@@ -11,9 +11,9 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.refresh_token_logic.refresh_token_handler import refresh_token_handler
+from mystic_auth.auth.refresh_token_logic.refresh_token_handler import refresh_token_handler
 
-HANDLER_MODULE = "backend.app.auth.refresh_token_logic.refresh_token_handler"
+HANDLER_MODULE = "mystic_auth.auth.refresh_token_logic.refresh_token_handler"
 
 
 class _FakeClient:

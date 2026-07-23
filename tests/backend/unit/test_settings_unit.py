@@ -1,5 +1,5 @@
 # tests/backend/unit/test_settings_unit.py
-from backend.app.core.settings import Settings
+from mystic_auth.core.settings import Settings
 
 _REQUIRED_FIELDS = {
     "BACKEND_BASE_URL": "http://localhost:8000",

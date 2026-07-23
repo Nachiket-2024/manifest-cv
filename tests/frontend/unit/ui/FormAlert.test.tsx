@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
-import FormAlert from '@/ui/FormAlert';
+import FormAlert from '@/mystic_auth/ui/FormAlert';
 
 function renderAlert(status: 'error' | 'success', children: React.ReactNode) {
   return render(

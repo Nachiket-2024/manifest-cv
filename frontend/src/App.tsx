@@ -9,16 +9,16 @@ import type { StackProps } from "@chakra-ui/react";
 // code-split via React.lazy: none of them are needed until their route is
 // actually visited, and splitting them keeps the initial bundle (and every
 // unauthenticated visitor's download) limited to auth + the app shell.
-import LoginPage from "./auth/login/LoginPage";
-const SignupPage = lazy(() => import("./auth/signup/SignupPage"));
-const VerifyAccountPage = lazy(() => import("./auth/verify_account/VerifyAccountPage"));
-const PasswordResetRequestPage = lazy(() => import("./auth/password_reset_request/PasswordResetRequestPage"));
-const PasswordResetConfirmPage = lazy(() => import("./auth/password_reset_confirm/PasswordResetConfirmPage"));
-const DashboardPage = lazy(() => import("./dashboard/DashboardPage"));
-const UsersPage = lazy(() => import("./users/UsersPage"));
-const PoliciesPage = lazy(() => import("./policies/PoliciesPage"));
-const AuditLogPage = lazy(() => import("./audit_log/AuditLogPage"));
-const ProfilePage = lazy(() => import("./profile/ProfilePage"));
+import LoginPage from "./mystic_auth/auth/login/LoginPage";
+const SignupPage = lazy(() => import("./mystic_auth/auth/signup/SignupPage"));
+const VerifyAccountPage = lazy(() => import("./mystic_auth/auth/verify_account/VerifyAccountPage"));
+const PasswordResetRequestPage = lazy(() => import("./mystic_auth/auth/password_reset_request/PasswordResetRequestPage"));
+const PasswordResetConfirmPage = lazy(() => import("./mystic_auth/auth/password_reset_confirm/PasswordResetConfirmPage"));
+const DashboardPage = lazy(() => import("./mystic_auth/dashboard/DashboardPage"));
+const UsersPage = lazy(() => import("./mystic_auth/users/UsersPage"));
+const PoliciesPage = lazy(() => import("./mystic_auth/policies/PoliciesPage"));
+const AuditLogPage = lazy(() => import("./mystic_auth/audit_log/AuditLogPage"));
+const ProfilePage = lazy(() => import("./mystic_auth/profile/ProfilePage"));
 
 // ManifestCV's own domains — each user's private career knowledge base,
 // resume drafts, and job applications.
@@ -27,19 +27,19 @@ const ResumeDraftsPage = lazy(() => import("./resumes/ResumeDraftsPage"));
 const ResumeEditorPage = lazy(() => import("./resumes/ResumeEditorPage"));
 const ApplicationsPage = lazy(() => import("./applications/ApplicationsPage"));
 
-import AppLayout from "./layout/AppLayout";
-import { ProtectedRoute, PERMISSIONS, useAuthStore } from "./sdk";
+import AppLayout from "./mystic_auth/layout/AppLayout";
+import { ProtectedRoute, PERMISSIONS, useAuthStore } from "./mystic_auth/sdk";
 
 // Mounted once here so any component/thunk can call toaster.create({...})
 // (see ui/toaster.tsx)
-import { Toaster } from "./ui/toaster";
+import { Toaster } from "./mystic_auth/ui/toaster";
 
 // Runs the current-user query once and mirrors it into the Zustand auth
 // store (see its own docstring for why this must be called exactly once,
 // here at the app root)
-import { useAuthSession } from "./auth/current_user/useCurrentUserQuery";
+import { useAuthSession } from "./mystic_auth/auth/current_user/useCurrentUserQuery";
 
-import LoadingState from "./ui/LoadingState";
+import LoadingState from "./mystic_auth/ui/LoadingState";
 
 const NotFoundPage: React.FC = () => {
     const navigate = useNavigate();

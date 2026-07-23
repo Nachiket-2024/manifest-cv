@@ -29,6 +29,10 @@ export function useResumeDraftQuery(draftId: number) {
     return useQuery<ResumeDraftRead>({
         queryKey: resumeDraftQueryKey(draftId),
         queryFn: async () => (await getResumeDraftApi(draftId)).data,
+        // A non-numeric :draftId route param (stale bookmark, typo'd URL,
+        // manual edit) produces NaN — skip the fetch entirely rather than
+        // send a doomed `/resumes/NaN` request and cache a NaN-keyed result.
+        enabled: !Number.isNaN(draftId),
     });
 }
 

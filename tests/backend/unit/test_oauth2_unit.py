@@ -5,8 +5,8 @@ import hashlib
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.oauth2.oauth2_login_handler import oauth2_login_handler
-from backend.app.auth.oauth2.oauth2_service import OAUTH2_STATE_TTL_SECONDS, oauth2_service
+from mystic_auth.auth.oauth2.oauth2_login_handler import oauth2_login_handler
+from mystic_auth.auth.oauth2.oauth2_service import OAUTH2_STATE_TTL_SECONDS, oauth2_service
 
 
 def _cookie_headers(response):
@@ -28,7 +28,7 @@ def _cookie_value(response, name):
 @pytest.mark.asyncio
 async def test_generate_and_store_state_persists_verifier_keyed_by_state(mocker):
     set_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_service.redis_client.set",
+        "mystic_auth.auth.oauth2.oauth2_service.redis_client.set",
         new_callable=AsyncMock,
     )
 
@@ -56,7 +56,7 @@ async def test_consume_state_rejects_empty_state():
 @pytest.mark.asyncio
 async def test_consume_state_returns_verifier_once_then_rejected_on_replay(mocker):
     getdel_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_service.redis_client.getdel",
+        "mystic_auth.auth.oauth2.oauth2_service.redis_client.getdel",
         new_callable=AsyncMock,
         side_effect=["stored-code-verifier", None],
     )
@@ -73,7 +73,7 @@ async def test_generate_and_store_state_pkce_challenge_is_correct_sha256_derivat
     # storing the verifier itself as the challenge) would let a network
     # observer of the authorization request alone complete the token
     # exchange without ever needing the verifier, defeating PKCE entirely.
-    set_mock = mocker.patch("backend.app.auth.oauth2.oauth2_service.redis_client.set", new_callable=AsyncMock)
+    set_mock = mocker.patch("mystic_auth.auth.oauth2.oauth2_service.redis_client.set", new_callable=AsyncMock)
 
     _, code_challenge = await oauth2_service.generate_and_store_state()
 
@@ -90,7 +90,7 @@ async def test_exchange_code_for_tokens_sends_pkce_code_verifier_to_google(mocke
     post_mock.return_value.raise_for_status = lambda: None
     post_mock.return_value.json = lambda: {"access_token": "google-access-token"}
 
-    mock_client = mocker.patch("backend.app.auth.oauth2.oauth2_service.httpx.AsyncClient")
+    mock_client = mocker.patch("mystic_auth.auth.oauth2.oauth2_service.httpx.AsyncClient")
     mock_client.return_value.__aenter__.return_value.post = post_mock
 
     await oauth2_service.exchange_code_for_tokens(
@@ -119,7 +119,7 @@ async def test_exchange_code_for_tokens_fails_closed_on_pkce_mismatch(mocker):
         side_effect=httpx.HTTPStatusError("400 Bad Request", request=mocker.Mock(), response=mocker.Mock())
     )
 
-    mock_client = mocker.patch("backend.app.auth.oauth2.oauth2_service.httpx.AsyncClient")
+    mock_client = mocker.patch("mystic_auth.auth.oauth2.oauth2_service.httpx.AsyncClient")
     mock_client.return_value.__aenter__.return_value.post = post_mock
 
     result = await oauth2_service.exchange_code_for_tokens(
@@ -138,7 +138,7 @@ async def test_exchange_code_for_tokens_fails_closed_on_pkce_mismatch(mocker):
 @pytest.mark.asyncio
 async def test_oauth2_login_initiate_embeds_state_and_pkce_challenge_in_url_and_cookie(mocker):
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.generate_and_store_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.generate_and_store_state",
         return_value=("test-state-value", "test-code-challenge"),
     )
 
@@ -164,10 +164,10 @@ async def test_oauth2_login_initiate_embeds_state_and_pkce_challenge_in_url_and_
 @pytest.mark.asyncio
 async def test_callback_redirects_cleanly_on_provider_error_without_touching_state(mocker):
     consume_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
     )
     exchange_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(
@@ -182,7 +182,7 @@ async def test_callback_redirects_cleanly_on_provider_error_without_touching_sta
 @pytest.mark.asyncio
 async def test_callback_redirects_cleanly_when_code_is_missing_without_error(mocker):
     consume_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(
@@ -198,10 +198,10 @@ async def test_callback_redirects_cleanly_when_code_is_missing_without_error(moc
 @pytest.mark.asyncio
 async def test_callback_rejects_missing_state(mocker):
     consume_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
     )
     exchange_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(
@@ -217,7 +217,7 @@ async def test_callback_rejects_missing_state(mocker):
 @pytest.mark.asyncio
 async def test_callback_rejects_missing_cookie(mocker):
     exchange_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(
@@ -231,10 +231,10 @@ async def test_callback_rejects_missing_cookie(mocker):
 @pytest.mark.asyncio
 async def test_callback_rejects_state_cookie_mismatch(mocker):
     consume_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
     )
     exchange_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(
@@ -249,11 +249,11 @@ async def test_callback_rejects_state_cookie_mismatch(mocker):
 @pytest.mark.asyncio
 async def test_callback_rejects_expired_or_replayed_state(mocker):
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
         return_value=None,
     )
     exchange_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(
@@ -267,19 +267,19 @@ async def test_callback_rejects_expired_or_replayed_state(mocker):
 @pytest.mark.asyncio
 async def test_callback_proceeds_and_clears_state_cookie_on_valid_state(mocker):
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
         return_value="stored-code-verifier",
     )
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
         return_value={"access_token": "google-access-token"},
     )
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
         return_value={"email": "user@example.com", "name": "Test User", "verified_email": True},
     )
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
         return_value={"access_token": "app-access-token", "refresh_token": "app-refresh-token"},
     )
 
@@ -297,19 +297,19 @@ async def test_callback_proceeds_and_clears_state_cookie_on_valid_state(mocker):
 @pytest.mark.asyncio
 async def test_callback_rejects_unverified_google_email(mocker):
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
         return_value="stored-code-verifier",
     )
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
         return_value={"access_token": "google-access-token"},
     )
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
         return_value={"email": "attacker@example.com", "name": "Unverified", "verified_email": False},
     )
     login_or_create_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(
@@ -324,20 +324,20 @@ async def test_callback_rejects_unverified_google_email(mocker):
 @pytest.mark.asyncio
 async def test_callback_rejects_missing_verified_email_field(mocker):
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
         return_value="stored-code-verifier",
     )
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.exchange_code_for_tokens",
         return_value={"access_token": "google-access-token"},
     )
     mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
         # No verified_email field at all — must not be assumed trustworthy
         return_value={"email": "user@example.com", "name": "Test User"},
     )
     login_or_create_mock = mocker.patch(
-        "backend.app.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
+        "mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
     )
 
     response = await oauth2_login_handler.handle_oauth2_callback(

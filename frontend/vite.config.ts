@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // VITE_* vars live in the repo root .env/.env.example, not frontend/.env —
+  // one file for both the dev server (loaded here) and the production build
+  // (docker-compose.prod.yml's build args, sourced from the same root .env
+  // via Compose's own interpolation — see .env.example).
+  envDir: '..',
   plugins: [
     react(),
   ],

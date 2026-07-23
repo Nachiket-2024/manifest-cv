@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { AxiosError, AxiosHeaders } from 'axios';
-import { extractApiErrorMessage } from '@/api/apiError';
+import { extractApiErrorMessage } from '@/mystic_auth/api/apiError';
 
 function makeAxiosError(data: unknown): AxiosError {
   return new AxiosError('Request failed', undefined, undefined, undefined, {

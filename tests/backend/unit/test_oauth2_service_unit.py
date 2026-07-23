@@ -2,11 +2,11 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.oauth2.oauth2_service import oauth2_service
-from backend.app.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
-from backend.app.user_table.user_model import UserRole
+from mystic_auth.auth.oauth2.oauth2_service import oauth2_service
+from mystic_auth.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
+from mystic_auth.user_table.user_model import UserRole
 
-MODULE = "backend.app.auth.oauth2.oauth2_service"
+MODULE = "mystic_auth.auth.oauth2.oauth2_service"
 
 
 class _FakeUser:

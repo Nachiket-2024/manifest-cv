@@ -12,7 +12,7 @@ interface AuthState {
     isAuthenticated: boolean | null;
     name: string | null;
     email: string | null;
-    // Metadata only — see backend/app/authorization/permissions.py's own docstring for why role
+    // Metadata only — see backend/mystic_auth/authorization/permissions.py's own docstring for why role
     // is never used to decide access.
     role: string | null;
     /** Flat list of every action string the caller currently holds via their active policies. */

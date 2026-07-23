@@ -2,7 +2,7 @@ import { useAuthStore } from "../store/authStore";
 
 /**
  * isAuthenticated: null = session not checked yet, true/false after.
- * role is metadata only — see backend/app/authorization/permissions.py's
+ * role is metadata only — see backend/mystic_auth/authorization/permissions.py's
  * own docstring for why role is never used to decide access.
  * permissions is a flat list of every action string the caller currently
  * holds via their active policies.

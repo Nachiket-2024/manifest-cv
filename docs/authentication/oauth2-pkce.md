@@ -10,10 +10,10 @@ Lets a user authenticate with their Google account instead of (or in addition to
 
 | File | Role |
 |---|---|
-| `backend/app/auth/oauth2/oauth2_login_handler.py` | Route-facing orchestration: builds the Google redirect, validates the callback, issues the app's own JWTs |
-| `backend/app/auth/oauth2/oauth2_service.py` | State/PKCE generation and storage, Google token exchange, userinfo fetch, user creation/login |
+| `backend/mystic_auth/auth/oauth2/oauth2_login_handler.py` | Route-facing orchestration: builds the Google redirect, validates the callback, issues the app's own JWTs |
+| `backend/mystic_auth/auth/oauth2/oauth2_service.py` | State/PKCE generation and storage, Google token exchange, userinfo fetch, user creation/login |
 | `backend/app/api/auth_routes/auth_routes.py` | `GET /auth/oauth2/login/google`, `GET /auth/oauth2/callback/google` |
-| `frontend/src/auth/oauth2/` | `OAuth2LoginButton`/`OAuth2LoginButtonComponent` — a plain link/redirect to the backend's initiate endpoint, no client-side OAuth SDK involved |
+| `frontend/src/mystic_auth/auth/oauth2/` | `OAuth2LoginButton`/`OAuth2LoginButtonComponent` — a plain link/redirect to the backend's initiate endpoint, no client-side OAuth SDK involved |
 
 ## Data / request flow
 

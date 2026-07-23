@@ -8,7 +8,7 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-from backend.app.authorization.context.request_context_builder import build_authorization_context
+from mystic_auth.authorization.context.request_context_builder import build_authorization_context
 
 
 def _request(client_host="203.0.113.7", headers=None, query_params=None):

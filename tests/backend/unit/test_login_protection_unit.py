@@ -2,9 +2,9 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.security.login_protection_service import login_protection_service
+from mystic_auth.auth.security.login_protection_service import login_protection_service
 
-MODULE = "backend.app.auth.security.login_protection_service"
+MODULE = "mystic_auth.auth.security.login_protection_service"
 
 
 # ---------------------------- record_failed_attempt ----------------------------

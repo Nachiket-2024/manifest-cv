@@ -8,7 +8,7 @@ import logging
 
 from logging.handlers import TimedRotatingFileHandler
 
-from backend.app.logging.logging_config import get_logger, get_startup_logger
+from mystic_auth.logging.logging_config import get_logger, get_startup_logger
 
 
 def test_access_log_handler_has_a_bounded_retention_window():

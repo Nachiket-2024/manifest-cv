@@ -5,8 +5,8 @@ import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { MemoryRouter } from 'react-router-dom';
 import MockAdapter from 'axios-mock-adapter';
 
-import api from '@/api/axiosInstance';
-import DashboardPage from '@/dashboard/DashboardPage';
+import api from '@/mystic_auth/api/axiosInstance';
+import DashboardPage from '@/mystic_auth/dashboard/DashboardPage';
 
 const mock = new MockAdapter(api);
 

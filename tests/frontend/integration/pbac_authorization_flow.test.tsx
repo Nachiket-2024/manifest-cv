@@ -5,12 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import MockAdapter from 'axios-mock-adapter';
 
-import api from '@/api/axiosInstance';
-import { useAuthStore } from '@/store/authStore';
-import { useLoginMutation } from '@/auth/login/useLoginMutation';
-import { useAuthSession } from '@/auth/current_user/useCurrentUserQuery';
-import { Authorized } from '@/authorization/Authorized';
-import { IfCan } from '@/authorization/IfCan';
+import api from '@/mystic_auth/api/axiosInstance';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
+import { useLoginMutation } from '@/mystic_auth/auth/login/useLoginMutation';
+import { useAuthSession } from '@/mystic_auth/auth/current_user/useCurrentUserQuery';
+import { Authorized } from '@/mystic_auth/authorization/Authorized';
+import { IfCan } from '@/mystic_auth/authorization/IfCan';
 
 const mock = new MockAdapter(api);
 const PASSWORD = 'StrongPass123!';

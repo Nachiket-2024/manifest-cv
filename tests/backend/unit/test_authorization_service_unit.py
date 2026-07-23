@@ -11,10 +11,10 @@ import pytest
 from unittest.mock import AsyncMock
 from fastapi import HTTPException
 
-from backend.app.authorization.services.authorization_service import authorization_service
-from backend.app.authorization.models.policy_model import Policy
+from mystic_auth.authorization.services.authorization_service import authorization_service
+from mystic_auth.authorization.models.policy_model import Policy
 
-MODULE = "backend.app.authorization.services.authorization_service"
+MODULE = "mystic_auth.authorization.services.authorization_service"
 
 
 def _policy(actions, resource_type="users", conditions=None, name=None):
@@ -439,7 +439,7 @@ async def test_authorize_batch_fails_closed_when_one_check_raises_during_evaluat
     )
     _mock_audit_log(mocker)
 
-    from backend.app.authorization.evaluators.policy_evaluator import PolicyEvaluationEngine
+    from mystic_auth.authorization.evaluators.policy_evaluator import PolicyEvaluationEngine
 
     call_count = {"n": 0}
 

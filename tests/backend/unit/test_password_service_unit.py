@@ -11,8 +11,8 @@ import time
 import jwt as pyjwt
 import pytest
 
-from backend.app.auth.password_logic.password_service import password_service
-from backend.app.core.settings import settings
+from mystic_auth.auth.password_logic.password_service import password_service
+from mystic_auth.core.settings import settings
 
 
 # ---------------------------- hash_password / verify_password ----------------------------

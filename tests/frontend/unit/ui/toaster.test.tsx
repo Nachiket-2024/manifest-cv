@@ -2,8 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
-import { Toaster } from '@/ui/toaster';
-import { toaster } from '@/ui/toasterInstance';
+import { Toaster } from '@/mystic_auth/ui/toaster';
+import { toaster } from '@/mystic_auth/ui/toasterInstance';
 
 describe('Toaster', () => {
   afterEach(async () => {

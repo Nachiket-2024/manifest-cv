@@ -1,5 +1,5 @@
 /**
- * Mirrors backend/app/authorization/permissions.py's Permission enum values
+ * Mirrors backend/mystic_auth/authorization/permissions.py's Permission enum values
  * exactly. Centralized here so every ProtectedRoute/IfCan/Authorized call
  * site references a constant instead of retyping the raw string — a typo in
  * a literal string silently fails closed (denies access) with no compiler

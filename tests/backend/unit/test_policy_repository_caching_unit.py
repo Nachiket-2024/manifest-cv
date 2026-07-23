@@ -8,9 +8,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.app.authorization.repositories.policy_repository import PolicyRepository
+from mystic_auth.authorization.repositories.policy_repository import PolicyRepository
 
-REPO_MODULE = "backend.app.authorization.repositories.policy_repository"
+REPO_MODULE = "mystic_auth.authorization.repositories.policy_repository"
 
 
 def _make_policy(**overrides):

@@ -10,7 +10,7 @@ import {
     type ResumeDraftRead,
 } from "../api/resume_api";
 import { finalizeResumeDocumentApi, type ResumeDocumentRead } from "../api/document_api";
-import { extractApiErrorMessage, queryClient } from "../sdk";
+import { extractApiErrorMessage, queryClient } from "../mystic_auth/sdk";
 import { RESUME_DRAFTS_QUERY_KEY, resumeDraftQueryKey, resumeDocumentQueryKey } from "./resumeQueries";
 
 export function useCreateResumeDraftMutation() {

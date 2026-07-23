@@ -6,8 +6,8 @@
 import pytest
 
 from .conftest import unique_email, create_system_user, unique_policy_name
-from backend.app.authorization.repositories.policy_repository import policy_repository
-from backend.app.database.connection import database
+from mystic_auth.authorization.repositories.policy_repository import policy_repository
+from mystic_auth.database.connection import database
 
 
 @pytest.mark.asyncio

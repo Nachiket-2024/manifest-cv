@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.sql import func
 
@@ -25,10 +25,24 @@ class AuthorizationAuditLog(Base):
 
     __tablename__ = "authorization_audit_log"
 
+    # Composite (user_email, created_at DESC, id DESC) replaces a plain
+    # single-column user_email index (migration c7f1a3e9d2b6) — its leftmost
+    # prefix already serves user_email-only lookups, and it also satisfies
+    # AuditLogRepository.get_for_user's ORDER BY without a separate sort.
+    __table_args__ = (
+        Index(
+            "ix_audit_log_user_email_created_at",
+            "user_email",
+            text("created_at DESC"),
+            text("id DESC"),
+        ),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
 
-    # The acting user's email — never their role (see PBAC decision-making)
-    user_email = Column(String, nullable=False, index=True)
+    # The acting user's email — never their role (see PBAC decision-making).
+    # No index=True here: see __table_args__ above.
+    user_email = Column(String, nullable=False)
     action = Column(String, nullable=False, index=True)
     resource_type = Column(String, nullable=False)
 

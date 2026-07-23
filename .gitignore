@@ -48,7 +48,6 @@ backend/*.db
 frontend/node_modules/
 frontend/dist/
 frontend/build/
-frontend/.env
 frontend/.DS_Store
 frontend/.cache/
 frontend/coverage/

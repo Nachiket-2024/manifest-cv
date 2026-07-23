@@ -11,7 +11,7 @@ You've cloned this repo to build your own product's authentication and authoriza
 - **Infrastructure**: Docker Compose for local dev and production, PostgreSQL, Redis (caching/rate-limiting/token registry/Taskiq broker), Taskiq for async email delivery, Alembic for migrations, and a GitHub Actions CI workflow.
 - **Error monitoring**: optional, disabled by default. Backend (`sentry-sdk[fastapi]`) and frontend (`@sentry/react`) reporting via the Sentry SDK protocol, with a self-hosted Bugsink quickstart documented — set `SENTRY_DSN`/`VITE_SENTRY_DSN` to turn it on. See [Error Monitoring](error-monitoring/overview.md).
 
-> **This document describes the upstream [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) template as-is.** ManifestCV (this repository) is a real, deployed consumer of it — see [ManifestCV's own `docs/README.md`](README.md) for how ManifestCV specifically applies the patterns below (its `backend/app/sdk.py`/`frontend/src/sdk.ts`, its own feature modules under `application_*`/`resume_*`/`career_knowledge_*`, etc.). Keeping this file byte-for-byte close to upstream (rather than rewriting it for ManifestCV specifically) is deliberate, so the [Staying in sync with upstream template updates](#staying-in-sync-with-upstream-template-updates) section below stays accurate for anyone comparing the two.
+> **This document describes the upstream [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) template as-is** — including its default layout, where the template's own code lives directly under `backend/app/`/`frontend/src/` rather than in a separate package. **ManifestCV (this repository) is a real, deployed consumer of it, and additionally keeps the vendored template physically separate from its own code** — mystic-auth lives in `backend/mystic_auth/`/`frontend/src/mystic_auth/`, ManifestCV's own feature modules (`application_*`/`resume_*`/`career_knowledge_*`, etc.) in `backend/app/`/`frontend/src/` — see [ManifestCV's own `docs/README.md`](README.md) and [Auth & Authorization](auth/overview.md) for how that split works and how it's kept mechanical. Keeping this file byte-for-byte close to upstream (rather than rewriting it for ManifestCV specifically) is deliberate, so the [Staying in sync with upstream template updates](#staying-in-sync-with-upstream-template-updates) section below stays accurate for anyone comparing the two.
 
 ## Quickstart
 
@@ -43,22 +43,26 @@ Then create the reserved system superuser (one-time, CLI-only — it can never b
 docker compose exec -it backend python -m app.scripts.create_system_user
 ```
 
+> **In this repo specifically** (ManifestCV, where `scripts/` moved to `backend/mystic_auth/scripts/` — see [Auth & Authorization](auth/overview.md)), the module path is `mystic_auth.scripts.create_system_user`, not `app.scripts.create_system_user`. Root [`README.md`](../README.md#-first-time-setup--creating-the-system-superuser) always has the exact, current command for this repo; the command above is what a fresh, standalone clone of the upstream template uses.
+
 See root [`README.md`](../README.md) for the interactive prompts, and [Policy JSON Examples: system superuser policy](authorization/policy-examples.md#system-superuser-policy-seeded) for what that account can do out of the box.
 
 ## Environment configuration
 
-Full variable-by-variable reference lives in [`.env.example`](../.env.example) (backend) and [`frontend/.env.example`](../frontend/.env.example) (frontend) — every setting is documented inline there with a one-line comment, grouped by category (database, JWT/tokens, OAuth2, Redis, email, login protection, rate limiting, logging, environment, reverse proxy, error monitoring, and — in this repo specifically — ManifestCV's own Gemini/Qdrant settings). Copy each to its real `.env` and treat those `.example` files as the source of truth, not this doc.
+Full variable-by-variable reference lives in [`.env.example`](../.env.example) (backend) and `frontend/.env.example` (frontend) — every setting is documented inline there with a one-line comment, grouped by category (database, JWT/tokens, OAuth2, Redis, email, login protection, rate limiting, logging, environment, reverse proxy, error monitoring, and — in this repo specifically — ManifestCV's own Gemini/Qdrant settings). Copy each to its real `.env` and treat those `.example` files as the source of truth, not this doc.
+
+> **In this repo specifically**, there is no separate `frontend/.env.example` — every `VITE_*` var lives in the same root [`.env.example`](../.env.example) as the backend settings, and `frontend/vite.config.ts`'s `envDir: '..'` is what points the dev server (and the production build's `docker-compose.prod.yml`) at that one file instead of a `frontend/`-local one. The two-file layout below is the standalone template's own default.
 
 One pair is worth calling out specifically, since it's the main "make this yours" hook:
 
 | Variable | File | Purpose |
 |---|---|---|
 | `APP_NAME` | `.env` | Product name used in email templates and the root `/` API response. Required — no fallback. |
-| `VITE_APP_NAME` | `frontend/.env` | Product name shown in the UI (navbar, auth pages) and the browser tab title (`frontend/index.html`'s `%VITE_APP_NAME%` substitution, resolved by Vite at build time). |
+| `VITE_APP_NAME` | `frontend/.env` (`.env` in this repo — see above) | Product name shown in the UI (navbar, auth pages) and the browser tab title (`frontend/index.html`'s `%VITE_APP_NAME%` substitution, resolved by Vite at build time). |
 
 ## Renaming the app
 
-Change `APP_NAME` in `.env` and `VITE_APP_NAME` in `frontend/.env`, then restart (`docker compose up --build` if the frontend image was already built, since `VITE_APP_NAME` is baked in at build time, not read at runtime). Nothing else in the codebase hardcodes a product name — there's no other file to touch.
+Change `APP_NAME` and `VITE_APP_NAME` in `.env` (`frontend/.env` in a standalone template clone — see above), then restart (`docker compose up --build` if the frontend image was already built, since `VITE_APP_NAME` is baked in at build time, not read at runtime). Nothing else in the codebase hardcodes a product name — there's no other file to touch.
 
 **CI still uses `APP_NAME=ManifestCV`, and that's fine.** `.github/workflows/ci.yml` sets `APP_NAME` (and every other required setting) directly as a job-level environment variable, since there's no checked-in `.env` for CI to read — `Settings` refuses to start without a value for it, so CI needs *something*. That value is a placeholder for test runs, not branding — see [CI/CD Overview](cicd/overview.md).
 
@@ -84,6 +88,8 @@ ManifestCV additionally has its own `backend/app/manifestcv_sdk.py` — the coun
 
 ## Backend customization
 
+> Every `backend/app/`-prefixed path and `app.sdk` import in this section describes a **fresh, standalone clone of the template** — i.e. what you'd see if you started from mystic-auth directly. In **this repo** (ManifestCV), the template itself lives at `backend/mystic_auth/` instead, so read `backend/app/sdk.py` as `backend/mystic_auth/sdk.py`, `from app.sdk import ...` as `from mystic_auth.sdk import ...`, and so on throughout this page — see [Auth & Authorization](auth/overview.md) for the exact mapping and why the split exists. `backend/app/manifestcv_sdk.py` mentioned just above is the one exception: it's ManifestCV's own file and really does live at that exact path in this repo too.
+
 - **Adding your own domain/resource** (e.g. `projects`, `documents`): follow the existing module pattern — a new top-level package under `backend/app/` with its own `*_model.py`, `*_schema.py`, `*_crud*.py`, and a router under `backend/app/api/` mounted in `backend/app/main.py`. Import `require_authorization`, `Permission`, `get_current_user`, `database`, `settings`, etc. from `backend/app/sdk.py` (above), not from their internal locations. See [Backend Architecture: module layout](architecture/backend.md#module-layout) for how the existing modules (`auth/`, `user_table/`, `user_crud/`) are shaped — and ManifestCV's own `career_knowledge_*`/`resume_*`/`application_*`/`document_*` modules for a real worked example of this pattern applied end-to-end.
 - **Database changes**: every schema change is an Alembic migration under `backend/alembic/versions/` — no `create_all()` anywhere. See [Database Design](database/design.md#migrations).
 - **Configuration**: all settings are centralized in `backend/app/core/settings.py` (`pydantic-settings`, env-driven) — add new settings there, never read `os.environ` directly elsewhere. Re-exported from `backend/app/sdk.py` as `settings`.
@@ -96,7 +102,7 @@ Business-domain actions (e.g. `"projects:create"`, `"documents:view"`) don't nee
 
 ### Protecting a new route
 
-Every protected route depends on `require_authorization(action, resource_type)` — never a role check. A real, worked example, adapted from `backend/app/api/user_routes/user_routes.py` to import from the SDK surface (above) the way your own new route module should:
+Every protected route depends on `require_authorization(action, resource_type)` — never a role check. A real, worked example, adapted from `user_routes.py` (`backend/app/api/user_routes/` in a standalone template clone; `backend/mystic_auth/api/user_routes/` in this repo) to import from the SDK surface (above) the way your own new route module should — swap `app.sdk` for `mystic_auth.sdk` if you're following this repo's own layout rather than a fresh template clone:
 
 ```python
 from fastapi import APIRouter, Depends

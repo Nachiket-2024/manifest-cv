@@ -6,12 +6,12 @@ import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 // behavior without depending on VITE_SENTRY_DSN or the real @sentry/react
 // SDK — reportError itself has its own dedicated coverage in
 // core/errorMonitoring.test.ts.
-vi.mock('@/core/errorMonitoring', () => ({
+vi.mock('@/mystic_auth/core/errorMonitoring', () => ({
   reportError: vi.fn(),
 }));
 
-import ErrorBoundary from '@/ui/ErrorBoundary';
-import { reportError } from '@/core/errorMonitoring';
+import ErrorBoundary from '@/mystic_auth/ui/ErrorBoundary';
+import { reportError } from '@/mystic_auth/core/errorMonitoring';
 
 const Bomb: React.FC = () => {
   throw new Error('boom');

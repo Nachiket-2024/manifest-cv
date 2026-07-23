@@ -11,12 +11,12 @@ import uuid
 
 import pytest
 
-from backend.app.auth.verify_account.account_verification_service import account_verification_service
-from backend.app.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
-from backend.app.authorization.repositories.policy_repository import policy_repository
-from backend.app.database.connection import database
-from backend.app.redis.client import redis_client
-from backend.app.user_crud.user_crud_collector import user_crud
+from mystic_auth.auth.verify_account.account_verification_service import account_verification_service
+from mystic_auth.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
+from mystic_auth.authorization.repositories.policy_repository import policy_repository
+from mystic_auth.database.connection import database
+from mystic_auth.redis.client import redis_client
+from mystic_auth.user_crud.user_crud_collector import user_crud
 from backend.app.resume_crud.resume_repository import resume_repository
 from backend.app.resume_document_crud.resume_document_repository import resume_document_repository
 
@@ -120,6 +120,45 @@ async def test_create_list_get_update_delete_application_flow(client, created_em
 
     get_after_delete = await client.get(f"/applications/{application_id}")
     assert get_after_delete.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_arbitrary_status_values_are_rejected(client, created_emails):
+    """ApplicationCreate/Update.status is a fixed Literal (applied/
+    interviewing/offered/rejected — see application_schema.py), matching the
+    frontend's STATUS_OPTIONS. Free-text/arbitrary status strings must be
+    rejected at the API boundary rather than silently persisted."""
+    email = _unique_email()
+    user_id = await _create_verified_user(client, created_emails, email)
+    draft_id = await _seed_finalized_resume(user_id)
+
+    create_resp = await client.post(
+        "/applications/",
+        json={
+            "resume_draft_id": draft_id,
+            "company_name": "Acme Corp",
+            "application_date": "2026-07-19",
+            "status": "not-a-real-status",
+        },
+    )
+    assert create_resp.status_code == 422
+
+    valid_create_resp = await client.post(
+        "/applications/",
+        json={
+            "resume_draft_id": draft_id,
+            "company_name": "Acme Corp",
+            "application_date": "2026-07-19",
+            "status": "applied",
+        },
+    )
+    assert valid_create_resp.status_code == 201
+    application_id = valid_create_resp.json()["id"]
+
+    update_resp = await client.patch(
+        f"/applications/{application_id}", json={"status": "not-a-real-status"}
+    )
+    assert update_resp.status_code == 422
 
 
 @pytest.mark.asyncio

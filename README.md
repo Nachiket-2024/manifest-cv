@@ -125,11 +125,10 @@ npm install
 
 ## ⚙️ Environment Variables
 
-All environment variables are defined in `.env.example` in both the project root and the `frontend` folder. Copy each to `.env` and fill in your own values:
+All environment variables — backend and frontend (`VITE_*`) alike — are defined in one place, root `.env.example`. Copy it to `.env` and fill in your own values:
 
 ```bash
 cp .env.example .env
-cp frontend/.env.example frontend/.env
 ```
 
 `SECRET_KEY` must be at least 32 characters — the app refuses to start with a shorter value. `GEMINI_API_KEY` is also required — without it the backend won't start at all; get a free-tier key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). `QDRANT_URL` defaults to the Docker-networked `qdrant` service and needs no separate signup.
@@ -182,8 +181,10 @@ alembic upgrade head
 
 #### 2. Start the FastAPI backend
 
+`PYTHONPATH=backend` is required from here on — mystic-auth (`backend/mystic_auth/`) and ManifestCV's own code (`backend/app/`) are separate top-level packages, and `main.py` crosses that boundary with plain `mystic_auth.*` imports (see [Auth & Authorization](docs/auth/overview.md)); Docker's `backend.Dockerfile` sets an equivalent `WORKDIR /app` so this is only needed for this local, non-Docker path.
+
 ```bash
-uvicorn backend.app.main:app --reload
+PYTHONPATH=backend uvicorn backend.app.main:app --reload
 ```
 
 - **Backend:** [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -194,7 +195,7 @@ uvicorn backend.app.main:app --reload
 #### 3. Start the Taskiq Worker
 
 ```bash
-taskiq worker backend.app.taskiq_tasks.email_tasks:broker --reload
+PYTHONPATH=backend taskiq worker backend.mystic_auth.taskiq_tasks.email_tasks:broker --reload
 ```
 
 #### 4. Run the React frontend
@@ -217,14 +218,14 @@ After starting the app for the first time, create the reserved system account �
 ### Docker
 
 ```bash
-docker compose exec -it backend python -m app.scripts.create_system_user
+docker compose exec -it backend python -m mystic_auth.scripts.create_system_user
 ```
 
 ### Local
 
 ```bash
 cd backend
-python -m app.scripts.create_system_user
+python -m mystic_auth.scripts.create_system_user
 ```
 
 You will be prompted to enter a name, email, and password interactively. This only needs to be run once — the system user persists in the database volume and can never be created, modified, or promoted via any API endpoint.
@@ -240,7 +241,7 @@ You will be prompted to enter a name, email, and password interactively. This on
 - OAuth2 setup requires Google Cloud credentials; AI features require a Gemini API key
 - Error monitoring (self-hosted Bugsink) is opt-in — `docker compose up` alone never starts it; see [Error Monitoring](docs/error-monitoring/overview.md)
 - **Zustand** manages client-side session state; **TanStack Query** manages all server-state caching
-- **Type Safety:** Full TypeScript support across the frontend (`ui/`, `authorization/`, `store/`, and every feature domain)
+- **Type Safety:** Full TypeScript support across the frontend (`mystic_auth/ui/`, `mystic_auth/authorization/`, `mystic_auth/store/`, and every feature domain)
 
 ---
 

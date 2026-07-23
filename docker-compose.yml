@@ -68,7 +68,7 @@ services:
     working_dir: /app
     env_file:
       - ./.env
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --access-log
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --reload-dir mystic_auth --access-log
     environment:
       DATABASE_URL: ${DATABASE_URL}
     depends_on:
@@ -121,6 +121,10 @@ services:
       # to its own /app root) from inside the container. Same reasoning as
       # backend's own ./:/repo mount above.
       - ./tests:/tests
+      # vite.config.ts's envDir points at the repo root (one .env for both
+      # the dev server and the production build) — /app/.. resolves to
+      # container root, so the root .env needs to be reachable there too.
+      - ./.env:/.env:ro
     depends_on:
       backend:
         condition: service_healthy
@@ -132,7 +136,7 @@ services:
     working_dir: /app
     env_file:
       - ./.env
-    command: sh -c "taskiq worker app.taskiq_tasks.email_tasks:broker"
+    command: sh -c "taskiq worker mystic_auth.taskiq_tasks.email_tasks:broker"
     environment:
       - REDIS_URL=${REDIS_URL}
       - PYTHONPATH=/app
@@ -182,7 +186,7 @@ services:
   # (or add bugsink to an explicit service list: `docker compose up backend
   # frontend bugsink`, which also works regardless of profiles). This is
   # infrastructure for local/self-hosted error monitoring, not part of the
-  # application itself — SENTRY_DSN (backend/app/core/settings.py,
+  # application itself — SENTRY_DSN (backend/mystic_auth/core/settings.py,
   # frontend .env.example) is what actually turns error reporting on, and
   # stays unset (fully disabled) whether or not this container is running.
   bugsink:

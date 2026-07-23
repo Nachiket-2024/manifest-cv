@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
-import ConfirmDialog from '@/ui/ConfirmDialog';
+import ConfirmDialog from '@/mystic_auth/ui/ConfirmDialog';
 
 function renderDialog(props: Partial<React.ComponentProps<typeof ConfirmDialog>> = {}) {
   const onConfirm = vi.fn();

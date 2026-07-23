@@ -12,10 +12,10 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.login.login_service import login_service
-from backend.app.auth.password_logic.password_service import password_service
+from mystic_auth.auth.login.login_service import login_service
+from mystic_auth.auth.password_logic.password_service import password_service
 
-MODULE = "backend.app.auth.login.login_service"
+MODULE = "mystic_auth.auth.login.login_service"
 
 
 class _FakeUser:

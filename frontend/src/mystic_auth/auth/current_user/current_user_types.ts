@@ -1,6 +1,6 @@
 /**
  * Shape of a successful GET /auth/me response (see
- * backend/app/auth/current_user/current_user_handler.py). `permissions` is a
+ * backend/mystic_auth/auth/current_user/current_user_handler.py). `permissions` is a
  * flat list of every action string granted unconditionally by the user's
  * active policies (e.g. "users:read_own") — it carries no per-resource
  * ownership/time/network granularity, so instance-level checks still need a
@@ -12,6 +12,6 @@ export interface CurrentUserProfile {
     role: string | null;
     permissions: string[];
     /** False for an OAuth-only account (no usable password credential) —
-     *  see backend/app/auth/current_user/current_user_handler.py. */
+     *  see backend/mystic_auth/auth/current_user/current_user_handler.py. */
     has_password: boolean;
 }

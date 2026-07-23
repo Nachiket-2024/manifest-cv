@@ -1,7 +1,7 @@
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.models import Distance, VectorParams
 
-from ..sdk import settings
+from mystic_auth.sdk import settings
 from ..ai_integration.gemini_client import EMBEDDING_DIMENSIONS
 
 # One shared collection for every user's career knowledge chunks, isolated

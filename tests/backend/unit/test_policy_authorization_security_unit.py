@@ -11,26 +11,26 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from fastapi import HTTPException
 
-from backend.app.authorization.services.authorization_service import AuthorizationService
-from backend.app.api.pbac_routes.policy_crud_routes import (
+from mystic_auth.authorization.services.authorization_service import AuthorizationService
+from mystic_auth.api.pbac_routes.policy_crud_routes import (
     create_policy,
     update_policy,
     delete_policy,
 )
-from backend.app.api.pbac_routes.policy_assignment_routes import (
+from mystic_auth.api.pbac_routes.policy_assignment_routes import (
     assign_policy_to_user,
     remove_policy_from_user,
 )
-from backend.app.authorization.schemas.policy_schema import PolicyCreate, PolicyUpdate, PolicyAssignmentRequest
-from backend.app.authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
+from mystic_auth.authorization.schemas.policy_schema import PolicyCreate, PolicyUpdate, PolicyAssignmentRequest
+from mystic_auth.authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
 
-SERVICE_MODULE = "backend.app.authorization.services.authorization_service"
+SERVICE_MODULE = "mystic_auth.authorization.services.authorization_service"
 # create/update/delete_policy live in policy_crud_routes; assign/remove live
 # in policy_assignment_routes — each mocker.patch target below must match
 # whichever module actually imported the name being patched (see the PBAC
 # route split in backend/app/api/pbac_routes/).
-ROUTES_MODULE = "backend.app.api.pbac_routes.policy_crud_routes"
-ASSIGNMENT_ROUTES_MODULE = "backend.app.api.pbac_routes.policy_assignment_routes"
+ROUTES_MODULE = "mystic_auth.api.pbac_routes.policy_crud_routes"
+ASSIGNMENT_ROUTES_MODULE = "mystic_auth.api.pbac_routes.policy_assignment_routes"
 
 CALLER = {"email": "caller@example.com", "name": "Caller"}
 

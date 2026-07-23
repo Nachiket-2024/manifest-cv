@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
-import api from '@/api/axiosInstance';
+import api from '@/mystic_auth/api/axiosInstance';
 import {
   listResumeTemplatesApi,
   resumeTemplatePreviewUrl,

@@ -15,9 +15,9 @@
 import pytest
 
 from .conftest import unique_email, create_verified_user, unique_policy_name
-from backend.app.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
-from backend.app.authorization.repositories.policy_repository import policy_repository
-from backend.app.database.connection import database
+from mystic_auth.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
+from mystic_auth.authorization.repositories.policy_repository import policy_repository
+from mystic_auth.database.connection import database
 
 ACTION = "sectest:view"
 RESOURCE_TYPE = "sectest_resource"

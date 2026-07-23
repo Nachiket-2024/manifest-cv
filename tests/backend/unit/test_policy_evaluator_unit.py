@@ -11,8 +11,8 @@
 # different authorization outcomes.
 import pytest
 
-from backend.app.authorization.evaluators.policy_evaluator import PolicyEvaluationEngine
-from backend.app.authorization.models.policy_model import Policy
+from mystic_auth.authorization.evaluators.policy_evaluator import PolicyEvaluationEngine
+from mystic_auth.authorization.models.policy_model import Policy
 
 
 def _policy(actions, resource_type="users", conditions=None, name=None):

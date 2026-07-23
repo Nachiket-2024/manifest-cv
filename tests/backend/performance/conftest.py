@@ -10,7 +10,7 @@ import uuid
 
 from sqlalchemy import text
 
-from backend.app.database.connection import database
+from mystic_auth.database.connection import database
 
 
 def unique_tag() -> str:

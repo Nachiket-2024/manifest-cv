@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from backend.app.error_monitoring import sentry_service
+from mystic_auth.error_monitoring import sentry_service
 
-MODULE = "backend.app.error_monitoring.sentry_service"
+MODULE = "mystic_auth.error_monitoring.sentry_service"
 
 
 def _fake_request(cookies: dict | None = None, method: str = "GET", path: str = "/users/me"):

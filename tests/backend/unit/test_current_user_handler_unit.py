@@ -8,10 +8,10 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.current_user.current_user_handler import current_user_handler
-from backend.app.user_table.user_model import UserRole
+from mystic_auth.auth.current_user.current_user_handler import current_user_handler
+from mystic_auth.user_table.user_model import UserRole
 
-MODULE = "backend.app.auth.current_user.current_user_handler"
+MODULE = "mystic_auth.auth.current_user.current_user_handler"
 
 
 class _FakeUser:

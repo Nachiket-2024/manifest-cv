@@ -2,7 +2,7 @@
 # **/ prefix (not just a bare "__pycache__/") is required for these to match
 # at any depth, not just directly under the build context root — verified by
 # building the image and finding real __pycache__ directories nested under
-# backend/app/**/ still present without it, despite the bare pattern looking
+# backend/app/**/ and backend/mystic_auth/**/ still present without it, despite the bare pattern looking
 # like it should already cover them.
 **/__pycache__/
 **/*.pyc
@@ -11,7 +11,7 @@
 *.sqlite3
 *.db
 *.log
-# backend/logs/ — rotated access-log files (backend/app/logging/logging_config.py
+# backend/logs/ — rotated access-log files (backend/mystic_auth/logging/logging_config.py
 # creates this directory on import and writes real request data to it: paths,
 # timestamps, correlation IDs). `*.log` above only matches files ending in
 # exactly ".log" — the rotated siblings TimedRotatingFileHandler creates
@@ -33,13 +33,16 @@ venv/
 # ---------------------------- Node / Frontend ----------------------------
 frontend/node_modules/       # Only ignore inside frontend
 frontend/dist/
-frontend/.env
 
 # ---------------------------- Secrets ----------------------------
 # Neither Dockerfile currently COPYs the repo root (backend.Dockerfile copies
 # backend/, frontend.Dockerfile copies frontend/), so this isn't fixing an
 # active leak — it's defense-in-depth against a future `COPY . .` silently
-# baking real secrets into an image, same rationale as frontend/.env above.
+# baking real secrets into an image. The one place the root .env is
+# deliberately reachable is docker-compose.yml's frontend dev service,
+# which bind-mounts it read-only so the Vite dev server can load it
+# (vite.config.ts's envDir) — a bind mount, not a COPY, so this rule
+# doesn't affect it.
 .env
 # frontend/coverage/ — vitest --coverage HTML/JSON report, a local test
 # artifact `COPY frontend/ .` would otherwise bake into both the `dev` and

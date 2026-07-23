@@ -9,9 +9,9 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.app.api.health_routes.health_routes import health, health_ready
+from mystic_auth.api.health_routes.health_routes import health, health_ready
 
-MODULE = "backend.app.api.health_routes.health_routes"
+MODULE = "mystic_auth.api.health_routes.health_routes"
 
 
 @pytest.mark.asyncio

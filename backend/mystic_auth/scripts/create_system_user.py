@@ -40,7 +40,7 @@ async def create_system_user():
     Interactive CLI script to create the one-time system superuser.
 
     Run once manually before first launch:
-        python -m app.scripts.create_system_user
+        python -m mystic_auth.scripts.create_system_user
     """
     print("\n--- System Superuser Creation ---")
 

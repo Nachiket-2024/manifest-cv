@@ -2,9 +2,9 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.security.rate_limiter_service import rate_limiter_service
+from mystic_auth.auth.security.rate_limiter_service import rate_limiter_service
 
-MODULE = "backend.app.auth.security.rate_limiter_service"
+MODULE = "mystic_auth.auth.security.rate_limiter_service"
 
 
 class _FakeClient:

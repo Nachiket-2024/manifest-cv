@@ -13,10 +13,10 @@ from unittest.mock import AsyncMock
 import pytest
 from sqlalchemy import text
 
-from backend.app.core.settings import settings
-from backend.app.database.connection import database
+from mystic_auth.core.settings import settings
+from mystic_auth.database.connection import database
 
-HANDLER_MODULE = "backend.app.auth.oauth2.oauth2_login_handler"
+HANDLER_MODULE = "mystic_auth.auth.oauth2.oauth2_login_handler"
 PASSWORD = "StrongPass123!"
 
 
@@ -146,8 +146,8 @@ async def test_oauth2_login_does_not_touch_password_of_already_verified_account(
     assert signup_resp.status_code == 200
     created_emails.append(email)
 
-    from backend.app.auth.verify_account.account_verification_service import account_verification_service
-    from backend.app.redis.client import redis_client
+    from mystic_auth.auth.verify_account.account_verification_service import account_verification_service
+    from mystic_auth.redis.client import redis_client
 
     token = await account_verification_service.create_verification_token(email)
     await redis_client.set(f"verify:{token}", "1", ex=600)

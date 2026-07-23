@@ -2,13 +2,13 @@
 
 ## Workflow
 
-`.github/workflows/ci.yml` — triggers on every push and pull request targeting `main`. Four independent jobs, all run in parallel (no job depends on another):
+`.github/workflows/ci.yml` — triggers on every push and pull request targeting `main`. Five independent jobs, all run in parallel (no job depends on another):
 
 ### `backend` — Backend (unit + integration)
 
 - Spins up Postgres 15 and Redis 7 as GitHub Actions **service containers** (not Docker Compose — a deliberate, lower-overhead equivalent for CI; Compose remains the source of truth for local development).
 - All required settings (`SECRET_KEY`, `GOOGLE_CLIENT_ID`, `APP_NAME`, `GEMINI_API_KEY`, etc. — `core/settings.py` has no defaults for most of them) are provided as job-level env vars with clearly-fake CI-only values, since there's no checked-in `.env` for CI to read. `GEMINI_API_KEY` in particular is a placeholder only — the ManifestCV integration suite mocks every Gemini/Qdrant call at each route module's import site rather than calling either service for real, so nothing in CI ever needs a live key or a reachable Qdrant instance (no `qdrant` service container is spun up here, unlike `postgres`/`redis`).
-- Installs dependencies, then runs `pip-audit -r backend/requirements.txt` (dependency vulnerability scan) before proceeding.
+- Installs dependencies, then runs `pip-audit -r backend/requirements.txt` (dependency vulnerability scan), then `bandit -r backend/app -ll` (static security analysis — injection, insecure crypto, unsafe deserialization, etc. — scoped to ManifestCV's own code, not the separately-reviewed vendored `backend/mystic_auth/`) before proceeding.
 - Runs `alembic upgrade head` (mystic-auth's 13 inherited migrations plus ManifestCV's own 4, in one chain), then `pytest tests/backend/unit tests/backend/manifestcv/unit`, then `pytest tests/backend/integration tests/backend/manifestcv/integration --cov-append`, then `pytest tests/backend/security --cov-append --cov-fail-under=80`. The `--cov-append` flags accumulate coverage across all three steps, so the 80% gate on the final step checks *cumulative* coverage across the whole run (inherited suites + ManifestCV's own), not any one suite alone — `pytest.ini` deliberately does not bake `--cov-fail-under` into `addopts` itself, since that would also apply to (and false-fail) a developer running a single suite locally. See [Testing Overview](../testing/overview.md).
 - Then runs `pytest tests/backend/performance` as a **non-blocking** (`continue-on-error: true`) step — informational only, since its thresholds, while generous regression alarms rather than a strict SLA, can still be noisier on shared GitHub-hosted runners than locally.
 
@@ -29,6 +29,12 @@
 - `docker run --network host` reaches the Postgres/Redis service containers via `localhost`, same as the bare-runner `backend` job; `-v "$GITHUB_WORKSPACE:/repo" -w /repo` mirrors exactly how a developer already runs this locally (`docker compose exec -w /repo backend pytest ...` — see [Docker Overview: test suite mounts](../docker/overview.md#test-suite-mounts)), not a CI-only invocation shape.
 - Exists because the `backend` job's own `tests/backend/manifestcv/integration/*` mocks `render_resume_pdf` everywhere (tectonic isn't on that job's bare runner) — this job is what actually exercises the real `markdown_to_latex` → `templates` → `tectonic_compiler` pipeline in CI, catching a LaTeX-escaping or template-preamble regression that a mocked compile can't. See [Document Generation: Testing](../document-generation/overview.md#testing).
 
+### `secret-scan` — Secret scanning (gitleaks)
+
+- Checks out full git history (`fetch-depth: 0`, not the default shallow clone) so a secret introduced and later removed in an earlier commit is still caught, not just the current tree.
+- Installs the OSS `gitleaks` CLI directly from its GitHub release (checksum-verified before extraction — see the Dockerfile checksum pattern below) rather than the `gitleaks-action` wrapper, which gates private-repo usage behind a paid license; the underlying CLI is Apache-2.0 and free regardless of repo visibility.
+- Runs `gitleaks detect --source . --redact` against the full checkout — fails the job on any match.
+
 ## What's covered
 
 - Backend unit/integration/security suites, against real Postgres/Redis, gated by an 80% cumulative-coverage threshold (actual coverage runs a few points above this — see [Testing Overview](../testing/overview.md)); performance tests run too, non-blocking.
@@ -36,6 +42,7 @@
 - Both Docker images still build.
 - Real `tectonic` PDF compilation, inside the actual production backend image — not just mocked.
 - Dependency vulnerability scanning on every push/PR: `pip-audit` (backend) and `npm audit --audit-level=high` (frontend) — lightweight steps added to the existing jobs, not new jobs, so CI time is barely affected. There is no scheduled/automated dependency-update bot in this repo — dependency bumps are a manual, deliberate action (see the header comment in `backend/requirements.txt`), not something that opens PRs on its own.
+- Static security analysis (`bandit`, scoped to `backend/app`) and full-history secret scanning (`gitleaks`) on every push/PR.
 
 ## What's not covered (tracked, not silently missing)
 

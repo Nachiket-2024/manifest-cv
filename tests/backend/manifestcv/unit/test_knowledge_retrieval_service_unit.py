@@ -10,6 +10,7 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+from backend.app.ai_integration.exceptions import AIIntegrationError
 from backend.app.retrieval.exceptions import RetrievalError
 from backend.app.retrieval import knowledge_retrieval_service as service
 
@@ -51,9 +52,14 @@ def test_chunk_markdown_returns_empty_list_for_blank_content():
 
 @pytest.mark.asyncio
 async def test_index_knowledge_base_wraps_qdrant_delete_failure_as_retrieval_error(mocker):
+    # embed_text must be mocked here too — index_knowledge_base embeds every
+    # chunk before touching Qdrant at all (see its own docstring), so a real,
+    # unmocked embed_text call would hit the network before ever reaching
+    # the delete step this test means to exercise.
     client = _fake_client()
     client.delete.side_effect = ConnectionError("qdrant unreachable")
     mocker.patch(f"{MODULE}.get_client", return_value=client)
+    mocker.patch(f"{MODULE}.embed_text", new_callable=AsyncMock, return_value=[0.1, 0.2])
 
     with pytest.raises(RetrievalError, match="delete failed"):
         await service.index_knowledge_base(1, "# Section\ncontent")
@@ -78,6 +84,23 @@ async def test_index_knowledge_base_skips_upsert_for_empty_content(mocker):
     await service.index_knowledge_base(1, "   ")
 
     client.delete.assert_awaited_once()
+    client.upsert.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_index_knowledge_base_leaves_qdrant_untouched_if_embedding_fails(mocker):
+    # The atomicity guarantee this whole function exists for: a failed embed
+    # call must never delete the previously-indexed content, or a user's
+    # knowledge base would go from "stale" to "completely unsearchable" on a
+    # single flaky Gemini call.
+    client = _fake_client()
+    mocker.patch(f"{MODULE}.get_client", return_value=client)
+    mocker.patch(f"{MODULE}.embed_text", new_callable=AsyncMock, side_effect=AIIntegrationError("Gemini down"))
+
+    with pytest.raises(AIIntegrationError):
+        await service.index_knowledge_base(1, "# Section\ncontent")
+
+    client.delete.assert_not_awaited()
     client.upsert.assert_not_awaited()
 
 
@@ -126,3 +149,44 @@ async def test_qdrant_call_wraps_timeout_as_retrieval_error(mocker):
 
     with pytest.raises(RetrievalError, match="did not respond within"):
         await service._call(_never_returns(), "delete")
+
+
+@pytest.mark.asyncio
+async def test_concurrent_reindex_for_same_user_is_serialized_not_interleaved(mocker):
+    """Two concurrent index_knowledge_base calls for the same user_id must
+    not interleave their delete/upsert pairs (see _reindex_lock's docstring)
+    — each call's delete must be immediately followed by its own upsert
+    before the other call's delete ever runs, or Qdrant could end up
+    reflecting neither save cleanly."""
+    call_log: list[str] = []
+
+    async def _delete(*args, **kwargs):
+        call_log.append("delete-start")
+        # Yields control so a real race would interleave here without the lock.
+        await asyncio.sleep(0.02)
+        call_log.append("delete-end")
+
+    async def _upsert(*args, **kwargs):
+        call_log.append("upsert-start")
+        await asyncio.sleep(0.02)
+        call_log.append("upsert-end")
+
+    client = MagicMock(delete=AsyncMock(side_effect=_delete), upsert=AsyncMock(side_effect=_upsert))
+    mocker.patch(f"{MODULE}.get_client", return_value=client)
+    mocker.patch(f"{MODULE}.embed_text", new_callable=AsyncMock, return_value=[0.1, 0.2])
+
+    await asyncio.gather(
+        service.index_knowledge_base(1, "# Section\nfirst save"),
+        service.index_knowledge_base(1, "# Section\nsecond save"),
+    )
+
+    assert call_log == [
+        "delete-start",
+        "delete-end",
+        "upsert-start",
+        "upsert-end",
+        "delete-start",
+        "delete-end",
+        "upsert-start",
+        "upsert-end",
+    ]

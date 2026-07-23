@@ -1,9 +1,9 @@
 # tests/backend/unit/test_login.py
 import pytest
 
-from backend.app.auth.login.login_handler import login_handler
-from backend.app.auth.security.login_protection_service import login_protection_service
-from backend.app.auth.token_logic.token_schema import TokenPairResponseSchema
+from mystic_auth.auth.login.login_handler import login_handler
+from mystic_auth.auth.security.login_protection_service import login_protection_service
+from mystic_auth.auth.token_logic.token_schema import TokenPairResponseSchema
 
 
 VALID_TOKENS = TokenPairResponseSchema(access_token="access", refresh_token="refresh")
@@ -12,15 +12,15 @@ VALID_TOKENS = TokenPairResponseSchema(access_token="access", refresh_token="ref
 @pytest.mark.asyncio
 async def test_login_success_sets_cookies_and_resets_lockout_counter(mocker):
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
         return_value=False,
     )
     reset_mock = mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.check_and_record_action",
+        "mystic_auth.auth.login.login_handler.login_protection_service.check_and_record_action",
         return_value=True,
     )
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_service.login",
+        "mystic_auth.auth.login.login_handler.login_service.login",
         return_value=VALID_TOKENS,
     )
 
@@ -41,15 +41,15 @@ async def test_login_success_sets_cookies_and_resets_lockout_counter(mocker):
 @pytest.mark.asyncio
 async def test_failed_login_is_recorded_towards_lockout(mocker):
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
         return_value=False,
     )
     record_mock = mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.check_and_record_action",
+        "mystic_auth.auth.login.login_handler.login_protection_service.check_and_record_action",
         return_value=True,
     )
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_service.login",
+        "mystic_auth.auth.login.login_handler.login_service.login",
         return_value=None,
     )
 
@@ -78,11 +78,11 @@ async def test_locked_source_ip_is_rejected_before_authentication_even_if_email_
         return key.startswith("login_lock:ip:")
 
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
         side_effect=is_locked_side_effect,
     )
     login_mock = mocker.patch(
-        "backend.app.auth.login.login_handler.login_service.login",
+        "mystic_auth.auth.login.login_handler.login_service.login",
     )
 
     response = await login_handler.handle_login(email="never-tried-before@example.com", password="whatever")
@@ -94,11 +94,11 @@ async def test_locked_source_ip_is_rejected_before_authentication_even_if_email_
 @pytest.mark.asyncio
 async def test_locked_account_is_rejected_before_authentication_is_attempted(mocker):
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
         return_value=True,
     )
     login_mock = mocker.patch(
-        "backend.app.auth.login.login_handler.login_service.login",
+        "mystic_auth.auth.login.login_handler.login_service.login",
     )
 
     response = await login_handler.handle_login(email="test@example.com", password="Test123!")
@@ -110,15 +110,15 @@ async def test_locked_account_is_rejected_before_authentication_is_attempted(moc
 @pytest.mark.asyncio
 async def test_correct_password_is_still_rejected_once_locked(mocker):
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
         return_value=False,
     )
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.check_and_record_action",
+        "mystic_auth.auth.login.login_handler.login_protection_service.check_and_record_action",
         return_value=False,
     )
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_service.login",
+        "mystic_auth.auth.login.login_handler.login_service.login",
         return_value=VALID_TOKENS,
     )
 
@@ -132,21 +132,21 @@ async def test_pre_check_and_post_check_lockout_responses_are_identical(mocker):
     # Both lockout rejections (pre-auth pre-check and post-auth recheck) share
     # a single response builder specifically so they can't drift apart.
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
         return_value=True,
     )
     pre_check_response = await login_handler.handle_login(email="test@example.com", password="Test123!")
 
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
         return_value=False,
     )
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.check_and_record_action",
+        "mystic_auth.auth.login.login_handler.login_protection_service.check_and_record_action",
         return_value=False,
     )
     mocker.patch(
-        "backend.app.auth.login.login_handler.login_service.login",
+        "mystic_auth.auth.login.login_handler.login_service.login",
         return_value=VALID_TOKENS,
     )
     post_check_response = await login_handler.handle_login(email="test@example.com", password="Test123!")
@@ -158,7 +158,7 @@ async def test_pre_check_and_post_check_lockout_responses_are_identical(mocker):
 @pytest.mark.asyncio
 async def test_missing_credentials_returns_400_without_touching_lockout(mocker):
     is_locked_mock = mocker.patch(
-        "backend.app.auth.login.login_handler.login_protection_service.is_locked",
+        "mystic_auth.auth.login.login_handler.login_protection_service.is_locked",
     )
 
     response = await login_handler.handle_login(email="", password="")

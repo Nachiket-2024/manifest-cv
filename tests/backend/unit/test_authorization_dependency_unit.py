@@ -10,9 +10,9 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from fastapi import HTTPException
 
-from backend.app.authorization.dependencies.authorization_dependency import require_authorization
+from mystic_auth.authorization.dependencies.authorization_dependency import require_authorization
 
-MODULE = "backend.app.authorization.dependencies.authorization_dependency"
+MODULE = "mystic_auth.authorization.dependencies.authorization_dependency"
 
 
 def _user(email="user@example.com") -> dict:

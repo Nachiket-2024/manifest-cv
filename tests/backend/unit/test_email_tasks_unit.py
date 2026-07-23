@@ -13,9 +13,9 @@ from unittest.mock import AsyncMock, patch
 from redis.exceptions import ResponseError
 from taskiq import SimpleRetryMiddleware
 
-from backend.app.taskiq_tasks.email_tasks import send_email_task, broker
+from mystic_auth.taskiq_tasks.email_tasks import send_email_task, broker
 
-MODULE = "backend.app.taskiq_tasks.email_tasks"
+MODULE = "mystic_auth.taskiq_tasks.email_tasks"
 
 
 @pytest.mark.asyncio

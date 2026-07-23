@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Text, DateTime, Date, Time, ForeignKey, String, LargeBinary
 from sqlalchemy.sql import func
 
-from ..database.base import Base
+from mystic_auth.database.base import Base
 
 
 class ApplicationRecord(Base):
@@ -15,10 +15,10 @@ class ApplicationRecord(Base):
     CareerKnowledgeBase, which has no meaning without its owner and so
     cascades instead — this data's whole purpose is outliving its source).
 
-    `status` (applied/interviewing/offered/rejected/etc, claude.md's list is
-    non-exhaustive) and the identifying fields are the only parts a user
-    can update after saving — the resume content/PDF snapshot itself is
-    read-only once created.
+    `status` (one of ApplicationStatus's fixed set — applied/interviewing/
+    offered/rejected, see application_schema.py) and the identifying fields
+    are the only parts a user can update after saving — the resume
+    content/PDF snapshot itself is read-only once created.
     """
 
     __tablename__ = "application_records"

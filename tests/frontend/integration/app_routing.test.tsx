@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import MockAdapter from 'axios-mock-adapter';
 
-import api from '@/api/axiosInstance';
+import api from '@/mystic_auth/api/axiosInstance';
 import App from '@/App';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
 
 // App.tsx builds its own BrowserRouter internally (rather than accepting one
 // from the caller), so the route under test is set via the real browser

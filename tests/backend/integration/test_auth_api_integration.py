@@ -14,9 +14,9 @@ from datetime import datetime, timedelta, timezone
 import jwt as pyjwt
 import pytest
 
-from backend.app.auth.verify_account.account_verification_service import account_verification_service
-from backend.app.core.settings import settings
-from backend.app.redis.client import redis_client
+from mystic_auth.auth.verify_account.account_verification_service import account_verification_service
+from mystic_auth.core.settings import settings
+from mystic_auth.redis.client import redis_client
 
 PASSWORD = "StrongPass123!"
 
@@ -538,7 +538,7 @@ async def _request_password_reset(client, email: str) -> str:
     """Mirrors password_reset_service.send_reset_email's Redis single-use
     registration so the test can drive password-reset/confirm without
     depending on the Taskiq email worker being up to deliver the link."""
-    from backend.app.auth.password_logic.password_service import password_service
+    from mystic_auth.auth.password_logic.password_service import password_service
 
     resp = await client.post("/auth/password-reset/request", json={"email": email})
     assert resp.status_code == 200

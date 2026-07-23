@@ -5,15 +5,15 @@
 # -> Condition Handlers. Each handler is tested in isolation (no DB, no
 # evaluator), plus the service's dispatch/AND/fail-safe-on-unknown-key
 # behavior, plus the registry itself.
-from backend.app.authorization.conditions.condition_registry import ConditionRegistry, default_condition_registry
-from backend.app.authorization.conditions.condition_evaluation_service import ConditionEvaluationService
-from backend.app.authorization.conditions.self_only_condition import SelfOnlyCondition
-from backend.app.authorization.conditions.resource_attributes_condition import ResourceAttributesCondition
-from backend.app.authorization.conditions.context_attributes_condition import ContextAttributesCondition
-from backend.app.authorization.conditions.time_condition import TimeCondition
-from backend.app.authorization.conditions.date_range_condition import DateRangeCondition
-from backend.app.authorization.conditions.network_condition import NetworkCondition
-from backend.app.authorization.conditions.security_context_condition import SecurityContextCondition
+from mystic_auth.authorization.conditions.condition_registry import ConditionRegistry, default_condition_registry
+from mystic_auth.authorization.conditions.condition_evaluation_service import ConditionEvaluationService
+from mystic_auth.authorization.conditions.self_only_condition import SelfOnlyCondition
+from mystic_auth.authorization.conditions.resource_attributes_condition import ResourceAttributesCondition
+from mystic_auth.authorization.conditions.context_attributes_condition import ContextAttributesCondition
+from mystic_auth.authorization.conditions.time_condition import TimeCondition
+from mystic_auth.authorization.conditions.date_range_condition import DateRangeCondition
+from mystic_auth.authorization.conditions.network_condition import NetworkCondition
+from mystic_auth.authorization.conditions.security_context_condition import SecurityContextCondition
 
 
 # ==================================================================

@@ -2,10 +2,10 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.refresh_token_logic.refresh_token_service import refresh_token_service
+from mystic_auth.auth.refresh_token_logic.refresh_token_service import refresh_token_service
 
 
-MODULE = "backend.app.auth.refresh_token_logic.refresh_token_service.jwt_service"
+MODULE = "mystic_auth.auth.refresh_token_logic.refresh_token_service.jwt_service"
 
 
 @pytest.mark.asyncio
@@ -71,7 +71,7 @@ async def test_refresh_tokens_rejects_wrong_type_token_without_treating_it_as_re
     )
     claim_mock = mocker.patch(f"{MODULE}.claim_jti_for_rotation", new_callable=AsyncMock)
     revoke_all_mock = mocker.patch(
-        "backend.app.auth.refresh_token_logic.refresh_token_service.RefreshTokenService.revoke_all_tokens_for_user",
+        "mystic_auth.auth.refresh_token_logic.refresh_token_service.RefreshTokenService.revoke_all_tokens_for_user",
         new_callable=AsyncMock,
     )
 
@@ -95,7 +95,7 @@ async def test_refresh_tokens_reuse_of_revoked_token_revokes_all_sessions(mocker
     )
     mocker.patch(f"{MODULE}.claim_jti_for_rotation", new_callable=AsyncMock, return_value=False)
     revoke_all_mock = mocker.patch(
-        "backend.app.auth.refresh_token_logic.refresh_token_service.RefreshTokenService.revoke_all_tokens_for_user",
+        "mystic_auth.auth.refresh_token_logic.refresh_token_service.RefreshTokenService.revoke_all_tokens_for_user",
         new_callable=AsyncMock,
         return_value=3,
     )
@@ -122,7 +122,7 @@ async def test_refresh_tokens_reuse_with_missing_email_does_not_crash(mocker):
     # which itself copes with a missing email gracefully.
     mocker.patch(f"{MODULE}.claim_jti_for_rotation", new_callable=AsyncMock, return_value=False)
     revoke_all_mock = mocker.patch(
-        "backend.app.auth.refresh_token_logic.refresh_token_service.RefreshTokenService.revoke_all_tokens_for_user",
+        "mystic_auth.auth.refresh_token_logic.refresh_token_service.RefreshTokenService.revoke_all_tokens_for_user",
         new_callable=AsyncMock,
     )
 
@@ -153,10 +153,10 @@ async def test_refresh_tokens_rejects_valid_type_token_missing_email_after_succe
 
 @pytest.mark.asyncio
 async def test_decode_payload_ignores_revocation_status(mocker):
-    from backend.app.auth.token_logic.jwt_service import jwt_service
+    from mystic_auth.auth.token_logic.jwt_service import jwt_service
 
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hset",
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hset",
         new_callable=AsyncMock,
     )
     token = await jwt_service.create_refresh_token(email="user@example.com")
@@ -171,6 +171,6 @@ async def test_decode_payload_ignores_revocation_status(mocker):
 
 @pytest.mark.asyncio
 async def test_decode_payload_returns_none_for_garbage_token():
-    from backend.app.auth.token_logic.jwt_service import jwt_service
+    from mystic_auth.auth.token_logic.jwt_service import jwt_service
 
     assert await jwt_service.decode_payload("not-a-real-jwt") is None

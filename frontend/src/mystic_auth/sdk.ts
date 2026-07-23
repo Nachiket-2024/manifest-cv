@@ -38,3 +38,17 @@ export { default as settings, APP_NAME } from "./core/settings";
 // ui/ErrorBoundary.tsx). A safe no-op when VITE_SENTRY_DSN is unset, see
 // docs/error-monitoring/overview.md
 export { reportError } from "./core/errorMonitoring";
+
+// Shared UI primitives — used by every page-level component, template or not
+export { default as PageContainer } from "./ui/PageContainer";
+export { default as Card } from "./ui/Card";
+export { default as DataTable } from "./ui/DataTable";
+export type { DataTableColumn } from "./ui/DataTable";
+export { default as ConfirmDialog } from "./ui/ConfirmDialog";
+export { default as FormAlert } from "./ui/FormAlert";
+export { default as LoadingState } from "./ui/LoadingState";
+export { toaster } from "./ui/toasterInstance";
+
+// Shared form/navigation guard hook, not specific to the profile page it
+// originated on
+export { useUnsavedChangesWarning } from "./profile/useUnsavedChangesWarning";

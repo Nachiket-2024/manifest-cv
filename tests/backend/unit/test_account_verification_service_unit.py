@@ -13,11 +13,11 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.verify_account.account_verification_service import (
+from mystic_auth.auth.verify_account.account_verification_service import (
     account_verification_service,
 )
 
-MODULE = "backend.app.auth.verify_account.account_verification_service"
+MODULE = "mystic_auth.auth.verify_account.account_verification_service"
 
 
 @pytest.mark.asyncio

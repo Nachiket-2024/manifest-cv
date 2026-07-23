@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
-import { useUnsavedChangesWarning } from '@/profile/useUnsavedChangesWarning';
+import { useUnsavedChangesWarning } from '@/mystic_auth/profile/useUnsavedChangesWarning';
 
 function dispatchBeforeUnload(): Event & { defaultPrevented: boolean } {
   const event = new Event('beforeunload', { cancelable: true }) as Event & { defaultPrevented: boolean };

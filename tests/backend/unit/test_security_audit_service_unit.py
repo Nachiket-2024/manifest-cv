@@ -9,10 +9,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.app.audit_log import audit_log_service
-from backend.app.audit_log.audit_log_service import log_security_event, LOGIN_SUCCESS
+from mystic_auth.audit_log import audit_log_service
+from mystic_auth.audit_log.audit_log_service import log_security_event, LOGIN_SUCCESS
 
-MODULE = "backend.app.audit_log.audit_log_service"
+MODULE = "mystic_auth.audit_log.audit_log_service"
 
 
 @pytest.mark.asyncio

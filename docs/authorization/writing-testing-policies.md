@@ -58,8 +58,8 @@ Every create/update/delete stages an immutable row in `policy_history` in the sa
 **Fastest feedback: unit tests with mocked policies** (no DB needed) — see `tests/backend/unit/test_policy_evaluator_unit.py` and `test_authorization_decision_unit.py`. Build a `Policy(...)` instance directly (it's a plain SQLAlchemy model, freely instantiable without a session) and call `PolicyEvaluationEngine.evaluate_detailed` directly:
 
 ```python
-from backend.app.authorization.models.policy_model import Policy
-from backend.app.authorization.evaluators.policy_evaluator import PolicyEvaluationEngine
+from backend.mystic_auth.authorization.models.policy_model import Policy
+from backend.mystic_auth.authorization.evaluators.policy_evaluator import PolicyEvaluationEngine
 
 def test_my_new_policy_shape_grants_the_right_action():
     policy = Policy(

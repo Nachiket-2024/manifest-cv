@@ -5,8 +5,8 @@ import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
-import { useAuthStore } from '@/store/authStore';
-import Navbar from '@/layout/Navbar';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
+import Navbar from '@/mystic_auth/layout/Navbar';
 
 const initialAuthState = useAuthStore.getState();
 

@@ -18,8 +18,8 @@ from .conftest import (
     cleanup_perftest_rows,
 )
 from tests.backend.security.conftest import create_verified_user
-from backend.app.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
-from backend.app.authorization.schemas.batch_authorization_schema import MAX_BATCH_SIZE
+from mystic_auth.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
+from mystic_auth.authorization.schemas.batch_authorization_schema import MAX_BATCH_SIZE
 
 # Generous thresholds: these exist to catch a gross regression (e.g. an
 # accidental N+1 query, or a dropped index), not to enforce a strict SLA.
@@ -61,7 +61,7 @@ async def test_listing_policies_stays_reasonable_with_many_policies(client, crea
         # Reuse the security suite's system-user helper indirectly: build
         # it here since it needs system_superuser + user_administration
         # too, not just self_service.
-        from backend.app.authorization.policies.default_policies import (
+        from mystic_auth.authorization.policies.default_policies import (
             USER_ADMINISTRATION_POLICY_NAME,
             SYSTEM_SUPERUSER_POLICY_NAME,
         )

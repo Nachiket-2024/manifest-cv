@@ -11,7 +11,7 @@ directly, for the same one-file-to-discover/one-file-to-fix reasons as
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .user_crud.user_crud_collector import user_crud
+from mystic_auth.user_crud.user_crud_collector import user_crud
 
 
 async def get_user_id_by_email(email: str, db: AsyncSession) -> int | None:

@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock
 
 import jwt as pyjwt
 
-from backend.app.auth.token_logic.jwt_service import jwt_service
-from backend.app.core.settings import settings
+from mystic_auth.auth.token_logic.jwt_service import jwt_service
+from mystic_auth.core.settings import settings
 
 
 def _decode(token: str) -> dict:
@@ -27,7 +27,7 @@ async def test_create_access_token_is_tagged_with_access_type(mocker):
 @pytest.mark.asyncio
 async def test_create_refresh_token_is_tagged_with_refresh_type(mocker):
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hset",
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hset",
         new_callable=AsyncMock,
     )
 
@@ -40,7 +40,7 @@ async def test_create_refresh_token_is_tagged_with_refresh_type(mocker):
 @pytest.mark.asyncio
 async def test_verify_token_accepts_matching_expected_type(mocker):
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
+        "mystic_auth.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
         new_callable=AsyncMock,
         return_value=False,
     )
@@ -56,7 +56,7 @@ async def test_verify_token_accepts_matching_expected_type(mocker):
 @pytest.mark.asyncio
 async def test_verify_token_rejects_access_token_presented_as_refresh(mocker):
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
+        "mystic_auth.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
         new_callable=AsyncMock,
         return_value=False,
     )
@@ -70,12 +70,12 @@ async def test_verify_token_rejects_access_token_presented_as_refresh(mocker):
 @pytest.mark.asyncio
 async def test_verify_token_rejects_refresh_token_presented_as_access(mocker):
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
+        "mystic_auth.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
         new_callable=AsyncMock,
         return_value=False,
     )
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hset",
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hset",
         new_callable=AsyncMock,
     )
 
@@ -95,11 +95,11 @@ async def test_verify_token_passes_algorithm_allowlist_as_a_list(mocker):
     # list check. Not currently exploitable given a fixed trusted algorithm
     # setting, but the list form is the only one PyJWT's own docs endorse.
     decode_mock = mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.jwt.decode",
+        "mystic_auth.auth.token_logic.jwt_service.jwt.decode",
         return_value={"jti": None, "type": "access", "email": "user@example.com"},
     )
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
+        "mystic_auth.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
         new_callable=AsyncMock,
         return_value=False,
     )
@@ -114,7 +114,7 @@ async def test_verify_token_passes_algorithm_allowlist_as_a_list(mocker):
 @pytest.mark.asyncio
 async def test_decode_payload_passes_algorithm_allowlist_as_a_list(mocker):
     decode_mock = mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.jwt.decode",
+        "mystic_auth.auth.token_logic.jwt_service.jwt.decode",
         return_value={"email": "user@example.com"},
     )
 
@@ -131,7 +131,7 @@ async def test_verify_token_rejects_a_genuinely_expired_token(mocker):
     # must reject this, and verify_token must translate that into None
     # rather than letting jwt.ExpiredSignatureError escape uncaught.
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
+        "mystic_auth.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
         new_callable=AsyncMock,
         return_value=False,
     )
@@ -162,7 +162,7 @@ async def test_decode_payload_rejects_a_genuinely_expired_token():
 @pytest.mark.asyncio
 async def test_verify_token_without_expected_type_skips_type_check(mocker):
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
+        "mystic_auth.auth.token_logic.jwt_service.JWTService.is_token_revoked_by_jti",
         new_callable=AsyncMock,
         return_value=False,
     )
@@ -187,10 +187,10 @@ async def test_verify_token_without_expected_type_skips_type_check(mocker):
 @pytest.mark.asyncio
 async def test_current_user_handler_requires_access_type(mocker):
     from fastapi import HTTPException
-    from backend.app.auth.current_user.current_user_handler import current_user_handler
+    from mystic_auth.auth.current_user.current_user_handler import current_user_handler
 
     verify_mock = mocker.patch(
-        "backend.app.auth.current_user.current_user_handler.jwt_service.verify_token",
+        "mystic_auth.auth.current_user.current_user_handler.jwt_service.verify_token",
         new_callable=AsyncMock,
         return_value=None,
     )
@@ -203,18 +203,18 @@ async def test_current_user_handler_requires_access_type(mocker):
 
 @pytest.mark.asyncio
 async def test_refresh_token_service_requires_refresh_type_on_rotation(mocker):
-    from backend.app.auth.refresh_token_logic.refresh_token_service import refresh_token_service
+    from mystic_auth.auth.refresh_token_logic.refresh_token_service import refresh_token_service
 
     # refresh_tokens() decodes once via decode_payload and checks the "type"
     # claim itself (rather than delegating to verify_token) to avoid
     # decoding/checking revocation on the same token more than once.
     mocker.patch(
-        "backend.app.auth.refresh_token_logic.refresh_token_service.jwt_service.decode_payload",
+        "mystic_auth.auth.refresh_token_logic.refresh_token_service.jwt_service.decode_payload",
         new_callable=AsyncMock,
         return_value={"email": "user@example.com", "role": "user", "type": "access", "jti": "jti-1", "exp": 1},
     )
     mocker.patch(
-        "backend.app.auth.refresh_token_logic.refresh_token_service.jwt_service.is_token_revoked_by_jti",
+        "mystic_auth.auth.refresh_token_logic.refresh_token_service.jwt_service.is_token_revoked_by_jti",
         new_callable=AsyncMock,
         return_value=False,
     )
@@ -226,10 +226,10 @@ async def test_refresh_token_service_requires_refresh_type_on_rotation(mocker):
 
 @pytest.mark.asyncio
 async def test_refresh_token_service_requires_refresh_type_on_revoke(mocker):
-    from backend.app.auth.refresh_token_logic.refresh_token_service import refresh_token_service
+    from mystic_auth.auth.refresh_token_logic.refresh_token_service import refresh_token_service
 
     verify_mock = mocker.patch(
-        "backend.app.auth.refresh_token_logic.refresh_token_service.jwt_service.verify_token",
+        "mystic_auth.auth.refresh_token_logic.refresh_token_service.jwt_service.verify_token",
         new_callable=AsyncMock,
         return_value=None,
     )
@@ -251,15 +251,15 @@ async def test_create_refresh_token_prunes_already_expired_registry_entries(mock
     past = time.time() - 60
     future = time.time() + 3600
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hgetall",
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hgetall",
         new_callable=AsyncMock,
         return_value={"expired-jti-1": str(past), "expired-jti-2": str(past), "still-valid-jti": str(future)},
     )
     hset_mock = mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hset", new_callable=AsyncMock
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hset", new_callable=AsyncMock
     )
     hdel_mock = mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hdel", new_callable=AsyncMock
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hdel", new_callable=AsyncMock
     )
 
     await jwt_service.create_refresh_token(email="user@example.com")
@@ -273,13 +273,13 @@ async def test_create_refresh_token_prunes_already_expired_registry_entries(mock
 @pytest.mark.asyncio
 async def test_create_refresh_token_skips_hdel_when_nothing_is_expired(mocker):
     mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hgetall",
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hgetall",
         new_callable=AsyncMock,
         return_value={"still-valid-jti": str(time.time() + 3600)},
     )
-    mocker.patch("backend.app.auth.token_logic.jwt_service.redis_client.hset", new_callable=AsyncMock)
+    mocker.patch("mystic_auth.auth.token_logic.jwt_service.redis_client.hset", new_callable=AsyncMock)
     hdel_mock = mocker.patch(
-        "backend.app.auth.token_logic.jwt_service.redis_client.hdel", new_callable=AsyncMock
+        "mystic_auth.auth.token_logic.jwt_service.redis_client.hdel", new_callable=AsyncMock
     )
 
     await jwt_service.create_refresh_token(email="user@example.com")
@@ -314,10 +314,10 @@ async def test_create_verification_token_defaults_to_access_token_expiry_when_un
 
 @pytest.mark.asyncio
 async def test_account_verification_requires_verify_type(mocker):
-    from backend.app.auth.verify_account.account_verification_service import account_verification_service
+    from mystic_auth.auth.verify_account.account_verification_service import account_verification_service
 
     verify_mock = mocker.patch(
-        "backend.app.auth.verify_account.account_verification_service.jwt_service.verify_token",
+        "mystic_auth.auth.verify_account.account_verification_service.jwt_service.verify_token",
         new_callable=AsyncMock,
         return_value=None,
     )

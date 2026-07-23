@@ -69,6 +69,12 @@ function resolveExternalTestImports(): Plugin {
 }
 
 export default defineConfig({
+  // VITE_* vars live in the repo root .env/.env.example, not frontend/.env —
+  // matches vite.config.ts's own envDir, so tests see the same
+  // VITE_API_BASE_URL the dev server and production build use instead of
+  // an undefined one.
+  envDir: '..',
+
   plugins: [react(), resolveExternalTestImports()],
 
   resolve: {

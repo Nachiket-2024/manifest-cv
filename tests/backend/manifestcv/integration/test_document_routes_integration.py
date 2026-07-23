@@ -20,12 +20,12 @@ import uuid
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.verify_account.account_verification_service import account_verification_service
-from backend.app.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
-from backend.app.authorization.repositories.policy_repository import policy_repository
-from backend.app.database.connection import database
-from backend.app.redis.client import redis_client
-from backend.app.user_crud.user_crud_collector import user_crud
+from mystic_auth.auth.verify_account.account_verification_service import account_verification_service
+from mystic_auth.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
+from mystic_auth.authorization.repositories.policy_repository import policy_repository
+from mystic_auth.database.connection import database
+from mystic_auth.redis.client import redis_client
+from mystic_auth.user_crud.user_crud_collector import user_crud
 from backend.app.resume_crud.resume_repository import resume_repository
 
 ROUTES_MODULE = "backend.app.api.document_routes.document_routes"
@@ -142,7 +142,7 @@ async def test_preview_compiles_on_the_fly_without_persisting(client, created_em
     # never the frontend) and X-Frame-Options is omitted entirely, since it
     # has no cross-browser way to name a specific non-same origin — see
     # security_headers_middleware.py.
-    from backend.app.core.settings import settings
+    from mystic_auth.core.settings import settings
 
     assert "X-Frame-Options" not in response.headers
     assert response.headers["Content-Security-Policy"] == f"default-src 'none'; frame-ancestors {settings.FRONTEND_BASE_URL}"

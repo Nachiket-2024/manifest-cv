@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock
 
 import jwt as pyjwt
 
-from backend.app.auth.token_logic.jwt_service import jwt_service
-from backend.app.core.settings import settings
+from mystic_auth.auth.token_logic.jwt_service import jwt_service
+from mystic_auth.core.settings import settings
 
-MODULE = "backend.app.auth.token_logic.jwt_service"
+MODULE = "mystic_auth.auth.token_logic.jwt_service"
 
 
 def _decode(token: str) -> dict:
@@ -181,7 +181,7 @@ async def test_verify_token_rejects_when_jti_is_revoked(mocker):
 
 @pytest.mark.asyncio
 async def test_revoke_all_tokens_for_user_revokes_each_jti_in_registry(mocker):
-    from backend.app.auth.refresh_token_logic.refresh_token_service import refresh_token_service
+    from mystic_auth.auth.refresh_token_logic.refresh_token_service import refresh_token_service
 
     mocker.patch(
         f"{MODULE}.redis_client.hgetall",
@@ -202,7 +202,7 @@ async def test_revoke_all_tokens_for_user_revokes_each_jti_in_registry(mocker):
 
 @pytest.mark.asyncio
 async def test_revoke_all_tokens_for_user_empty_registry_returns_zero(mocker):
-    from backend.app.auth.refresh_token_logic.refresh_token_service import refresh_token_service
+    from mystic_auth.auth.refresh_token_logic.refresh_token_service import refresh_token_service
 
     mocker.patch(f"{MODULE}.redis_client.hgetall", new_callable=AsyncMock, return_value={})
 

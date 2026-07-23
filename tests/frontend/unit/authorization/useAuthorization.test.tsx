@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, renderHook } from '@testing-library/react';
 
-import { useAuthStore } from '@/store/authStore';
-import { useAuthorization } from '@/authorization/useAuthorization';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
+import { useAuthorization } from '@/mystic_auth/authorization/useAuthorization';
 
 const initialAuthState = useAuthStore.getState();
 

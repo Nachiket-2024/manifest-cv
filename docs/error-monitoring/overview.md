@@ -44,15 +44,15 @@ No external account or sign-up is involved anywhere in this path — Bugsink is 
 
 3. **Log in** at `http://localhost:8010` (or whatever `BUGSINK_BASE_URL` you set) with the superuser credentials from step 1 — a project named after `APP_NAME` is already there, created automatically (see below), so there's no "New Project" step to figure out first. Open it and go to its settings to find its **DSN** — a URL like `http://<key>@localhost:8010/1`.
 
-4. **Put that DSN in `.env`** (backend) and `frontend/.env` (frontend) — **using two different hosts, not the same DSN copy-pasted into both**:
+4. **Put that DSN in `.env`** — both `SENTRY_DSN` (backend) and `VITE_SENTRY_DSN` (frontend) live in the same root `.env` now, but still need **two different hosts, not the same DSN copy-pasted into both**:
 
    ```bash
-   # .env — the backend runs *inside* the Docker network, where "localhost"
-   # means the backend container itself, not Bugsink. Reach Bugsink via its
-   # Compose service name and internal container port instead:
+   # SENTRY_DSN — the backend runs *inside* the Docker network, where
+   # "localhost" means the backend container itself, not Bugsink. Reach
+   # Bugsink via its Compose service name and internal container port instead:
    SENTRY_DSN=http://<key>@bugsink:8000/1
 
-   # frontend/.env — the frontend SDK runs in the browser, on your host
+   # VITE_SENTRY_DSN — the frontend SDK runs in the browser, on your host
    # machine, outside Docker entirely, so it uses the published host port
    # Bugsink's DSN actually gave you:
    VITE_SENTRY_DSN=http://<key>@localhost:8010/1
@@ -71,7 +71,7 @@ No external account or sign-up is involved anywhere in this path — Bugsink is 
    ```bash
    docker compose exec backend python -c "
    import sentry_sdk
-   from app.error_monitoring.sentry_service import init_sentry, capture_exception
+   from mystic_auth.error_monitoring.sentry_service import init_sentry, capture_exception
    import asyncio
 
    init_sentry()
@@ -98,7 +98,7 @@ A second one-shot service, `seed_bugsink_project` (`docker-compose.yml`/`docker-
 - **Idempotent, not destructive.** It only acts when zero non-deleted projects exist anywhere in the Bugsink instance. Create more projects/teams by hand afterward (multiple services, staging vs. prod, whatever) and this script permanently no-ops on every future run — it never touches, renames, or recreates anything once a project exists.
 - **Why a script piped into `bugsink-manage shell` rather than a proper management command**: Bugsink's official image exposes no hook for adding custom Django management commands, and the model-level creation calls used here (`Team.objects.get_or_create`, `ProjectMembership.objects.get_or_create`, etc.) are the same primitives Bugsink's own project-creation view uses internally — there's no supported REST/CLI shortcut for "create a project non-interactively" as of this template's mystic-auth/Bugsink versions.
 - **Runs after `bugsink` reports healthy** (`depends_on: condition: service_healthy`), so it always sees fully-migrated tables; runs before `backend`/`frontend` even start, so the very first login already has something to open. No restart policy, same reasoning as `alembic`.
-- **Doesn't touch `SENTRY_DSN`/`VITE_SENTRY_DSN` for you.** It prints the new project's DSN to its own container's log output (`docker compose logs seed_bugsink_project`) as a convenience, but wiring that DSN into `.env`/`frontend/.env` is still the manual step in [Quickstart](#quickstart-self-hosted-bugsink) above — the two host forms it needs (`bugsink:8000` internally vs. `localhost:8010` from the browser) aren't something a script running *inside* the Bugsink container can know about your setup.
+- **Doesn't touch `SENTRY_DSN`/`VITE_SENTRY_DSN` for you.** It prints the new project's DSN to its own container's log output (`docker compose logs seed_bugsink_project`) as a convenience, but wiring that DSN into `.env` (both `SENTRY_DSN` and `VITE_SENTRY_DSN`) is still the manual step in [Quickstart](#quickstart-self-hosted-bugsink) above — the two host forms it needs (`bugsink:8000` internally vs. `localhost:8010` from the browser) aren't something a script running *inside* the Bugsink container can know about your setup.
 - **Opting out**: if you'd rather organize projects/teams entirely by hand, just create your own before ever starting `seed_bugsink_project` (e.g. via Bugsink's UI right after your first login) — the idempotency check means the bootstrap script will find your project and do nothing.
 
 ## Using Bugsink
@@ -116,10 +116,10 @@ Written for whoever's never touched Bugsink (or Sentry, or any error tracker lik
 
 | Layer | Trigger | Where |
 |---|---|---|
-| Backend | Any exception that reaches `main.py`'s global exception handler (i.e. anything not already turned into a normal HTTP error response by a route) | `backend/app/error_monitoring/sentry_service.py::capture_exception` |
-| Backend (manual) | Anything your own route/service code catches but still wants tracked | `capture_exception`, re-exported from `backend/app/sdk.py` |
-| Frontend | An uncaught render error anywhere in the component tree | `frontend/src/ui/ErrorBoundary.tsx` → `core/errorMonitoring.ts::reportError` |
-| Frontend (manual) | Anything your own component/hook code catches but still wants tracked | `reportError`, re-exported from `frontend/src/sdk.ts` |
+| Backend | Any exception that reaches `main.py`'s global exception handler (i.e. anything not already turned into a normal HTTP error response by a route) | `backend/mystic_auth/error_monitoring/sentry_service.py::capture_exception` |
+| Backend (manual) | Anything your own route/service code catches but still wants tracked | `capture_exception`, re-exported from `backend/mystic_auth/sdk.py` |
+| Frontend | An uncaught render error anywhere in the component tree | `frontend/src/mystic_auth/ui/ErrorBoundary.tsx` → `core/errorMonitoring.ts::reportError` |
+| Frontend (manual) | Anything your own component/hook code catches but still wants tracked | `reportError`, re-exported from `frontend/src/mystic_auth/sdk.ts` |
 | Frontend (automatic) | Uncaught `window.onerror`/unhandled promise rejections | Sentry SDK's own default browser instrumentation, once initialized |
 
 **Not reported automatically**: a normal `403`/`404`/validation error — those are expected API responses handled by the calling code (a toast, an inline `FormAlert`), not exceptions. Reporting every expected error response would drown out the events that actually indicate a bug.

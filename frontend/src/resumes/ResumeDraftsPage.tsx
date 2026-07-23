@@ -2,13 +2,16 @@ import React, { useState } from "react";
 import { Badge, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 
-import PageContainer from "../ui/PageContainer";
-import Card from "../ui/Card";
-import DataTable, { type DataTableColumn } from "../ui/DataTable";
-import FormAlert from "../ui/FormAlert";
-import ConfirmDialog from "../ui/ConfirmDialog";
 import Pager from "../ui/Pager";
-import { toaster } from "../ui/toasterInstance";
+import {
+    PageContainer,
+    Card,
+    DataTable,
+    type DataTableColumn,
+    FormAlert,
+    ConfirmDialog,
+    toaster,
+} from "../mystic_auth/sdk";
 import { useResumeDraftsQuery, RESUME_DRAFTS_PAGE_SIZE } from "./resumeQueries";
 import { useCreateResumeDraftMutation, useDeleteResumeDraftMutation } from "./resumeMutations";
 import type { ResumeDraftRead } from "../api/resume_api";

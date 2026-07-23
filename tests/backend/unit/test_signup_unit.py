@@ -2,11 +2,11 @@
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.auth.signup.signup_handler import signup_handler
-from backend.app.auth.signup.signup_service import signup_service
+from mystic_auth.auth.signup.signup_handler import signup_handler
+from mystic_auth.auth.signup.signup_service import signup_service
 
-HANDLER_MODULE = "backend.app.auth.signup.signup_handler"
-SERVICE_MODULE = "backend.app.auth.signup.signup_service"
+HANDLER_MODULE = "mystic_auth.auth.signup.signup_handler"
+SERVICE_MODULE = "mystic_auth.auth.signup.signup_service"
 
 
 class _FakeUser:

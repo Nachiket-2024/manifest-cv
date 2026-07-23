@@ -3,8 +3,8 @@ import { render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { MemoryRouter } from 'react-router-dom';
 
-import { useAuthStore } from '@/store/authStore';
-import Sidebar from '@/layout/Sidebar';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
+import Sidebar from '@/mystic_auth/layout/Sidebar';
 
 const initialAuthState = useAuthStore.getState();
 

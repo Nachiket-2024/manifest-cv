@@ -1,4 +1,4 @@
-import { api } from "../sdk";
+import { api } from "../mystic_auth/sdk";
 
 export interface CareerKnowledgeBaseRead {
     id: number;

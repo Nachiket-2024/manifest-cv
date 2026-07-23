@@ -1,4 +1,4 @@
-import { api } from "../sdk";
+import { api } from "../mystic_auth/sdk";
 
 export interface ApplicationRead {
     id: number;
@@ -44,5 +44,12 @@ export const updateApplicationApi = (applicationId: number, payload: Application
 
 export const deleteApplicationApi = (applicationId: number) => api.delete(`/applications/${applicationId}`);
 
-export const applicationPdfDownloadUrl = (applicationId: number, apiBaseUrl: string) =>
-    `${apiBaseUrl}/applications/${applicationId}/pdf`;
+// A missing VITE_API_BASE_URL at build time would otherwise silently
+// produce a literal "undefined/applications/.../pdf" URL — fail loudly here
+// instead, at the point the URL is actually needed.
+export const applicationPdfDownloadUrl = (applicationId: number, apiBaseUrl: string) => {
+    if (!apiBaseUrl) {
+        throw new Error("VITE_API_BASE_URL is not configured — set it before building the frontend");
+    }
+    return `${apiBaseUrl}/applications/${applicationId}/pdf`;
+};

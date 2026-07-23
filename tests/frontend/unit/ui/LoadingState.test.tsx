@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
-import LoadingState from '@/ui/LoadingState';
+import LoadingState from '@/mystic_auth/ui/LoadingState';
 
 describe('LoadingState', () => {
   it('renders the given message', () => {

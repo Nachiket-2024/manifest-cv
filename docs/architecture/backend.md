@@ -2,13 +2,13 @@
 
 ## Purpose
 
-FastAPI application (`backend/app/`), async throughout — SQLAlchemy async engine, async Redis client, async SMTP, async Qdrant client. One codebase, three container roles (`backend`, `taskiq_worker`, `alembic`) built from the same image with different `command:` overrides — see [Docker Overview](../docker/overview.md).
+FastAPI application (`backend/`), async throughout — SQLAlchemy async engine, async Redis client, async SMTP, async Qdrant client. One codebase, three container roles (`backend`, `taskiq_worker`, `alembic`) built from the same image with different `command:` overrides — see [Docker Overview](../docker/overview.md).
 
-The app is two layers: an identity/authorization foundation vendored from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) (`api/auth_routes/`, `api/pbac_routes/`, `api/user_routes/`, `auth/`, `authorization/`, `user_crud/`, `user_table/`, `audit_log/`), and ManifestCV's own product domains built on top of it (`career_knowledge_*`, `resume_*`, `application_*`, `document_generation/`, `ai_integration/`, `retrieval/`). The only bridge between the two is mystic-auth's own `sdk.py` extension surface plus ManifestCV's small `manifestcv_sdk.py` id-resolution helper — see [Auth & Authorization](../auth/overview.md).
+The app is two layers, kept in physically separate top-level Python packages: an identity/authorization foundation vendored from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) (`backend/mystic_auth/` — `api/auth_routes/`, `api/pbac_routes/`, `api/user_routes/`, `auth/`, `authorization/`, `user_crud/`, `user_table/`, `audit_log/`), and ManifestCV's own product domains built on top of it (`backend/app/` — `career_knowledge_*`, `resume_*`, `application_*`, `document_generation/`, `ai_integration/`, `retrieval/`). The only bridge between the two is mystic-auth's own `mystic_auth/sdk.py` extension surface plus ManifestCV's small `app/manifestcv_sdk.py` id-resolution helper — see [Auth & Authorization](../auth/overview.md). Because they're sibling top-level packages rather than one nested under the other, every import that crosses the boundary is an absolute `mystic_auth.*` import (relative imports can't reach across it) — everything else, within either package, stays relative exactly as before the split.
 
 ## Module layout
 
-### Inherited from mystic-auth
+### `backend/mystic_auth/` — inherited from mystic-auth
 
 | Module | Purpose |
 |---|---|
@@ -25,11 +25,11 @@ The app is two layers: an identity/authorization foundation vendored from [mysti
 | `taskiq_tasks/` | The async email-sending task and its broker — see [Background Workers](../background-workers/taskiq.md) |
 | `user_crud/`, `user_table/` | CRUD orchestration and SQLAlchemy model/schema for the `users` table |
 | `error_monitoring/` | `sentry_service.py` — optional, disabled unless `SENTRY_DSN` is set; a no-op otherwise — see [Error Monitoring](../error-monitoring/overview.md) |
-| `sdk.py` | mystic-auth's own public extension surface for downstream code (`get_current_user`, `require_authorization`, `Permission`, `database`, `settings`, `capture_exception`, etc.) — ManifestCV route modules import `get_current_user` from here rather than mystic-auth's internal path directly, see [Auth & Authorization](../auth/overview.md) |
+| `sdk.py` | mystic-auth's own public extension surface for downstream code (`get_current_user`, `require_authorization`, `Permission`, `database`, `settings`, `capture_exception`, etc.) — ManifestCV route modules import `get_current_user` from `mystic_auth.sdk` rather than mystic-auth's internal path directly, see [Auth & Authorization](../auth/overview.md) |
 
 For how any of these actually work internally, see [mystic-auth's own docs](https://github.com/Nachiket-2024/mystic-auth/tree/main/docs) — this repo doesn't duplicate that documentation, only what ManifestCV adds on top of it or depends on from it.
 
-### ManifestCV's own domains
+### `backend/app/` — ManifestCV's own domains
 
 | Module | Purpose |
 |---|---|
@@ -39,7 +39,9 @@ For how any of these actually work internally, see [mystic-auth's own docs](http
 | `resume_document_table/`, `resume_document_crud/`, `document_generation/`, `api/document_routes/` | Compiled PDF resumes — see [Document Generation](../document-generation/overview.md) |
 | `application_table/`, `application_crud/`, `api/application_routes/` | Tracked job applications — see [Applications](../applications/overview.md) |
 | `ai_integration/`, `retrieval/` | Gemini text generation/embeddings and Qdrant vector search — see [AI & Retrieval](../ai-and-retrieval/overview.md) |
-| `main.py` | App entrypoint: middleware registration, router mounting (mystic-auth's routers plus ManifestCV's four), global exception handler, lifespan (Qdrant collection bootstrap on startup; DB pool / Redis / Qdrant client cleanup on shutdown) |
+| `main.py` | App entrypoint: middleware registration, router mounting (mystic-auth's routers plus ManifestCV's four), global exception handler, lifespan (Qdrant collection bootstrap on startup; DB pool / Redis / Qdrant client cleanup on shutdown). Stays under `app/` — and remains the `uvicorn app.main:app` / `backend.app.main:app` entrypoint everywhere (Docker, local, tests) — rather than moving to `mystic_auth/`, since it's the actual composition root that mounts both packages' routers together |
+
+`main.py` is the one file that necessarily imports across the `mystic_auth`/`app` boundary at the top level — it pulls in mystic-auth's settings, routers, middleware, and DB/Redis singletons via absolute `mystic_auth.*` imports, then mounts ManifestCV's own routers via its usual relative imports within `app/`.
 
 ## Request pipeline
 
@@ -60,11 +62,11 @@ In production (`ENVIRONMENT=production`), `/docs`, `/redoc`, and `/openapi.json`
 
 ## Configuration
 
-All configuration is centralized in `core/settings.py` (`pydantic-settings`, loaded from `.env`) — every setting is documented inline there with a one-line comment. No module reads an environment variable directly outside of `settings`. `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EMBEDDING_MODEL`, and `QDRANT_URL` are ManifestCV's own additions to the inherited settings list. See `.env.example` for the full list, grouped by category.
+All configuration is centralized in `mystic_auth/core/settings.py` (`pydantic-settings`, loaded from `.env`) — every setting is documented inline there with a one-line comment. No module reads an environment variable directly outside of `settings`. `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_EMBEDDING_MODEL`, and `QDRANT_URL` are ManifestCV's own additions to the inherited settings list. See `.env.example` for the full list, grouped by category.
 
 ## Database layer
 
-SQLAlchemy 2.0, fully async (`asyncpg` driver). `database/connection.py`'s `Database` class wraps the async engine and session factory; a module-level `database` singleton is imported everywhere a session is needed (`Depends(database.get_session)`). Schema is managed entirely through Alembic migrations (`backend/alembic/versions/`) — no `create_all()` anywhere in application startup. ManifestCV's four tables chain directly after mystic-auth's own migration history rather than branching — see [Database Design](../database/design.md).
+SQLAlchemy 2.0, fully async (`asyncpg` driver). `mystic_auth/database/connection.py`'s `Database` class wraps the async engine and session factory; a module-level `database` singleton is imported everywhere a session is needed (`Depends(database.get_session)`). Schema is managed entirely through Alembic migrations (`backend/alembic/versions/`) — no `create_all()` anywhere in application startup. ManifestCV's four tables chain directly after mystic-auth's own migration history rather than branching — see [Database Design](../database/design.md).
 
 ## Error handling
 
@@ -74,8 +76,8 @@ Two layers:
 
 ## Logging
 
-Structured, module-scoped loggers via `logging/logging_config.py::get_logger(__name__)` throughout. Every request gets a correlation ID (`CorrelationIdMiddleware`) attached to every log line emitted while handling it, making it possible to grep `docker compose logs backend` for one request's full trail.
+Structured, module-scoped loggers via `mystic_auth/logging/logging_config.py::get_logger(__name__)` throughout. Every request gets a correlation ID (`CorrelationIdMiddleware`) attached to every log line emitted while handling it, making it possible to grep `docker compose logs backend` for one request's full trail.
 
 ## Testing coverage
 
-`tests/backend/{unit,integration,security,performance}/` cover the inherited mystic-auth foundation; `tests/backend/manifestcv/{unit,integration}/` cover ManifestCV's own domains — see [Testing Overview](../testing/overview.md).
+`tests/backend/{unit,integration,security,performance}/` cover the inherited mystic-auth foundation (`backend/mystic_auth/`); `tests/backend/manifestcv/{unit,integration}/` cover ManifestCV's own domains (`backend/app/`) — see [Testing Overview](../testing/overview.md).

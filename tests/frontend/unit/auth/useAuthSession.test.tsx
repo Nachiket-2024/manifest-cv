@@ -4,9 +4,9 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import MockAdapter from 'axios-mock-adapter';
 
-import api from '@/api/axiosInstance';
-import { useAuthStore } from '@/store/authStore';
-import { useAuthSession } from '@/auth/current_user/useCurrentUserQuery';
+import api from '@/mystic_auth/api/axiosInstance';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
+import { useAuthSession } from '@/mystic_auth/auth/current_user/useCurrentUserQuery';
 
 const mock = new MockAdapter(api);
 

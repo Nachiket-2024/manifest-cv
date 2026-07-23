@@ -16,6 +16,30 @@ Tracked deliberately rather than left as silent gaps. Each entry reflects an act
 
 **Priority**: High for any real production use, N/A for local development.
 
+### Qdrant is never backed up, and can silently drift from Postgres after a restore
+
+**Description**: [Deployment Guide](../deployment/guide.md#backups) documents backing up/restoring Postgres via `scripts/db_backup.sh`/`scripts/db_restore.sh`, but Qdrant's vector index (`retrieval/qdrant_client.py`'s `career_knowledge_chunks` collection) has no backup story at all — it isn't a Docker named volume covered by any documented backup step, and Qdrant itself keeps no history.
+
+**Impact**: Restoring Postgres from an older dump after a real incident brings back `career_knowledge_bases` rows that may no longer match what's indexed in Qdrant (rows deleted after the dump was taken still have live vectors; rows created/edited after the dump was taken are missing from Qdrant entirely) — semantic search silently returns stale or orphaned results rather than failing loudly, with no code path that detects or repairs the mismatch.
+
+**Why it exists**: Qdrant's index is treated as a derived cache of Postgres content (`content` is the source of truth, chunks are re-embedded from it on every save — see `retrieval/knowledge_retrieval_service.py`), so it was assumed always re-derivable rather than something to actually back up.
+
+**Possible fix**: Either add Qdrant's storage volume to the backup story, or — simpler, given it's fully derived — a documented/scripted "reindex everyone" maintenance task (loop `career_knowledge_repository` rows through `index_knowledge_base`) to run once after any Postgres restore, so a restore's runbook has an explicit, mechanical step instead of a silent gap.
+
+**Priority**: Medium — no data loss (Postgres remains authoritative), but a real, currently-undocumented correctness gap for search results after any restore.
+
+### Deleting a user account never cleans up their indexed knowledge-base chunks in Qdrant
+
+**Description**: `career_knowledge_bases` rows cascade-delete in Postgres when the owning user is deleted (`ON DELETE CASCADE`, mystic-auth's own account-deletion route in `mystic_auth/api/user_routes/`), but nothing calls `retrieval/knowledge_retrieval_service.py::delete_knowledge_base(user_id)` as part of that flow — only ManifestCV's own `DELETE /career-knowledge/` route does. mystic-auth's account-deletion code has no reason to know ManifestCV's Qdrant collection exists, and giving it one would mean editing vendored mystic-auth code, which this repo deliberately never does (see [Auth & Authorization](../auth/overview.md)).
+
+**Impact**: A deleted user's embedded career-knowledge text (raw chunk content, not just an id) is permanently orphaned in the shared `career_knowledge_chunks` Qdrant collection with no remaining code path to remove it — a data-retention/right-to-erasure gap for any deployment with real users.
+
+**Why it exists**: Structural consequence of the mystic-auth/ManifestCV boundary — mystic-auth's account lifecycle is generic and deliberately has zero knowledge of ManifestCV's own tables or Qdrant.
+
+**Possible fix**: A periodic reconciliation job (compare Qdrant's indexed `user_id` payload values against live `users` rows, delete orphans) is the cleanest fix that doesn't require touching mystic-auth's own code — see [Background Workers](../background-workers/taskiq.md) for where a scheduled taskiq task like this would live.
+
+**Priority**: Medium — no security impact (chunks stay scoped to a `user_id` no route can authenticate as anymore), but a real compliance/data-retention gap.
+
 ## Configuration
 
 ### One global rate-limit threshold for every endpoint
@@ -39,6 +63,18 @@ Tracked deliberately rather than left as silent gaps. Each entry reflects an act
 **Why it exists**: Deliberate — no assumed production target (see [Deployment Guide](../deployment/guide.md#free--low-cost-hosting-options) for provider-agnostic options); adding a deploy stage would need to assume a specific host.
 
 **Priority**: N/A — intentional scope boundary, not a gap.
+
+### CI never smoke-tests the full multi-container stack end-to-end
+
+**Description**: `docker-build` validates `docker compose config` (parses both compose files, checks service dependency references) and builds the backend/frontend images individually, and `real-tectonic` runs one real container against real Postgres/Redis — but no CI job runs `docker compose -f docker-compose.prod.yml up` and hits a real endpoint through the actual multi-container wiring (nginx → backend → postgres/redis/qdrant, `depends_on`/healthcheck chains, env var names actually matching between compose `environment:` blocks and what `Settings` expects).
+
+**Impact**: A wiring bug that only manifests when every piece runs together — a typo'd env var name, a broken healthcheck dependency, an nginx `proxy_pass` misconfiguration — could pass every existing CI job and only surface on the first real deployment.
+
+**Why it exists**: Scope/complexity tradeoff — a true end-to-end smoke test needs real service startup ordering and a working `.env` (placeholder secrets, at minimum a real-enough `GEMINI_API_KEY`/`QDRANT_URL` shape), which is a meaningfully bigger CI job than anything currently in `ci.yml`.
+
+**Possible fix**: A new CI job that runs `docker compose -f docker-compose.prod.yml up -d` (with placeholder secrets, same pattern as the `backend` job's job-level env) and polls `/health/ready` plus the frontend's `/` before tearing down — catches wiring regressions without needing real external API access, since `/health/ready` only checks DB/Redis connectivity, not Gemini/Qdrant.
+
+**Priority**: Medium — the individual pieces are all separately well-tested; this closes the one remaining gap between "each piece works" and "the pieces work together."
 
 ## Product (ManifestCV)
 

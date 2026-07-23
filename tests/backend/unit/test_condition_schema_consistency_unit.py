@@ -7,14 +7,14 @@
 # evaluator representation, per condition. Each canonical payload below
 # must both pass validation and be understood (evaluate to the intended
 # outcome, not silently ignored) by its handler.
-from backend.app.authorization.conditions.condition_validator import validate_conditions
-from backend.app.authorization.conditions.self_only_condition import SelfOnlyCondition
-from backend.app.authorization.conditions.resource_attributes_condition import ResourceAttributesCondition
-from backend.app.authorization.conditions.context_attributes_condition import ContextAttributesCondition
-from backend.app.authorization.conditions.time_condition import TimeCondition
-from backend.app.authorization.conditions.date_range_condition import DateRangeCondition
-from backend.app.authorization.conditions.network_condition import NetworkCondition
-from backend.app.authorization.conditions.security_context_condition import SecurityContextCondition
+from mystic_auth.authorization.conditions.condition_validator import validate_conditions
+from mystic_auth.authorization.conditions.self_only_condition import SelfOnlyCondition
+from mystic_auth.authorization.conditions.resource_attributes_condition import ResourceAttributesCondition
+from mystic_auth.authorization.conditions.context_attributes_condition import ContextAttributesCondition
+from mystic_auth.authorization.conditions.time_condition import TimeCondition
+from mystic_auth.authorization.conditions.date_range_condition import DateRangeCondition
+from mystic_auth.authorization.conditions.network_condition import NetworkCondition
+from mystic_auth.authorization.conditions.security_context_condition import SecurityContextCondition
 
 
 def test_self_only_canonical_shape_is_accepted_by_both_layers():

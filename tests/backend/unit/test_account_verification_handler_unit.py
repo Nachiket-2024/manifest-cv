@@ -7,11 +7,11 @@
 # count towards and could trip the unrelated login lockout for the same email.
 import pytest
 
-from backend.app.auth.verify_account.account_verification_handler import (
+from mystic_auth.auth.verify_account.account_verification_handler import (
     account_verification_handler,
 )
 
-MODULE = "backend.app.auth.verify_account.account_verification_handler"
+MODULE = "mystic_auth.auth.verify_account.account_verification_handler"
 
 
 @pytest.mark.asyncio

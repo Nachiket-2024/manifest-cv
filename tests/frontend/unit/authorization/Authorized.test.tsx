@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
-import { useAuthStore } from '@/store/authStore';
-import { Authorized } from '@/authorization/Authorized';
-import { IfCan } from '@/authorization/IfCan';
+import { useAuthStore } from '@/mystic_auth/store/authStore';
+import { Authorized } from '@/mystic_auth/authorization/Authorized';
+import { IfCan } from '@/mystic_auth/authorization/IfCan';
 
 const initialAuthState = useAuthStore.getState();
 

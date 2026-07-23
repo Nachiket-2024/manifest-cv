@@ -7,11 +7,11 @@
 # and could trip the unrelated login lockout for the same email.
 import pytest
 
-from backend.app.auth.password_reset_confirm.password_reset_confirm_handler import (
+from mystic_auth.auth.password_reset_confirm.password_reset_confirm_handler import (
     password_reset_confirm_handler,
 )
 
-MODULE = "backend.app.auth.password_reset_confirm.password_reset_confirm_handler"
+MODULE = "mystic_auth.auth.password_reset_confirm.password_reset_confirm_handler"
 
 
 @pytest.mark.asyncio

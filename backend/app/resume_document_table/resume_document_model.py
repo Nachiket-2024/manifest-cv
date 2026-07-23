@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, String, LargeBinary
 from sqlalchemy.sql import func
 
-from ..database.base import Base
+from mystic_auth.database.base import Base
 
 
 class ResumeDocument(Base):

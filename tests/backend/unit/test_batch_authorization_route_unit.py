@@ -10,14 +10,14 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from pydantic import ValidationError
 
-from backend.app.api.pbac_routes.authorization_check_routes import batch_check_authorization
-from backend.app.authorization.schemas.batch_authorization_schema import (
+from mystic_auth.api.pbac_routes.authorization_check_routes import batch_check_authorization
+from mystic_auth.authorization.schemas.batch_authorization_schema import (
     BatchAuthorizationCheckRequest,
     MAX_BATCH_SIZE,
 )
-from backend.app.authorization.evaluators.authorization_decision import AuthorizationDecision
+from mystic_auth.authorization.evaluators.authorization_decision import AuthorizationDecision
 
-ROUTES_MODULE = "backend.app.api.pbac_routes.authorization_check_routes"
+ROUTES_MODULE = "mystic_auth.api.pbac_routes.authorization_check_routes"
 
 CALLER = {"email": "caller@example.com", "name": "Caller"}
 

@@ -1,10 +1,18 @@
 from datetime import date, time, datetime
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
-# Both are short, human-typed fields — a bound here is purely a sanity cap
-# against a malformed/abusive request, not a real-world usage constraint.
+# The only statuses the frontend's status selector (ApplicationsPage.tsx's
+# STATUS_OPTIONS) ever sends — constraining the backend to the same fixed
+# set closes an input-validation gap (arbitrary free text was previously
+# accepted and stored) without dropping any behavior the UI actually uses.
+# Extending this set to add a new status (e.g. "withdrawn") means updating
+# both this Literal and STATUS_OPTIONS together.
+ApplicationStatus = Literal["applied", "interviewing", "offered", "rejected"]
+
+# A short, human-typed field — a bound here is purely a sanity cap against a
+# malformed/abusive request, not a real-world usage constraint.
 _MAX_COMPANY_NAME_LENGTH = 200
-_MAX_STATUS_LENGTH = 50
 
 
 class ApplicationCreate(BaseModel):
@@ -19,7 +27,7 @@ class ApplicationCreate(BaseModel):
     company_name: str = Field(min_length=1, max_length=_MAX_COMPANY_NAME_LENGTH)
     application_date: date
     application_time: time | None = None
-    status: str = Field(min_length=1, max_length=_MAX_STATUS_LENGTH)
+    status: ApplicationStatus
 
 
 class ApplicationUpdate(BaseModel):
@@ -33,7 +41,7 @@ class ApplicationUpdate(BaseModel):
     company_name: str | None = Field(default=None, min_length=1, max_length=_MAX_COMPANY_NAME_LENGTH)
     application_date: date | None = None
     application_time: time | None = None
-    status: str | None = Field(default=None, min_length=1, max_length=_MAX_STATUS_LENGTH)
+    status: ApplicationStatus | None = None
 
 
 class ApplicationRead(BaseModel):
@@ -43,7 +51,7 @@ class ApplicationRead(BaseModel):
     company_name: str
     application_date: date
     application_time: time | None
-    status: str
+    status: ApplicationStatus
     template_id_snapshot: str
     created_at: datetime
     updated_at: datetime

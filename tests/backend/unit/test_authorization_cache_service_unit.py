@@ -10,13 +10,13 @@ import json
 import pytest
 from unittest.mock import AsyncMock
 
-from backend.app.authorization.caching.authorization_cache_service import (
+from mystic_auth.authorization.caching.authorization_cache_service import (
     authorization_cache_service,
     _user_policies_key,
 )
-from backend.app.authorization.models.policy_model import Policy
+from mystic_auth.authorization.models.policy_model import Policy
 
-MODULE = "backend.app.authorization.caching.authorization_cache_service"
+MODULE = "mystic_auth.authorization.caching.authorization_cache_service"
 
 
 def _policy(name="self_service", actions=None, resource_type="users", conditions=None, is_active=True):

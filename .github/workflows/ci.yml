@@ -1,7 +1,7 @@
 name: CI
 
-# Runs on every push and pull request targeting main. Four independent jobs
-# (backend, frontend, docker build, real-tectonic) run in parallel.
+# Runs on every push and pull request targeting main. Five independent jobs
+# (backend, frontend, docker build, real-tectonic, secret-scan) run in parallel.
 on:
   push:
     branches: [main]
@@ -117,6 +117,17 @@ jobs:
           pip install --no-cache-dir pip-audit
           pip-audit -r backend/requirements.txt
 
+      # Static analysis (SAST) for ManifestCV's own code — injection,
+      # insecure crypto, unsafe deserialization, etc. Scoped to backend/app
+      # (ManifestCV's own product code) rather than backend/mystic_auth
+      # (the vendored, separately-reviewed template) to keep signal high;
+      # -ll (medium+ severity and confidence) filters out bandit's noisier
+      # low-confidence heuristics.
+      - name: Static security analysis (bandit)
+        run: |
+          pip install --no-cache-dir bandit
+          bandit -r backend/app -ll
+
       - name: Run database migrations
         working-directory: backend
         run: alembic upgrade head
@@ -148,6 +159,19 @@ jobs:
   frontend:
     name: Frontend (typecheck + lint + test + build)
     runs-on: ubuntu-latest
+
+    env:
+      # Vite exposes VITE_-prefixed process.env vars via import.meta.env
+      # directly, no .env file needed (process.env always wins over .env
+      # files anyway) — see vitest.config.ts / vite.config.ts's envDir.
+      # VITE_API_BASE_URL specifically is required: document_api.ts and
+      # application_api.ts's URL builders throw loudly on a missing value
+      # (see their own docstrings) rather than silently building an
+      # "undefined/..." URL, so ResumeEditorPage/ApplicationsPage crash on
+      # render without this set — that's what actually fails these tests
+      # and the production build, not app or test-selector logic.
+      VITE_API_BASE_URL: http://localhost:8000
+      VITE_APP_NAME: ManifestCV
 
     steps:
       - uses: actions/checkout@v4
@@ -206,11 +230,17 @@ jobs:
       # dev's `backend` service missing an `alembic: service_completed_successfully`
       # dependency that prod already had). Uses .env.example only to satisfy
       # each file's `env_file: ./.env` directive — no real secrets involved.
+      # REDIS_PASSWORD is passed separately (not left as .env.example's
+      # intentionally-blank dev-convenience default) because
+      # docker-compose.prod.yml's `${REDIS_PASSWORD:?...}` fails variable
+      # interpolation outright on an empty value — that's the point of the
+      # check (see docs/deployment/guide.md), but it means this validation
+      # step needs a non-empty placeholder to get past parsing at all.
       - name: Validate docker-compose configs
         run: |
           cp .env.example .env
           docker compose -f docker-compose.yml config > /dev/null
-          docker compose -f docker-compose.prod.yml config > /dev/null
+          REDIS_PASSWORD=ci-placeholder-password docker compose -f docker-compose.prod.yml config > /dev/null
           rm .env
 
       - name: Build backend image
@@ -220,7 +250,7 @@ jobs:
         run: docker build --target production -f docker/frontend.Dockerfile -t frontend:ci .
 
       # Regression guard: backend/logs/ (real request data — paths, timestamps,
-      # correlation IDs, written by backend/app/logging/logging_config.py) was
+      # correlation IDs, written by backend/mystic_auth/logging/logging_config.py) was
       # previously getting baked straight into the image by `COPY backend/ .`,
       # since *.log alone doesn't match TimedRotatingFileHandler's rotated
       # filenames (access.log.2026-07-19, not access.log.log) — a real privacy
@@ -368,4 +398,29 @@ jobs:
             -e COVERAGE_FILE \
             backend:tectonic-ci \
             pytest tests/backend/manifestcv/integration/test_document_routes_integration.py -k real_tectonic -v \
-            -o addopts="-v --cov=backend/app --cov-report=term"
+            -o addopts="-v --cov=backend/app --cov=backend/mystic_auth --cov-report=term"
+
+  secret-scan:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, not the default shallow clone — gitleaks scans
+          # commits, and a secret introduced then removed in a later commit
+          # would be invisible to a depth-1 checkout even though it's still
+          # sitting in the repo's history for anyone who clones it.
+          fetch-depth: 0
+
+      # Uses the OSS gitleaks CLI directly (Apache-2.0, no license needed
+      # regardless of repo visibility) rather than the gitleaks-action
+      # wrapper, which gates private-repo usage behind a paid license.
+      - name: Install gitleaks
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
+
+      - name: Scan git history for committed secrets
+        run: gitleaks detect --source . --redact -v

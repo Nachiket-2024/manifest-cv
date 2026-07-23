@@ -8,13 +8,13 @@
 import pytest
 
 from .conftest import unique_email, create_system_user
-from backend.app.authorization.policies.default_policies import (
+from mystic_auth.authorization.policies.default_policies import (
     SELF_SERVICE_POLICY_NAME,
     USER_ADMINISTRATION_POLICY_NAME,
     SYSTEM_SUPERUSER_POLICY_NAME,
 )
-from backend.app.authorization.repositories.policy_repository import policy_repository
-from backend.app.database.connection import database
+from mystic_auth.authorization.repositories.policy_repository import policy_repository
+from mystic_auth.database.connection import database
 
 
 @pytest.mark.asyncio

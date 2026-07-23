@@ -9,7 +9,7 @@ export interface AuthorizationCheck {
 
 /**
  * One result in a batch-check response — deliberately minimal (see
- * backend/app/authorization/schemas/batch_authorization_schema.py): never exposes
+ * backend/mystic_auth/authorization/schemas/batch_authorization_schema.py): never exposes
  * matched/rejected policies or failed conditions, only enough to drive a UI decision.
  */
 export interface AuthorizationCheckResult {

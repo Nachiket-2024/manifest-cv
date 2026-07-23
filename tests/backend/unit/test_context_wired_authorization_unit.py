@@ -8,9 +8,9 @@
 # denial.
 from unittest.mock import MagicMock
 
-from backend.app.authorization.context.request_context_builder import build_authorization_context
-from backend.app.authorization.evaluators.policy_evaluator import policy_evaluation_engine
-from backend.app.authorization.models.policy_model import Policy
+from mystic_auth.authorization.context.request_context_builder import build_authorization_context
+from mystic_auth.authorization.evaluators.policy_evaluator import policy_evaluation_engine
+from mystic_auth.authorization.models.policy_model import Policy
 
 
 def _request(client_host):

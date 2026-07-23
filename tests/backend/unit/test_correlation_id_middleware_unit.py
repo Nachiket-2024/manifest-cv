@@ -13,7 +13,7 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from backend.app.logging.correlation_id_middleware import (
+from mystic_auth.logging.correlation_id_middleware import (
     CorrelationIdMiddleware,
     REQUEST_ID_HEADER,
     request_id_ctx_var,

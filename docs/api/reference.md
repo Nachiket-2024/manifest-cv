@@ -6,7 +6,7 @@ Every request/response body is a Pydantic schema (`*_schema.py` beside each feat
 
 ## Conventions
 
-- **Auth requirement** `session` means "a valid `access_token` cookie, no specific permission" (`Depends(get_current_user)`, imported from mystic-auth's `app.sdk` — see [Auth & Authorization](../auth/overview.md)). None of ManifestCV's own routes use PBAC (`permission:action`) — every one is `session` + server-side `user_id` scoping.
+- **Auth requirement** `session` means "a valid `access_token` cookie, no specific permission" (`Depends(get_current_user)`, imported from mystic-auth's `mystic_auth.sdk` — see [Auth & Authorization](../auth/overview.md)). None of ManifestCV's own routes use PBAC (`permission:action`) — every one is `session` + server-side `user_id` scoping.
 - All cookies are httpOnly; the API is never called with a bearer token/header.
 - **Rate limited** (marked below) routes are gated by `auth.security.rate_limiter_service.rate_limited(...)`, keyed per-account — see each route's own feature doc for why.
 

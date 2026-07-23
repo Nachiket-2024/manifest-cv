@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...sdk import get_current_user, database, get_or_404, rate_limiter_service
+from mystic_auth.sdk import get_current_user, database, get_or_404, rate_limiter_service
 from ...manifestcv_sdk import get_user_id_by_email
 
 from ...resume_crud.resume_repository import resume_repository

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...sdk import get_current_user, database, get_or_404
+from mystic_auth.sdk import get_current_user, database, get_or_404, get_logger, rate_limiter_service
 from ...manifestcv_sdk import get_user_id_by_email
 
 from ...resume_crud.resume_repository import resume_repository
@@ -20,6 +20,8 @@ from ...document_generation.exceptions import LatexCompilationError
 # Nested under /resumes/{draft_id} — document generation always operates on
 # one specific resume draft, never independently of it.
 router = APIRouter(prefix="/resumes/{draft_id}", tags=["Resume Documents"])
+
+logger = get_logger(__name__)
 
 
 async def _current_user_id(current_user: dict, db: AsyncSession) -> int:
@@ -65,9 +67,17 @@ async def list_resume_templates(
 
 
 @router.get("/templates/{template_id}/preview")
+# Each call shells out to tectonic for a real LaTeX compile (up to ~60s of
+# CPU/wall time) — the same AI-route-grade rate limiting as career knowledge/
+# resume generation applies here so a caller can't exhaust backend compute
+# by hammering this endpoint. See docs/concerns/README.md.
+@rate_limiter_service.rate_limited(
+    "resume_document_preview", account_key_func=lambda kwargs: kwargs["current_user"]["email"]
+)
 async def preview_resume_template(
     draft_id: int,
     template_id: str,
+    request: Request,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
@@ -83,15 +93,28 @@ async def preview_resume_template(
     try:
         _, pdf_bytes = await render_resume_pdf(draft.resume_content, template_id)
     except LatexCompilationError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+        # Tectonic's raw stderr/stdout can include internal file paths/tool
+        # diagnostics — logged in full for debugging, but never returned to
+        # the caller verbatim (matches main.py's generic-500 policy for
+        # unexpected failures elsewhere in the app).
+        logger.warning("Template preview compilation failed for draft_id=%s: %s", draft_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to compile this resume — please try again"
+        ) from exc
 
     return Response(content=pdf_bytes, media_type="application/pdf")
 
 
 @router.post("/finalize", response_model=ResumeDocumentRead)
+# Same rate limiting as the preview route above — this is the persisting
+# variant of the identical compile-on-demand operation.
+@rate_limiter_service.rate_limited(
+    "resume_document_finalize", account_key_func=lambda kwargs: kwargs["current_user"]["email"]
+)
 async def finalize_resume_document(
     draft_id: int,
     payload: ResumeDocumentFinalize,
+    request: Request,
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
@@ -106,7 +129,10 @@ async def finalize_resume_document(
     try:
         tex_source, pdf_bytes = await render_resume_pdf(draft.resume_content, payload.template_id)
     except LatexCompilationError as exc:
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+        logger.warning("Resume finalize compilation failed for draft_id=%s: %s", draft_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="Failed to compile this resume — please try again"
+        ) from exc
 
     return await resume_document_repository.upsert(draft_id, payload.template_id, tex_source, pdf_bytes, db)
 

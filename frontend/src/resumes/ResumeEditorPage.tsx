@@ -12,13 +12,15 @@ import {
     Textarea,
 } from "@chakra-ui/react";
 
-import PageContainer from "../ui/PageContainer";
-import Card from "../ui/Card";
-import LoadingState from "../ui/LoadingState";
-import FormAlert from "../ui/FormAlert";
-import { toaster } from "../ui/toasterInstance";
-import { useUnsavedChangesWarning } from "../profile/useUnsavedChangesWarning";
-import { settings } from "../sdk";
+import {
+    PageContainer,
+    Card,
+    LoadingState,
+    FormAlert,
+    toaster,
+    useUnsavedChangesWarning,
+    settings,
+} from "../mystic_auth/sdk";
 
 import { useResumeDraftQuery, useResumeTemplatesQuery, useFinalizedResumeDocumentQuery } from "./resumeQueries";
 import {
@@ -46,7 +48,12 @@ const ResumeEditorPage: React.FC = () => {
     const navigate = useNavigate();
 
     const { data: draft, isLoading, isError } = useResumeDraftQuery(draftId);
+    // Two independent mutation instances against the same PUT endpoint —
+    // save and refine are triggered by separate buttons/forms, so each needs
+    // its own `isPending`/`isError` state rather than one clicking making
+    // the other's button spin or show the wrong error.
     const updateMutation = useUpdateResumeDraftMutation(draftId);
+    const refineMutation = useUpdateResumeDraftMutation(draftId);
     const approveMutation = useApproveResumeDraftMutation(draftId);
 
     const [content, setContent] = useState("");
@@ -85,7 +92,7 @@ const ResumeEditorPage: React.FC = () => {
 
     const handleRefine = (e: React.FormEvent) => {
         e.preventDefault();
-        updateMutation.mutate(
+        refineMutation.mutate(
             { refinement_prompt: refinementPrompt },
             {
                 onSuccess: () => {
@@ -139,6 +146,14 @@ const ResumeEditorPage: React.FC = () => {
         );
     }
 
+    if (Number.isNaN(draftId)) {
+        return (
+            <PageContainer title="Resume">
+                <FormAlert status="error">Invalid resume ID</FormAlert>
+            </PageContainer>
+        );
+    }
+
     if (isError || !draft) {
         return (
             <PageContainer title="Resume">
@@ -177,7 +192,12 @@ const ResumeEditorPage: React.FC = () => {
                             onChange={(e) => setContent(e.target.value)}
                             rows={20}
                             fontFamily="mono"
-                            disabled={isApproved || updateMutation.isPending}
+                            // Disabled during a refine call too, not just a
+                            // save — content is about to be overwritten by
+                            // the AI's response, so editing it mid-flight
+                            // would just be silently discarded when that
+                            // response lands.
+                            disabled={isApproved || updateMutation.isPending || refineMutation.isPending}
                         />
                         {updateMutation.isError && <FormAlert status="error">{updateMutation.error.message}</FormAlert>}
                         {!isApproved && (
@@ -211,13 +231,15 @@ const ResumeEditorPage: React.FC = () => {
                                 placeholder="Describe the change you want..."
                                 rows={3}
                             />
+                            {refineMutation.isError && <FormAlert status="error">{refineMutation.error.message}</FormAlert>}
                             <HStack>
                                 <Button
                                     type="submit"
                                     variant="outline"
-                                    loading={updateMutation.isPending}
+                                    loading={refineMutation.isPending}
                                     loadingText="Refining..."
-                                    disabled={!refinementPrompt.trim()}
+                                    disabled={!refinementPrompt.trim() || isDirty}
+                                    title={isDirty ? "Save your changes before refining — refining regenerates content from what's already saved" : undefined}
                                 >
                                     Refine with AI
                                 </Button>

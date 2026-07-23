@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { checkPasswordRules, evaluatePasswordStrength, validatePassword } from '@/auth/password_rules/passwordRules';
+import { checkPasswordRules, evaluatePasswordStrength, validatePassword } from '@/mystic_auth/auth/password_rules/passwordRules';
 
 describe('checkPasswordRules', () => {
   it('flags every rule as failing for an empty password', () => {

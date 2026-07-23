@@ -18,9 +18,9 @@ import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { MemoryRouter } from 'react-router-dom';
 import MockAdapter from 'axios-mock-adapter';
 
-import api from '@/api/axiosInstance';
-import SignupForm from '@/auth/signup/SignupForm';
-import PasswordResetConfirmForm from '@/auth/password_reset_confirm/PasswordResetConfirmForm';
+import api from '@/mystic_auth/api/axiosInstance';
+import SignupForm from '@/mystic_auth/auth/signup/SignupForm';
+import PasswordResetConfirmForm from '@/mystic_auth/auth/password_reset_confirm/PasswordResetConfirmForm';
 
 const mock = new MockAdapter(api);
 

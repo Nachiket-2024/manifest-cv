@@ -6,19 +6,20 @@ Consolidates the concrete hardening mechanisms in the codebase — rate limiting
 
 ## Rate limiting
 
-`backend/app/auth/security/rate_limiter_service.py` — a generic sliding-window-by-fixed-bucket limiter backed by Redis (`INCR` + `EXPIRE` on first request in a window), applied via the `@rate_limiter_service.rate_limited("endpoint_name", account_key_func=...)` decorator on every route in `auth_routes.py` (signup, login, OAuth2 initiate/callback, `/auth/me`, logout, logout-all, password-reset request/confirm, verify-account) — and, in this repo, ManifestCV's own AI-triggering routes (`career_knowledge_routes.py`, `resume_routes.py`, see [Career Knowledge](../career-knowledge/overview.md#rate-limiting) and [Resumes](../resumes/overview.md#rate-limiting)). **Not** applied to `refresh_token_routes.py` (`POST /auth/refresh/`) — that route relies instead on its own single-use-token rotation and reuse-detection protection (see [Security Decisions](decisions.md#rate-limiting-and-lockout-are-layered-not-singular)), which a generic request-volume limiter would only duplicate.
+`backend/mystic_auth/auth/security/rate_limiter_service.py` — a generic sliding-window-by-fixed-bucket limiter backed by Redis (`INCR` + `EXPIRE` on first request in a window), applied via the `@rate_limiter_service.rate_limited("endpoint_name", account_key_func=...)` decorator on every route in `auth_routes.py` (signup, login, OAuth2 initiate/callback, `/auth/me`, logout, logout-all, password-reset request/confirm, verify-account) — and, in this repo, ManifestCV's own AI-triggering routes (`career_knowledge_routes.py`, `resume_routes.py`, see [Career Knowledge](../career-knowledge/overview.md#rate-limiting) and [Resumes](../resumes/overview.md#rate-limiting)). **Not** applied to `refresh_token_routes.py` (`POST /auth/refresh/`) — that route relies instead on its own single-use-token rotation and reuse-detection protection (see [Security Decisions](decisions.md#rate-limiting-and-lockout-are-layered-not-singular)), which a generic request-volume limiter would only duplicate.
 
 - **Always applies a per-IP limit** (`{endpoint_name}:ip:{ip}`), resolved via [`auth/security/client_ip.py`](../authorization/architecture.md#authorization-context-builder) (trusted-proxy-aware).
 - **Optionally applies a per-account limit** when `account_key_func` is given (e.g. signup/password-reset-request key on the submitted email) — closes the gap where an attacker spreads requests targeting one account across many source IPs to stay under the per-IP threshold alone.
-- Both limits are configured by `MAX_REQUESTS_PER_WINDOW` / `REQUEST_WINDOW_SECONDS` (`.env.example`) — one shared threshold/window for every rate-limited endpoint, not per-endpoint tunable today (see [Concerns](../concerns/README.md)).
+- Both limits are configured by `MAX_REQUESTS_PER_WINDOW` / `REQUEST_WINDOW_SECONDS` (`.env.example`) — one shared threshold/window for every rate-limited endpoint, not per-endpoint tunable today (see [Concerns](../concerns/README.md)). `.env.example`'s shipped defaults: `MAX_REQUESTS_PER_WINDOW=100` per `REQUEST_WINDOW_SECONDS=60` (per-IP and, where `account_key_func` is set, per-account too) — an operator tuning this for production should start here, not go spelunking in `settings.py`.
+- ManifestCV's own AI/compute-triggering routes carry the identical rate-limit protection: `career_knowledge_routes.py`'s `POST /`, `PUT /`, and `GET /search` (each makes a real Gemini call), and `document_routes.py`'s `GET /templates/{template_id}/preview` and `POST /finalize` (each shells out to `tectonic`, up to ~60s of CPU/wall time per call).
 - **Fails closed on Redis error, reviewed and kept intentionally**: `record_request` catches all exceptions, logs them, and returns `False` ("not allowed") — a Redis outage makes every rate-limited request appear over-limit and get rejected with `429`, rather than silently disabling rate limiting. This is the opposite tradeoff from the PBAC authorization cache, which fails open to the authoritative database on a Redis error — see [PBAC Troubleshooting: Redis cache management](../authorization/troubleshooting.md#redis-cache-management) for that contrast. Practical implication: a Redis outage makes the API fully unusable for any rate-limited auth route, not just slower — see [Security Decisions](decisions.md#rate-limiter-fails-closed-on-a-redis-outage--reviewed-kept-intentionally) for why this was kept rather than changed.
 
 ## Brute-force lockout
 
-`backend/app/auth/security/login_protection_service.py` — separate from and layered on top of the generic rate limiter (see [Security Decisions: rate limiting and lockout are layered](decisions.md#rate-limiting-and-lockout-are-layered-not-singular)):
+`backend/mystic_auth/auth/security/login_protection_service.py` — separate from and layered on top of the generic rate limiter (see [Security Decisions: rate limiting and lockout are layered](decisions.md#rate-limiting-and-lockout-are-layered-not-singular)):
 
-- Per-account: `MAX_FAILED_LOGIN_ATTEMPTS` failures within `LOGIN_LOCKOUT_TIME` seconds locks that email out.
-- Per-IP: `MAX_FAILED_LOGIN_ATTEMPTS_PER_IP` failures within `LOGIN_LOCKOUT_TIME_PER_IP` seconds locks that IP out across *any* account it targets.
+- Per-account: `MAX_FAILED_LOGIN_ATTEMPTS` (default `5`) failures within `LOGIN_LOCKOUT_TIME` (default `300`s) seconds locks that email out.
+- Per-IP: `MAX_FAILED_LOGIN_ATTEMPTS_PER_IP` (default `20`) failures within `LOGIN_LOCKOUT_TIME_PER_IP` (default `300`s) seconds locks that IP out across *any* account it targets.
 - `check_and_record_action` double-checks `is_locked` both before and after the expensive password-hash comparison, closing a race where a concurrent request crosses the threshold mid-check.
 - Both counters use `INCR`/`EXPIRE`-on-first-failure (not sliding), so the lockout window is fixed from the *first* failure, not extended by each subsequent one.
 
@@ -28,7 +29,7 @@ See [Security Decisions: timing-attack mitigations](decisions.md#timing-attack-m
 
 ## Security response headers
 
-`backend/app/auth/security/security_headers_middleware.py`, applied to every response:
+`backend/mystic_auth/auth/security/security_headers_middleware.py`, applied to every response:
 
 | Header | Value | Reasoning |
 |---|---|---|

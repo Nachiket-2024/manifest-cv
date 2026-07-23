@@ -2,7 +2,7 @@
 
 ## Backend — pytest
 
-Config: `pytest.ini` (repo root) — `testpaths = tests/backend`, `addopts = -v --cov=backend/app --cov-report=html`. Coverage is measured and an HTML report generated (`htmlcov/`) on every invocation. **`--cov-fail-under` is deliberately not set in `pytest.ini`** — it would apply to every invocation, including partial local runs (`pytest tests/backend/unit` alone covers only a slice of `backend/app` and would false-fail well under any sensible whole-project threshold). CI enforces an 80% cumulative-coverage gate once instead — see below.
+Config: `pytest.ini` (repo root) — `testpaths = tests/backend`, `pythonpath = backend` (so bare `app.*`/`mystic_auth.*` imports resolve identically to how the running app itself resolves them — see [Auth & Authorization](../auth/overview.md)), `addopts = -v --cov=backend/app --cov=backend/mystic_auth --cov-report=html`. Coverage is measured and an HTML report generated (`htmlcov/`) on every invocation. **`--cov-fail-under` is deliberately not set in `pytest.ini`** — it would apply to every invocation, including partial local runs (`pytest tests/backend/unit` alone covers only a slice of `backend/app`/`backend/mystic_auth` and would false-fail well under any sensible whole-project threshold). CI enforces an 80% cumulative-coverage gate once instead — see below.
 
 | Suite | Path | Covers |
 |---|---|---|

@@ -5,7 +5,7 @@
 # keys, wrong types, missing required fields, invalid timezone/IP/dates.
 import pytest
 
-from backend.app.authorization.conditions.condition_validator import (
+from mystic_auth.authorization.conditions.condition_validator import (
     validate_conditions,
     ConditionValidationError,
 )

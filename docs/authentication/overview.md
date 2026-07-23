@@ -2,11 +2,11 @@
 
 Covers signup, email verification, login, refresh, logout, password reset, Google OAuth2, and the JWT/cookie mechanics underneath all of them. For *authorization* (what an authenticated caller is allowed to do), see [../authorization/architecture.md](../authorization/architecture.md).
 
-> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) — every mechanism below is vendored code, confirmed byte-identical to upstream as of this review. See [ManifestCV's own auth notes](../auth/overview.md) for how ManifestCV's feature routes consume `get_current_user` via `backend/app/sdk.py`.
+> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) — every mechanism below is vendored code, confirmed byte-identical to upstream as of this review. See [ManifestCV's own auth notes](../auth/overview.md) for how ManifestCV's feature routes consume `get_current_user` via `backend/mystic_auth/sdk.py`.
 
 ## Tokens and cookies
 
-Every session is a pair of JWTs, delivered as httpOnly cookies — never readable by frontend JavaScript, never stored in `localStorage`/Zustand (see `frontend/src/store/authStore.ts`, which holds only the profile/permissions `GET /auth/me` returns, not tokens).
+Every session is a pair of JWTs, delivered as httpOnly cookies — never readable by frontend JavaScript, never stored in `localStorage`/Zustand (see `frontend/src/mystic_auth/store/authStore.ts`, which holds only the profile/permissions `GET /auth/me` returns, not tokens).
 
 | Cookie | Path | Attributes | Purpose |
 |---|---|---|---|

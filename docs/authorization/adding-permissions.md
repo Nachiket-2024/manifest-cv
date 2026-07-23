@@ -4,7 +4,7 @@
 
 ## Where to define a new action
 
-Add it to the `Permission` enum in `backend/app/authorization/permissions.py`:
+Add it to the `Permission` enum in `backend/mystic_auth/authorization/permissions.py`:
 
 ```python
 class Permission(str, enum.Enum):

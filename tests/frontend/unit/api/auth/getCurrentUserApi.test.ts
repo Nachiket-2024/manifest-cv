@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import MockAdapter from 'axios-mock-adapter';
-import api from '@/api/axiosInstance';
-import { getCurrentUserApi } from '@/api/auth_api';
+import api from '@/mystic_auth/api/axiosInstance';
+import { getCurrentUserApi } from '@/mystic_auth/api/auth_api';
 
 const mock = new MockAdapter(api);
 

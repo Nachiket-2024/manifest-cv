@@ -21,7 +21,7 @@ async def test_response_carries_security_hardening_headers(client):
 
 @pytest.mark.asyncio
 async def test_hsts_header_present_in_production(client, mocker):
-    mocker.patch("backend.app.auth.security.security_headers_middleware.settings.ENVIRONMENT", "production")
+    mocker.patch("mystic_auth.auth.security.security_headers_middleware.settings.ENVIRONMENT", "production")
 
     resp = await client.get("/")
 
@@ -30,7 +30,7 @@ async def test_hsts_header_present_in_production(client, mocker):
 
 @pytest.mark.asyncio
 async def test_hsts_header_absent_outside_production(client, mocker):
-    mocker.patch("backend.app.auth.security.security_headers_middleware.settings.ENVIRONMENT", "development")
+    mocker.patch("mystic_auth.auth.security.security_headers_middleware.settings.ENVIRONMENT", "development")
 
     resp = await client.get("/")
 
@@ -49,7 +49,7 @@ async def test_security_headers_present_even_on_error_responses(client):
 
 @pytest.mark.asyncio
 async def test_cors_preflight_allows_only_the_configured_frontend_origin(client):
-    from backend.app.core.settings import settings
+    from mystic_auth.core.settings import settings
 
     resp = await client.options(
         "/auth/login",

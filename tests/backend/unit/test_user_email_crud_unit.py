@@ -9,14 +9,14 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from backend.app.user_crud.user_crud_modules.user_email_crud import UserEmailCRUD
-from backend.app.user_crud.user_crud_modules.user_base_crud import UserBaseCRUD
+from mystic_auth.user_crud.user_crud_modules.user_email_crud import UserEmailCRUD
+from mystic_auth.user_crud.user_crud_modules.user_base_crud import UserBaseCRUD
 # Real mapped model — select(...)/where(...) require an actual ORM-mapped
 # class or column expression, not a plain stand-in class.
-from backend.app.user_table.user_model import User as _FakeModel
+from mystic_auth.user_table.user_model import User as _FakeModel
 
-EMAIL_CRUD_MODULE = "backend.app.user_crud.user_crud_modules.user_email_crud"
-BASE_CRUD_MODULE = "backend.app.user_crud.user_crud_modules.user_base_crud"
+EMAIL_CRUD_MODULE = "mystic_auth.user_crud.user_crud_modules.user_email_crud"
+BASE_CRUD_MODULE = "mystic_auth.user_crud.user_crud_modules.user_base_crud"
 
 
 def _make_db(scalar_return=None):

@@ -8,12 +8,12 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from fastapi import HTTPException
 
-from backend.app.api.pbac_routes.policy_crud_routes import create_policy, update_policy
-from backend.app.authorization.schemas.policy_schema import PolicyCreate, PolicyUpdate
-from backend.app.authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
+from mystic_auth.api.pbac_routes.policy_crud_routes import create_policy, update_policy
+from mystic_auth.authorization.schemas.policy_schema import PolicyCreate, PolicyUpdate
+from mystic_auth.authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
 
-ROUTES_MODULE = "backend.app.api.pbac_routes.policy_crud_routes"
-SERVICE_MODULE = "backend.app.authorization.services.authorization_service"
+ROUTES_MODULE = "mystic_auth.api.pbac_routes.policy_crud_routes"
+SERVICE_MODULE = "mystic_auth.authorization.services.authorization_service"
 
 CALLER = {"email": "caller@example.com", "name": "Caller"}
 

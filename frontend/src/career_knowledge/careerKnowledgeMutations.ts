@@ -8,7 +8,7 @@ import {
     type CareerKnowledgeBaseUpdatePayload,
     type CareerKnowledgeBaseRead,
 } from "../api/career_knowledge_api";
-import { extractApiErrorMessage, queryClient } from "../sdk";
+import { extractApiErrorMessage, queryClient } from "../mystic_auth/sdk";
 import { CAREER_KNOWLEDGE_QUERY_KEY } from "./careerKnowledgeQueries";
 
 export function useCreateCareerKnowledgeBaseMutation() {
