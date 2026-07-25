@@ -1,19 +1,19 @@
 import traceback
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from ...authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
 
+# PBAC: new users get their access via an explicit default policy assignment,
+# never via their (metadata-only) role — see claude.md's "Roles" section: "New
+# users must receive access through default policy assignment, not default roles."
+from ...authorization.repositories.policy_repository import policy_repository
+from ...logging.logging_config import get_logger
 from ...user_crud.user_crud_collector import user_crud
+
 # Default role assigned to all new users — metadata only (display/grouping); it
 # grants no access. See the PBAC policy assignment below for what actually
 # authorizes a new account.
 from ...user_table.user_model import UserRole
 from ..password_logic.password_service import password_service
-# PBAC: new users get their access via an explicit default policy assignment,
-# never via their (metadata-only) role — see claude.md's "Roles" section: "New
-# users must receive access through default policy assignment, not default roles."
-from ...authorization.repositories.policy_repository import policy_repository
-from ...authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
-from ...logging.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -22,7 +22,15 @@ class SignupService:
     """Hashes the password, checks for duplicates, and creates the user with default access."""
 
     @staticmethod
-    async def signup(name: str, email: str, password: str, db: AsyncSession) -> bool:
+    # `db` is deliberately unannotated (matches login_service.login and
+    # oauth2_service.login_or_create_user): every real caller supplies a
+    # genuine AsyncSession via Depends(database.get_session), but unit tests
+    # call this directly with db=None while mocking every db-touching
+    # collaborator (user_crud, policy_repository) below it — an `AsyncSession`
+    # annotation would be accurate for production but wrong for that test
+    # pattern, and `AsyncSession | None` pushes the same mismatch onto every
+    # collaborator's own (correctly non-optional) signature instead.
+    async def signup(name: str, email: str, password: str, db) -> bool:
         try:
             existing_user = await user_crud.get_by_email(email, db)
 

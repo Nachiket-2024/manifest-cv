@@ -9,7 +9,7 @@ class ConditionHandler(ABC):
     ConditionRegistry — the evaluator (PolicyEvaluationEngine) never
     contains condition-specific logic itself, so adding a new condition
     type never requires touching the evaluator or the service, only
-    registering a new handler (see conditions/registry.py).
+    registering a new handler (see conditions/condition_registry.py).
 
     Every handler must fail safe: malformed condition config, missing
     required context/resource, or any internal error must result in

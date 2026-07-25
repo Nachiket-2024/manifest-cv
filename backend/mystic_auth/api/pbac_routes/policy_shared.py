@@ -1,11 +1,11 @@
 from fastapi import Depends
 
-from ...authorization.permissions import Permission
 from ...authorization.dependencies.authorization_dependency import require_authorization
+from ...authorization.permissions import Permission
 from ...authorization.policies.default_policies import (
     SELF_SERVICE_POLICY_NAME,
-    USER_ADMINISTRATION_POLICY_NAME,
     SYSTEM_SUPERUSER_POLICY_NAME,
+    USER_ADMINISTRATION_POLICY_NAME,
 )
 
 # Fine-grained per-operation dependencies (replaces the old single coarse

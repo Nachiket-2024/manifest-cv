@@ -15,22 +15,21 @@ Purely additive (nullable, no default required for existing rows) — no
 backfill needed, since older rows simply never had this information
 computed.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'b4e8f2a9c6d1'
-down_revision: Union[str, Sequence[str], None] = 'a3f7c9e1b2d4'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'a3f7c9e1b2d4'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.add_column(
         'authorization_audit_log',
         sa.Column('failed_conditions', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -38,5 +37,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_column('authorization_audit_log', 'failed_conditions')

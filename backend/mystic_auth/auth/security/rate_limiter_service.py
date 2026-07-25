@@ -1,14 +1,14 @@
 import traceback
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from ...redis.client import redis_client
 from ...core.settings import settings
-from .client_ip import get_client_ip
 from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
+from .client_ip import get_client_ip
 
 logger = get_logger(__name__)
 
@@ -70,7 +70,7 @@ class RateLimiterService:
                         break
 
                 if not request:
-                    request = kwargs.get("request", None)
+                    request = kwargs.get("request")
 
                 ip_address = (get_client_ip(request) if request else None) or "unknown"
 

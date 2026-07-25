@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 from fastapi import Request
 
 from ...auth.security.client_ip import get_client_ip
@@ -36,6 +37,6 @@ def build_authorization_context(request: Request) -> dict:
     """
     return {
         "ip_address": get_client_ip(request),
-        "current_time": datetime.now(timezone.utc).isoformat(),
+        "current_time": datetime.now(UTC).isoformat(),
         "security_context": {},
     }

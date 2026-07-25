@@ -1,25 +1,23 @@
 import asyncio
 import getpass
 
+from ..auth.password_logic.password_service import password_service
+from ..authorization.policies.default_policies import (
+    SELF_SERVICE_POLICY_NAME,
+    SYSTEM_SUPERUSER_POLICY_NAME,
+    USER_ADMINISTRATION_POLICY_NAME,
+)
+
+# PBAC: the system superuser's actual access comes from holding every
+# baseline policy, assigned explicitly here — not from role="system".
+from ..authorization.repositories.policy_repository import policy_repository
 from ..database.connection import database
+from ..logging.logging_config import get_logger
 from ..user_crud.user_crud_collector import user_crud
 
 # UserRole is kept as display/grouping metadata for the system account; it no
 # longer grants any access itself (see PBAC policy assignment below).
 from ..user_table.user_model import UserRole
-
-from ..auth.password_logic.password_service import password_service
-
-# PBAC: the system superuser's actual access comes from holding every
-# baseline policy, assigned explicitly here — not from role="system".
-from ..authorization.repositories.policy_repository import policy_repository
-from ..authorization.policies.default_policies import (
-    SELF_SERVICE_POLICY_NAME,
-    USER_ADMINISTRATION_POLICY_NAME,
-    SYSTEM_SUPERUSER_POLICY_NAME,
-)
-
-from ..logging.logging_config import get_logger
 
 logger = get_logger(__name__)
 

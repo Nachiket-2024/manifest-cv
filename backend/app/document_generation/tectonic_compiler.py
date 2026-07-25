@@ -32,7 +32,7 @@ async def compile_latex_to_pdf(tex_source: str) -> bytes:
 
         try:
             stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=_COMPILE_TIMEOUT_SECONDS)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # communicate() already resumed if the process exits on its own;
             # kill() only fires here if it's genuinely still running.
             proc.kill()

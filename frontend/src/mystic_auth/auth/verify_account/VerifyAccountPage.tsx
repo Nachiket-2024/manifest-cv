@@ -1,5 +1,5 @@
 import React from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router";
 import { Heading, Text, VStack } from "@chakra-ui/react";
 
 import VerifyAccountButton from "./VerifyAccountButton";

@@ -11,17 +11,17 @@ career_knowledge_model.py). Chained after mystic-auth's own migration chain
 fresh `alembic upgrade head` applies both the inherited auth/PBAC schema and
 ManifestCV's own tables in one pass.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'c1d2e3f4a5b6'
-down_revision: Union[str, Sequence[str], None] = 'b2c3d4e5f6a7'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'b2c3d4e5f6a7'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

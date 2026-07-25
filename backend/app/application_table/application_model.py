@@ -1,17 +1,37 @@
-from sqlalchemy import Column, Integer, Text, DateTime, Date, Time, ForeignKey, String, LargeBinary
+import importlib
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, LargeBinary, String, Text, Time
 from sqlalchemy.sql import func
 
-from mystic_auth.database.base import Base
+if TYPE_CHECKING:
+    # mypy can't follow the dynamic import below, so it gets a normal,
+    # statically-resolvable import instead — never executed at runtime,
+    # since TYPE_CHECKING is always False when the module actually runs.
+    from mystic_auth.database.base import Base
+else:
+    # `mystic_auth` is a sibling package of `app`, not a child of it, so a
+    # relative import can't reach it, and a bare absolute import only resolves
+    # under Docker (WORKDIR=backend); the repo-root test suite instead imports
+    # this module as `backend.app...`, where only `backend.mystic_auth` is
+    # importable. Deriving the prefix from __package__ (same trick as
+    # app/sdk.py) keeps this working in both contexts and resolves to the
+    # exact same declarative Base/metadata registry either way — critical here
+    # specifically, since SQLAlchemy's table registration depends on every
+    # model subclassing the identical Base object.
+    _pkg_root = __package__.split(".")[0] if __package__ else "app"
+    _mystic_auth_root = "backend.mystic_auth" if _pkg_root == "backend" else "mystic_auth"
+    Base = importlib.import_module(f"{_mystic_auth_root}.database.base").Base
 
 
 class ApplicationRecord(Base):
     """
-    A tracked job application (claude.md flow steps 19-23) — fully
-    self-contained snapshot of the resume actually sent, copied at save
-    time from the ResumeDraft/ResumeDocument that produced it rather than
-    referencing them by foreign key. This is deliberate: claude.md calls
-    this "the resume snapshot", and a tracked application must survive the
-    user later editing or deleting the draft/document it came from (unlike
+    A tracked job application — fully self-contained snapshot of the
+    resume actually sent, copied at save time from the
+    ResumeDraft/ResumeDocument that produced it rather than referencing
+    them by foreign key. This is deliberate: a tracked application must
+    survive the user later editing or deleting the draft/document it came
+    from (unlike
     CareerKnowledgeBase, which has no meaning without its owner and so
     cascades instead — this data's whole purpose is outliving its source).
 

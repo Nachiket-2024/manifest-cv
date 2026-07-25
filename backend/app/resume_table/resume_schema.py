@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
 
 # See career_knowledge_table/career_knowledge_schema.py's _MAX_TEXT_LENGTH
 # for the same "generous but bounded" reasoning — job postings and full
@@ -11,10 +12,9 @@ _MAX_REFINEMENT_PROMPT_LENGTH = 2_000
 
 class ResumeDraftCreate(BaseModel):
     """
-    Starts a new tailored resume for a job description (claude.md flow step
-    6). The AI-generated `resume_content` (steps 7-8) is produced by
-    resume_routes.py from the caller's own knowledge base — never supplied
-    directly by the client.
+    Starts a new tailored resume for a job description. The AI-generated
+    `resume_content` is produced by resume_routes.py from the caller's own
+    knowledge base — never supplied directly by the client.
     """
 
     job_description: str = Field(min_length=1, max_length=_MAX_TEXT_LENGTH)

@@ -14,26 +14,23 @@ change any existing data (every current row keeps its existing role value)
 or default (new rows via signup_service still default to role="user" for
 display purposes — see that module for why the default itself is unchanged).
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = 'c4f8b2a6d1e3'
-down_revision: Union[str, Sequence[str], None] = 'b7d3a1c9e4f2'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'b7d3a1c9e4f2'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.alter_column('users', 'role', nullable=True)
 
 
 def downgrade() -> None:
     """
-    Downgrade schema.
     NOTE: if any row has role IS NULL at this point, re-adding NOT NULL
     will fail — an operator downgrading past this point must first backfill
     a role for any such row (e.g. UPDATE users SET role = 'user' WHERE role

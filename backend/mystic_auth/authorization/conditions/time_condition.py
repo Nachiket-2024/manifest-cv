@@ -1,8 +1,8 @@
 from datetime import time as dt_time
 from zoneinfo import ZoneInfo
 
-from .condition_handler import ConditionHandler
 from .clock import resolve_current_datetime
+from .condition_handler import ConditionHandler
 
 
 class TimeCondition(ConditionHandler):

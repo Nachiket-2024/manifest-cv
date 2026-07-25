@@ -48,6 +48,7 @@ backend/*.db
 frontend/node_modules/
 frontend/dist/
 frontend/build/
+frontend/.env
 frontend/.DS_Store
 frontend/.cache/
 frontend/coverage/
@@ -65,6 +66,12 @@ coverage.xml
 .pytest_cache/
 __pypackages__/
 
+# ---------------------------- Linting / Type-checking ----------------------------
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
+
 # ---------------------------- Celery ----------------------------
 celerybeat-schedule
 celerybeat.pid
@@ -81,9 +88,9 @@ logs/
 # ---------------------------- Database backups ----------------------------
 backups/
 
-# ---------------------------- Qdrant (local dev storage) ----------------------------
-/qdrant_storage/
-
 # ---------------------------- AI Assistant / Development Tools ----------------------------
 .claude/
 claude.md
+
+# ---------------------------- Qdrant (local dev storage) ----------------------------
+/qdrant_storage/

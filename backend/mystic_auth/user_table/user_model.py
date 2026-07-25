@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
-from sqlalchemy.sql import func
 import enum
+from datetime import datetime
+
+from sqlalchemy import DateTime, Enum
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
 
 from ..database.base import Base
 
@@ -30,13 +33,13 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    name = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
+    name: Mapped[str]
+    email: Mapped[str] = mapped_column(unique=True, index=True)
 
     # Nullable for OAuth-only users.
-    hashed_password = Column(String, nullable=True)
+    hashed_password: Mapped[str | None]
 
     # Single role assigned to the user — mutually exclusive. Stored as a
     # native DB enum for data integrity. Nullable: role is display/grouping
@@ -51,9 +54,9 @@ class User(Base):
     # roleless account by passing role=None. Every real creation path
     # (signup_service.py, scripts/create_system_user.py) already sets role
     # explicitly, so no caller relied on a fallback default in practice.
-    role = Column(Enum(UserRole), nullable=True)
+    role: Mapped[UserRole | None] = mapped_column(Enum(UserRole))
 
-    is_verified = Column(Boolean, default=False, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(default=False)
 
     # Soft-disable flag for deactivating accounts without deletion. Also the
     # flag every auth check point already gates on (login_service.py,
@@ -61,7 +64,7 @@ class User(Base):
     # reuses this exact mechanism rather than adding a second, parallel "is
     # deleted" check that every one of those call sites would also need
     # updating for.
-    is_active = Column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True)
 
     # Soft-delete marker — set when an account is deleted via the default
     # (reversible) deletion flow. NULL means never deleted. Distinct from
@@ -69,13 +72,10 @@ class User(Base):
     # apart from "deleted" if that distinction is ever needed, and so
     # reactivation can clear it explicitly. A soft-deleted row is NOT
     # removed — see user_routes.py's soft-delete vs purge (hard delete)
-    # routes, and docs/security/decisions.md for the full rationale.
-    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    # routes, and docs/mystic_auth/security/decisions.md for the full rationale.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

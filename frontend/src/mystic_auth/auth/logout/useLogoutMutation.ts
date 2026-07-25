@@ -7,14 +7,11 @@ import { queryClient } from "../../core/queryClient";
 import { CURRENT_USER_QUERY_KEY } from "../current_user/useCurrentUserQuery";
 import type { LogoutResponse } from "./logout_types";
 
-// A successful logout means the session is gone, so onSuccess marks the auth
-// store unauthenticated immediately (rather than waiting on a currentUser
-// refetch that would 401 by design) — setAuthenticated(false) also clears
-// the cached profile/permissions (see store/authStore.ts) — and clears the
-// cached profile from the query cache too. Deliberately `setAuthenticated(false)`,
-// not `reset()`: `reset()` would put isAuthenticated back to null, which
-// every ProtectedRoute-wrapped page reads as "still checking the session"
-// (a loading spinner) rather than "log out now" (an immediate redirect).
+// Marks the auth store unauthenticated immediately rather than waiting on a
+// currentUser refetch that would 401 by design. Deliberately
+// `setAuthenticated(false)`, not `reset()`: `reset()` puts isAuthenticated
+// back to null, which ProtectedRoute reads as "still checking the session"
+// (spinner) rather than "log out now" (immediate redirect).
 export function useLogoutMutation() {
     return useMutation<LogoutResponse, Error, void>({
         mutationFn: async () => {

@@ -8,17 +8,17 @@ The finalized, compiled PDF for one approved resume draft — one per draft,
 re-finalizing with a different template overwrites the previous row rather
 than accumulating history (see resume_document_table/resume_document_model.py).
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'e4f5a6b7c8d9'
-down_revision: Union[str, Sequence[str], None] = 'd3e4f5a6b7c8'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'd3e4f5a6b7c8'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -1,5 +1,5 @@
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from ...user_table.user_model import UserRole
 

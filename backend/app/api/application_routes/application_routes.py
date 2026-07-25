@@ -2,13 +2,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mystic_auth.sdk import get_current_user, database, get_or_404
-from ...manifestcv_sdk import get_user_id_by_email
-
+from ...app_sdk import get_user_id_by_email
+from ...application_crud.application_repository import application_repository
+from ...application_table.application_schema import (
+    ApplicationCreate,
+    ApplicationDetailRead,
+    ApplicationRead,
+    ApplicationUpdate,
+)
 from ...resume_crud.resume_repository import resume_repository
 from ...resume_document_crud.resume_document_repository import resume_document_repository
-from ...application_crud.application_repository import application_repository
-from ...application_table.application_schema import ApplicationCreate, ApplicationUpdate, ApplicationRead, ApplicationDetailRead
+from ...sdk import database, get_current_user, get_or_404
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -27,8 +31,8 @@ async def create_application(
     db: AsyncSession = Depends(database.get_session),
 ):
     """
-    Saves a tracked application (claude.md flow steps 19-23), snapshotting
-    the finalized resume's content/template/PDF at this moment in time —
+    Saves a tracked application, snapshotting the finalized resume's
+    content/template/PDF at this moment in time —
     see ApplicationRecord's docstring for why this copies rather than
     references its source.
     """
@@ -59,7 +63,7 @@ async def list_my_applications(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
-    """Newest first, paginated — see docs/applications/overview.md#pagination."""
+    """Newest first, paginated — see docs/app/applications/overview.md#pagination."""
     user_id = await _current_user_id(current_user, db)
     return await application_repository.list_by_user(user_id, db, limit=limit, offset=offset)
 

@@ -1,11 +1,11 @@
 import traceback
 
-from ...core.settings import settings
-from ...taskiq_tasks.email_tasks import send_email_task
-from ...emails.email_template_service import render_transactional_email
-from ...redis.client import redis_client
 from ...auth.token_logic.jwt_service import jwt_service
+from ...core.settings import settings
+from ...emails.email_template_service import render_transactional_email
 from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
+from ...taskiq_tasks.email_tasks import send_email_task
 
 logger = get_logger(__name__)
 

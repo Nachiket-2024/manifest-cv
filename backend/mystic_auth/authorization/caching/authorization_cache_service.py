@@ -1,8 +1,8 @@
 import json
 import traceback
 
-from ...redis.client import redis_client
 from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
 from ..models.policy_model import Policy
 
 logger = get_logger(__name__)

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...auth.token_logic.token_schema import TokenPairResponseSchema
 from ...auth.refresh_token_logic.refresh_token_handler import refresh_token_handler
+from ...auth.token_logic.token_schema import TokenPairResponseSchema
 from ...database.connection import database
 from ...logging.logging_config import get_logger
 

@@ -1,8 +1,8 @@
 import sentry_sdk
 from fastapi import Request
 
-from ..core.settings import settings
 from ..auth.token_logic.jwt_service import jwt_service
+from ..core.settings import settings
 from ..logging.logging_config import get_startup_logger
 
 # Whether error monitoring is enabled is a one-time, boot-relevant fact
@@ -20,7 +20,7 @@ def init_sentry() -> None:
     starts serving requests (see main.py).
 
     Works against Sentry itself or any self-hosted server that speaks the
-    same protocol (e.g. Bugsink — see docs/error-monitoring/overview.md); nothing
+    same protocol (e.g. Bugsink — see docs/mystic_auth/error-monitoring/overview.md); nothing
     here is Sentry-the-company-specific beyond the SDK package name.
 
     Deliberately never lets a bad SENTRY_DSN take the whole app down.

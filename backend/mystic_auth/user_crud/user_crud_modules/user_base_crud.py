@@ -1,5 +1,5 @@
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from ...emails.email_normalization import normalize_email
 

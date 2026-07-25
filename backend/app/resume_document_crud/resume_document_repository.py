@@ -1,6 +1,6 @@
-from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from sqlalchemy.sql import func
 
 from ..resume_document_table.resume_document_model import ResumeDocument
@@ -36,7 +36,10 @@ class ResumeDocumentRepository:
             tex_source=tex_source,
             pdf_bytes=pdf_bytes,
         )
-        stmt = stmt.on_conflict_do_update(
+        # on_conflict_do_update narrows the return type to ReturningInsert,
+        # which mypy sees as incompatible with stmt's inferred Insert type —
+        # correct and expected at runtime, just a fluent-API typing gap.
+        stmt = stmt.on_conflict_do_update(  # type: ignore[assignment]
             index_elements=[ResumeDocument.resume_draft_id],
             set_={
                 "template_id": stmt.excluded.template_id,

@@ -1,8 +1,8 @@
 import traceback
 
-from ...redis.client import redis_client
 from ...core.settings import settings
 from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
 
 logger = get_logger(__name__)
 
@@ -47,10 +47,7 @@ class LoginProtectionService:
         try:
             count = await redis_client.get(key)
 
-            if count is not None and int(count) >= max_attempts:
-                return True
-
-            return False
+            return count is not None and int(count) >= max_attempts
 
         except Exception:
             logger.error("Error checking login lock status:\n%s", traceback.format_exc())

@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack, Heading, Text, StackSeparator } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import PasswordResetRequestForm from "./PasswordResetRequestForm";
 

@@ -1,11 +1,11 @@
-import traceback
 import asyncio
+import traceback
 
+from ...logging.logging_config import get_logger
 from ...user_crud.user_crud_collector import user_crud
 from ..password_logic.password_service import password_service
 from ..token_logic.jwt_service import jwt_service
 from ..token_logic.token_schema import TokenPairResponseSchema
-from ...logging.logging_config import get_logger
 
 logger = get_logger(__name__)
 

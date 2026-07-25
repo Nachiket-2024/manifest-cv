@@ -2,9 +2,11 @@
 
 React 19 + TypeScript SPA built with Vite, Chakra UI v3, Zustand, and TanStack Query.
 
-This is one piece of ManifestCV — see the repository root [`README.md`](../README.md) for the full quickstart (Docker and local setup), and [`docs/architecture/frontend.md`](../docs/architecture/frontend.md) for the module layout, routing, and state-management conventions used here.
+This is one piece of ManifestCV — see the repository root [`README.md`](../README.md) for the full quickstart (Docker and local setup), and [`docs/app/architecture/frontend.md`](../docs/app/architecture/frontend.md) for the module layout, routing, and state-management conventions used here.
 
 ## Scripts
+
+> Commands below assume you're in `frontend/` (`cd frontend` from the repository root).
 
 ```bash
 npm run dev         # Vite dev server
@@ -15,4 +17,4 @@ npm run test          # vitest run (no coverage)
 npm run test:coverage # vitest run --coverage (thresholds enforced)
 ```
 
-See [`docs/testing/overview.md`](../docs/testing/overview.md) for what each suite covers.
+See [`docs/app/testing/overview.md`](../docs/app/testing/overview.md) for what each suite covers.

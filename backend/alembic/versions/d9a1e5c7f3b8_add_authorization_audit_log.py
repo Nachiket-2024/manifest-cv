@@ -14,22 +14,21 @@ deliberately: an audit entry must keep reflecting exactly what was
 evaluated at the time even if the policy or user referenced is later
 renamed or deleted (see AuthorizationAuditLog's own docstring).
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'd9a1e5c7f3b8'
-down_revision: Union[str, Sequence[str], None] = 'c4f8b2a6d1e3'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'c4f8b2a6d1e3'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.create_table(
         'authorization_audit_log',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -57,7 +56,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_index(op.f('ix_authorization_audit_log_created_at'), table_name='authorization_audit_log')
     op.drop_index(op.f('ix_authorization_audit_log_action'), table_name='authorization_audit_log')
     op.drop_index(op.f('ix_authorization_audit_log_user_email'), table_name='authorization_audit_log')

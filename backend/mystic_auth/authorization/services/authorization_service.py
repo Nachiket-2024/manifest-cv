@@ -1,23 +1,21 @@
-from fastapi import HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
 import traceback
 
 # Server clock for a fail-closed batch-item decision's timestamp — never
 # anything caller-supplied (see context/request_context_builder.py)
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from ..repositories.policy_repository import policy_repository
-from ..repositories.audit_log_repository import audit_log_repository
+from fastapi import HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..evaluators.policy_evaluator import policy_evaluation_engine
+from ...logging.logging_config import get_logger
 from ..evaluators.authorization_decision import AuthorizationDecision
+from ..evaluators.policy_evaluator import policy_evaluation_engine
 
 # The app's own fixed, known-sensitive action vocabulary — see
 # assert_authorized_to_grant for why only these are escalation-guarded.
 from ..permissions import Permission
-
-from ...logging.logging_config import get_logger
+from ..repositories.audit_log_repository import audit_log_repository
+from ..repositories.policy_repository import policy_repository
 
 logger = get_logger(__name__)
 
@@ -201,7 +199,7 @@ class AuthorizationService:
                     resource_type=resource_type,
                     user=user_email,
                     denial_reason="evaluation_error",
-                    evaluation_timestamp=datetime.now(timezone.utc).isoformat(),
+                    evaluation_timestamp=datetime.now(UTC).isoformat(),
                 )
 
             await AuthorizationService._log_decision(

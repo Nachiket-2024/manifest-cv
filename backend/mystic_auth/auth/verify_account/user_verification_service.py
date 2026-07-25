@@ -1,7 +1,7 @@
 import traceback
 
-from ...user_crud.user_crud_collector import user_crud
 from ...logging.logging_config import get_logger
+from ...user_crud.user_crud_collector import user_crud
 
 logger = get_logger(__name__)
 

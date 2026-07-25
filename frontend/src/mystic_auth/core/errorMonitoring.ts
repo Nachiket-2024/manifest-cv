@@ -9,7 +9,7 @@ const dsn = import.meta.env.VITE_SENTRY_DSN;
  * (see main.tsx).
  *
  * Works against Sentry itself or any self-hosted server that speaks the
- * same protocol (e.g. Bugsink — see docs/error-monitoring/overview.md); nothing
+ * same protocol (e.g. Bugsink — see docs/mystic_auth/error-monitoring/overview.md); nothing
  * here is Sentry-the-company-specific beyond the SDK package name.
  */
 export function initErrorMonitoring(): void {
@@ -35,9 +35,8 @@ export function initErrorMonitoring(): void {
  * equivalent (error_monitoring/sentry_service.py::capture_exception).
  *
  * Called from ui/ErrorBoundary.tsx for a caught render error; also
- * available as part of this template's extension surface (see sdk.ts) for
- * your own feature code to report a caught-but-still-noteworthy error the
- * same way.
+ * available for your own feature code to report a caught-but-still-
+ * noteworthy error the same way.
  */
 export function reportError(error: unknown, extra?: Record<string, unknown>): void {
     if (!dsn) return;

@@ -79,10 +79,14 @@ export default defineConfig({
 
   resolve: {
     alias: {
-      // Lets test files (and app source) import frontend/src modules with
-      // a stable, depth-independent path instead of brittle relative
-      // chains like "../../../../../frontend/src/api/auth_api".
-      '@': path.resolve(dirname, 'src'),
+      // Lets test files (and app source) import frontend/src/mystic_auth
+      // modules with a stable, depth-independent path instead of brittle
+      // relative chains like "../../../../../frontend/src/mystic_auth/api/auth_api".
+      '@': path.resolve(dirname, 'src/mystic_auth'),
+      // Separate alias for the thin app shell (App.tsx/main.tsx/sdk.ts/
+      // app_sdk.ts) living outside mystic_auth/ — only needed by the rare
+      // test that exercises the app root directly (e.g. app_routing.test.tsx).
+      '@app': path.resolve(dirname, 'src/app'),
     },
   },
 
@@ -104,7 +108,7 @@ export default defineConfig({
     ],
 
     setupFiles: [
-      './src/__tests__/setup.ts',
+      './src/mystic_auth/__tests__/setup.ts',
     ],
 
     coverage: {
@@ -115,7 +119,7 @@ export default defineConfig({
         'html',
       ],
       // Current coverage is ~89%/82%/84%/90% (statements/branches/functions/
-      // lines — see docs/testing/overview.md); thresholds sit a few points
+      // lines — see docs/mystic_auth/testing/overview.md); thresholds sit a few points
       // below that as a regression alarm, not a strict target, so
       // incidental coverage drift doesn't flap CI red. Only enforced when
       // coverage is actually collected (`vitest run --coverage`, i.e. the

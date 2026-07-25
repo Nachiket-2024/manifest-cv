@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database.connection import database
-from ...authorization.permissions import Permission
-from ...authorization.dependencies.authorization_dependency import require_authorization
+from ...audit_log.audit_log_repository import audit_log_repository
+from ...audit_log.audit_log_schema import AuditLogEntryRead
 
 # Authentication-only dependency (no permission required) — used by
 # /security-log/me, where a user inspects their own security events regardless
 # of whether they hold security_audit:read.
 from ...auth.current_user.current_user_dependency import get_current_user
-
-from ...audit_log.audit_log_repository import audit_log_repository
-from ...audit_log.audit_log_schema import AuditLogEntryRead
+from ...authorization.dependencies.authorization_dependency import require_authorization
+from ...authorization.permissions import Permission
+from ...database.connection import database
 
 router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 

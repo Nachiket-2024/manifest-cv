@@ -1,8 +1,9 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
 from datetime import datetime
 
-from .user_model import UserRole
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, computed_field, field_validator
+
 from ..emails.email_normalization import normalize_email
+from .user_model import UserRole
 
 
 class UserBase(BaseModel):
@@ -83,7 +84,8 @@ class UserRead(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @computed_field
+    # Known mypy limitation w/ @computed_field + @property stacking (pydantic/pydantic#3849)
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def has_password(self) -> bool:
         """Whether this account currently has a usable password credential

@@ -1,5 +1,6 @@
 import ipaddress
-from datetime import date, time as dt_time
+from datetime import date
+from datetime import time as dt_time
 from zoneinfo import available_timezones
 
 
@@ -113,9 +114,10 @@ def _validate_time(value) -> list[str]:
             errors.append(f"'time.{bound}' is not a valid time: {raw!r}")
 
     timezone_name = value.get("timezone")
-    if timezone_name is not None:
-        if not isinstance(timezone_name, str) or timezone_name not in available_timezones():
-            errors.append(f"'time.timezone' is not a valid IANA timezone name: {timezone_name!r}")
+    if timezone_name is not None and (
+        not isinstance(timezone_name, str) or timezone_name not in available_timezones()
+    ):
+        errors.append(f"'time.timezone' is not a valid IANA timezone name: {timezone_name!r}")
 
     return errors
 

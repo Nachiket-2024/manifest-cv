@@ -1,8 +1,4 @@
-from datetime import datetime, timezone
-
-# evaluate() takes already-fetched Policy rows so this module has no DB
-# dependency of its own (see PolicyEvaluationEngine's docstring).
-from ..models.policy_model import Policy
+from datetime import UTC, datetime
 
 # This engine delegates all condition-key logic (self_only, time, network,
 # ...) here rather than containing any condition-specific branching itself
@@ -10,6 +6,9 @@ from ..models.policy_model import Policy
 # Engine -> Condition Evaluation Service -> Condition Handlers.
 from ..conditions.condition_evaluation_service import condition_evaluation_service
 
+# evaluate() takes already-fetched Policy rows so this module has no DB
+# dependency of its own (see PolicyEvaluationEngine's docstring).
+from ..models.policy_model import Policy
 from .authorization_decision import AuthorizationDecision
 
 
@@ -103,7 +102,6 @@ class PolicyEvaluationEngine:
             if policy.resource_type not in (resource_type, "*"):
                 continue
 
-            # The policy must grant this specific action
             if action not in (policy.actions or []):
                 continue
 
@@ -130,7 +128,7 @@ class PolicyEvaluationEngine:
             denial_reason=None if allowed else PolicyEvaluationEngine._denial_reason(
                 evaluated_policies, matched_policies, rejected_policies
             ),
-            evaluation_timestamp=datetime.now(timezone.utc).isoformat(),
+            evaluation_timestamp=datetime.now(UTC).isoformat(),
         )
 
     @staticmethod

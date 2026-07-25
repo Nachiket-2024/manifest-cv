@@ -1,5 +1,6 @@
-from datetime import date, time, datetime
+from datetime import date, datetime, time
 from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 # The only statuses the frontend's status selector (ApplicationsPage.tsx's
@@ -17,10 +18,10 @@ _MAX_COMPANY_NAME_LENGTH = 200
 
 class ApplicationCreate(BaseModel):
     """
-    Saves a tracked application from an already-finalized resume document
-    (claude.md flow steps 19-23). `resume_draft_id` identifies which
-    finalized document to snapshot — the actual content/PDF are copied
-    server-side, never supplied directly by the client.
+    Saves a tracked application from an already-finalized resume document.
+    `resume_draft_id` identifies which finalized document to snapshot —
+    the actual content/PDF are copied server-side, never supplied
+    directly by the client.
     """
 
     resume_draft_id: int

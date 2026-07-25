@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mystic_auth.sdk import get_current_user, database, get_or_404, get_logger, rate_limiter_service
-from ...manifestcv_sdk import get_user_id_by_email
-
+from ...app_sdk import get_user_id_by_email
+from ...document_generation.exceptions import LatexCompilationError
+from ...document_generation.resume_pdf_service import render_resume_pdf
+from ...document_generation.templates import TEMPLATES, list_templates
 from ...resume_crud.resume_repository import resume_repository
 from ...resume_document_crud.resume_document_repository import resume_document_repository
 from ...resume_document_table.resume_document_schema import (
@@ -12,10 +13,7 @@ from ...resume_document_table.resume_document_schema import (
     ResumeDocumentRead,
     TemplateInfo,
 )
-
-from ...document_generation.templates import TEMPLATES, list_templates
-from ...document_generation.resume_pdf_service import render_resume_pdf
-from ...document_generation.exceptions import LatexCompilationError
+from ...sdk import database, get_current_user, get_logger, get_or_404, rate_limiter_service
 
 # Nested under /resumes/{draft_id} — document generation always operates on
 # one specific resume draft, never independently of it.
@@ -33,10 +31,9 @@ async def _current_user_id(current_user: dict, db: AsyncSession) -> int:
 
 async def _owned_approved_draft(draft_id: int, user_id: int, db: AsyncSession):
     """
-    Fetches a draft owned by the caller and enforces claude.md's Phase 3
-    rule that template preview/finalization only happens after the resume
-    is approved (step 13) — content is locked from that point on, so it's
-    safe to compile.
+    Fetches a draft owned by the caller and enforces that template
+    preview/finalization only happens after the resume is approved —
+    content is locked from that point on, so it's safe to compile.
     """
     draft = await get_or_404(
         resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found"
@@ -60,7 +57,7 @@ async def list_resume_templates(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
-    """Available visual styles (claude.md's "template preview system") — static, no compilation."""
+    """Available visual styles — static catalog, no compilation."""
     user_id = await _current_user_id(current_user, db)
     await _owned_approved_draft(draft_id, user_id, db)
     return list_templates()
@@ -70,7 +67,7 @@ async def list_resume_templates(
 # Each call shells out to tectonic for a real LaTeX compile (up to ~60s of
 # CPU/wall time) — the same AI-route-grade rate limiting as career knowledge/
 # resume generation applies here so a caller can't exhaust backend compute
-# by hammering this endpoint. See docs/concerns/README.md.
+# by hammering this endpoint. See docs/app/concerns/README.md.
 @rate_limiter_service.rate_limited(
     "resume_document_preview", account_key_func=lambda kwargs: kwargs["current_user"]["email"]
 )

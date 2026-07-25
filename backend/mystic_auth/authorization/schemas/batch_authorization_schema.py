@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 
-
 # Bounds one request's work (policy fetch is O(1) per batch, but evaluation
 # is O(checks)) and limits how much a single request can probe in one shot.
 MAX_BATCH_SIZE = 50

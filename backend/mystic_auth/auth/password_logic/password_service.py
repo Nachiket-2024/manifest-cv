@@ -1,7 +1,8 @@
-from passlib.context import CryptContext
-from datetime import datetime, timedelta, timezone
-import jwt
 import asyncio
+from datetime import UTC, datetime, timedelta
+
+import jwt
+from passlib.context import CryptContext
 
 from ...core.settings import settings
 
@@ -53,7 +54,7 @@ class PasswordService:
         email: str,
         expires_minutes: int = settings.RESET_TOKEN_EXPIRE_MINUTES
     ) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=expires_minutes)
+        expire = datetime.now(UTC) + timedelta(minutes=expires_minutes)
 
         # The "reset" type claim lets verify_reset_token reject any other
         # validly-signed JWT (e.g. an access or refresh token, which carries the

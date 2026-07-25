@@ -1,9 +1,8 @@
-from dotenv import load_dotenv
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from contextlib import asynccontextmanager
-from collections.abc import AsyncIterator
-
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -11,44 +10,44 @@ from fastapi.responses import JSONResponse
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 _ = load_dotenv(dotenv_path=BASE_DIR / ".env")
 
-from mystic_auth.core.settings import settings
-
-from mystic_auth.api.auth_routes.auth_routes import router as auth_router
-from mystic_auth.api.auth_routes.refresh_token_routes import router as refresh_token_router
-from mystic_auth.api.user_routes.user_routes import router as user_router
-from mystic_auth.api.pbac_routes.policy_crud_routes import router as policy_crud_router
-from mystic_auth.api.pbac_routes.policy_history_routes import router as policy_history_router
-from mystic_auth.api.pbac_routes.policy_assignment_routes import router as policy_assignment_router
-from mystic_auth.api.pbac_routes.authorization_check_routes import router as authorization_check_router
-from mystic_auth.api.pbac_routes.pbac_audit_log_routes import router as pbac_audit_log_router
-from mystic_auth.api.audit_log_routes.audit_log_routes import router as security_audit_router
-from mystic_auth.api.health_routes.health_routes import router as health_router
-
-# ManifestCV's own domains — mounted the same way as every mystic-auth
-# router above (see mystic_auth/sdk.py and app/manifestcv_sdk.py for the
-# loose-coupling boundary these route modules use to reach identity/current-user).
-from .api.career_knowledge_routes.career_knowledge_routes import router as career_knowledge_router
-from .api.resume_routes.resume_routes import router as resume_router
-from .api.document_routes.document_routes import router as document_router
-from .api.application_routes.application_routes import router as application_router
-
-# Database engine and Redis client singletons, closed on shutdown below.
-from mystic_auth.database.connection import database
-from mystic_auth.redis.client import redis_client
-from .retrieval.qdrant_client import ensure_collection as ensure_qdrant_collection, close_client as close_qdrant_client
-
-from mystic_auth.logging.logging_middleware import LoggingMiddleware
-from mystic_auth.logging.correlation_id_middleware import CorrelationIdMiddleware
-from mystic_auth.auth.security.security_headers_middleware import SecurityHeadersMiddleware
-from mystic_auth.logging.logging_config import get_logger
-
-from mystic_auth.error_monitoring.sentry_service import init_sentry, capture_exception
+# Every import below must follow load_dotenv() above, since sdk.py (and the
+# ManifestCV route modules that transitively import it) reads env-dependent
+# settings at import time. ManifestCV's own domains are mounted the same way
+# as every mystic-auth router below (see app/sdk.py and app/app_sdk.py for
+# the loose-coupling boundary these route modules use to reach identity/current-user).
+from .api.application_routes.application_routes import router as application_router  # noqa: E402
+from .api.career_knowledge_routes.career_knowledge_routes import router as career_knowledge_router  # noqa: E402
+from .api.document_routes.document_routes import router as document_router  # noqa: E402
+from .api.resume_routes.resume_routes import router as resume_router  # noqa: E402
+from .retrieval.qdrant_client import close_client as close_qdrant_client  # noqa: E402
+from .retrieval.qdrant_client import ensure_collection as ensure_qdrant_collection  # noqa: E402
+from .sdk import (  # noqa: E402
+    CorrelationIdMiddleware,
+    LoggingMiddleware,
+    SecurityHeadersMiddleware,
+    auth_router,
+    authorization_check_router,
+    capture_exception,
+    database,
+    get_logger,
+    health_router,
+    init_sentry,
+    pbac_audit_log_router,
+    policy_assignment_router,
+    policy_crud_router,
+    policy_history_router,
+    redis_client,
+    refresh_token_router,
+    security_audit_router,
+    settings,
+    user_router,
+)
 
 logger = get_logger("main")
 
 # Before the app starts serving requests — so every request from the very
 # first one onward is covered. A no-op when SENTRY_DSN is unset (see
-# error_monitoring/sentry_service.py and docs/error-monitoring/overview.md).
+# error_monitoring/sentry_service.py and docs/mystic_auth/error-monitoring/overview.md).
 init_sentry()
 
 
@@ -122,7 +121,7 @@ app.include_router(auth_router)
 app.include_router(refresh_token_router)
 app.include_router(user_router)
 # Split from a single pbac_routes/policy_routes.py into feature-based modules
-# (CRUD, history, assignment, checks, audit log) — see backend/app/api/pbac_routes/.
+# (CRUD, history, assignment, checks, audit log) — see backend/mystic_auth/api/pbac_routes/.
 # Registration order matters: policy_assignment_router defines
 # /authorization/users/me/policies before its own
 # /authorization/users/{user_email}/policies, so it must be included whole;

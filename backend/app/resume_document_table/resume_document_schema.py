@@ -1,9 +1,10 @@
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ResumeDocumentFinalize(BaseModel):
-    """Selects which template to compile the approved resume with (claude.md flow step 17)."""
+    """Selects which template to compile the approved resume with."""
 
     template_id: str = Field(min_length=1)
 

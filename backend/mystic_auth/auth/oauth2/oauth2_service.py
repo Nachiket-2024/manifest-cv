@@ -1,27 +1,32 @@
-import httpx
-import traceback
 import asyncio
-import secrets
+import base64
+
 # Hashlib/base64 are used to derive a PKCE code_challenge (SHA256 + base64url) from
 # the code_verifier, per RFC 7636 / OAuth 2.1's S256 method.
 import hashlib
-import base64
+import secrets
+import traceback
+from typing import cast
 
-from ..token_logic.jwt_service import jwt_service
-from ...user_crud.user_crud_collector import user_crud
+import httpx
+
+from ...authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
+
 # PBAC: new users get their access via an explicit default policy assignment,
 # never via their (metadata-only) role — see claude.md's "Roles" section: "New
 # users must receive access through default policy assignment, not default
 # roles." Mirrors signup_service.py.
 from ...authorization.repositories.policy_repository import policy_repository
-from ...authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
+from ...emails.email_normalization import normalize_email
+from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
+from ...user_crud.user_crud_collector import user_crud
+
 # UserRole is used ONLY to block OAuth2 login into the reserved system account
 # (see login_or_create_user below), mirroring the same guard user_routes.py
 # applies to update/delete/role-change. Never used to grant access.
 from ...user_table.user_model import UserRole
-from ...redis.client import redis_client
-from ...emails.email_normalization import normalize_email
-from ...logging.logging_config import get_logger
+from ..token_logic.jwt_service import jwt_service
 
 logger = get_logger(__name__)
 
@@ -65,8 +70,11 @@ class OAuth2Service:
             return None
 
         # Atomically fetch-and-delete so the same state (and its paired
-        # code_verifier) can never be redeemed twice.
-        return await redis_client.getdel(f"oauth_state:{state}")
+        # code_verifier) can never be redeemed twice. redis-py's stub types
+        # getdel() for both raw-bytes and decoded-str responses; this client
+        # is constructed with decode_responses=True (see redis/client.py),
+        # so the result is always str | None here.
+        return cast("str | None", await redis_client.getdel(f"oauth_state:{state}"))
 
     @staticmethod
     async def exchange_code_for_tokens(
@@ -147,7 +155,11 @@ class OAuth2Service:
             # (user_info is Google's raw JSON response, not a validated model)
             # — every other entry point normalizes at its schema boundary.
             raw_email = user_info.get("email")
-            email = normalize_email(raw_email) if raw_email else raw_email
+            if not raw_email:
+                logger.error("OAuth2 login rejected: Google user info had no email")
+                return None
+
+            email: str = normalize_email(raw_email)
             name = user_info.get("name", "Unknown")
 
             user = await user_crud.get_by_email(email, db)

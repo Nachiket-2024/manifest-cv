@@ -1,4 +1,4 @@
-from fastapi.responses import JSONResponse
+from fastapi import Response
 
 from .token_schema import TokenPairResponseSchema
 
@@ -7,8 +7,8 @@ class TokenCookieHandler:
     """Attaches access and refresh tokens as secure HTTP-only cookies to a response."""
 
     def set_tokens_in_cookies(
-        self, response: JSONResponse, tokens: TokenPairResponseSchema
-    ) -> JSONResponse:
+        self, response: Response, tokens: TokenPairResponseSchema
+    ) -> Response:
         """
         access_token is needed by both /auth/me and every route under /users/*,
         so it has to stay scoped to the whole site ("/", the default when no
@@ -28,7 +28,7 @@ class TokenCookieHandler:
             value=access_token,
             httponly=True,
             secure=True,
-            samesite="Strict",
+            samesite="strict",
             max_age=3600
         )
 
@@ -37,7 +37,7 @@ class TokenCookieHandler:
             value=refresh_token,
             httponly=True,
             secure=True,
-            samesite="Strict",
+            samesite="strict",
             max_age=2592000,
             path="/auth"
         )

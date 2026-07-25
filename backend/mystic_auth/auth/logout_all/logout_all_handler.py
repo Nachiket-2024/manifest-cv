@@ -1,13 +1,13 @@
 import traceback
 
-from fastapi.responses import JSONResponse
 from fastapi import Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...audit_log.audit_log_service import LOGOUT_ALL, log_security_event
+from ...logging.logging_config import get_logger
 from ..refresh_token_logic.refresh_token_service import refresh_token_service
 from ..token_logic.jwt_service import jwt_service
-from ...logging.logging_config import get_logger
-from ...audit_log.audit_log_service import log_security_event, LOGOUT_ALL
 
 logger = get_logger(__name__)
 
@@ -16,7 +16,7 @@ class LogoutAllHandler:
     """Revokes all refresh tokens for a user and clears authentication cookies."""
 
     async def handle_logout_all(
-        self, refresh_token: str | None, db: AsyncSession = None, request: Request | None = None
+        self, refresh_token: str | None, db: AsyncSession | None = None, request: Request | None = None
     ) -> JSONResponse:
         try:
             if not refresh_token:
@@ -42,7 +42,6 @@ class LogoutAllHandler:
 
             revoked_count = await refresh_token_service.revoke_all_tokens_for_user(email) if email else 0
 
-            # Best-effort security audit entry for the logout-all outcome.
             await log_security_event(
                 LOGOUT_ALL,
                 db,
@@ -60,11 +59,11 @@ class LogoutAllHandler:
                 content={"message": f"Logged out from {revoked_count} devices"},
                 status_code=200
             )
-            resp.delete_cookie(key="access_token", httponly=True, secure=True, samesite="Strict")
+            resp.delete_cookie(key="access_token", httponly=True, secure=True, samesite="strict")
             # path must match the path="/auth" refresh_token was set with
             # (token_cookie_handler.py), or the browser treats this as a different
             # cookie and never clears the real one.
-            resp.delete_cookie(key="refresh_token", httponly=True, secure=True, samesite="Strict", path="/auth")
+            resp.delete_cookie(key="refresh_token", httponly=True, secure=True, samesite="strict", path="/auth")
 
             return resp
 

@@ -1,23 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database.connection import database
-
-from ...authorization.repositories.policy_repository import policy_repository
+from ...authorization.conditions.condition_validator import ConditionValidationError, validate_conditions
 from ...authorization.repositories.policy_history_repository import policy_history_repository
-
-from ...authorization.schemas.policy_schema import PolicyRead
+from ...authorization.repositories.policy_repository import policy_repository
 from ...authorization.schemas.policy_history_schema import (
-    PolicyHistoryEntryRead,
     PolicyHistoryCompareResponse,
+    PolicyHistoryEntryRead,
     PolicyRollbackRequest,
 )
-
+from ...authorization.schemas.policy_schema import PolicyRead
 from ...authorization.services.authorization_service import authorization_service
-from ...authorization.conditions.condition_validator import validate_conditions, ConditionValidationError
-
+from ...database.connection import database
 from ..route_helpers import get_or_404
-from .policy_shared import READ_DEPENDENCY, UPDATE_DEPENDENCY, PROTECTED_POLICY_NAMES
+from .policy_shared import PROTECTED_POLICY_NAMES, READ_DEPENDENCY, UPDATE_DEPENDENCY
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
 
@@ -137,7 +133,7 @@ async def rollback_policy(
     try:
         validate_conditions((target_definition or {}).get("conditions"))
     except ConditionValidationError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors) from exc
 
     if policy.name in PROTECTED_POLICY_NAMES and (target_definition or {}).get("name") != policy.name:
         raise HTTPException(
@@ -160,7 +156,7 @@ async def rollback_policy(
 
     reason = rollback_request.reason if rollback_request else None
     return await policy_repository.update(
-        policy, target_definition, db,
+        policy, target_definition or {}, db,
         changed_by=current_user["email"],
         change_reason=reason or f"Rolled back to history entry {history_id}",
         change_type="rolled_back",

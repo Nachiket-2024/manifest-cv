@@ -1,8 +1,8 @@
 """
-LaTeX document templates (claude.md's Phase 3 "template preview system") —
-each wraps the same converted body (markdown_to_latex.markdown_to_latex_body)
-in a different preamble/visual style. Adding a new visual style means adding
-one entry here; the body conversion itself never needs to change.
+LaTeX document templates — each wraps the same converted body
+(markdown_to_latex.markdown_to_latex_body) in a different preamble/visual
+style. Adding a new visual style means adding one entry here; the body
+conversion itself never needs to change.
 """
 
 _CLASSIC_PREAMBLE = r"""

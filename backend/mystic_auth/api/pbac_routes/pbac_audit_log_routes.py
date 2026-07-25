@@ -1,17 +1,14 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database.connection import database
-from ...user_crud.user_crud_collector import user_crud
-
 # Authentication-only dependency (no permission required) — used by
 # /audit-log/me, where a user inspects their own decisions regardless of
 # whether they hold policies:read
 from ...auth.current_user.current_user_dependency import get_current_user
-
 from ...authorization.repositories.audit_log_repository import audit_log_repository
 from ...authorization.schemas.audit_log_schema import AuditLogEntryRead
-
+from ...database.connection import database
+from ...user_crud.user_crud_collector import user_crud
 from ..route_helpers import get_or_404
 from .policy_shared import READ_DEPENDENCY
 

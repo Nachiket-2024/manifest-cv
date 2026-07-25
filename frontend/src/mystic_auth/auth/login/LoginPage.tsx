@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate, Link, Navigate } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router";
 import { Stack, Heading, Text, StackSeparator } from "@chakra-ui/react";
 
 import LoginForm from "./LoginForm";

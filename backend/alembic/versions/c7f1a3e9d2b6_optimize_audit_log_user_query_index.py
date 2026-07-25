@@ -47,20 +47,18 @@ claude.md's "add indexes only with demonstrated need" — see this
 migration's absence of any policy_history change as the direct evidence
 of that finding, not an oversight.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = 'c7f1a3e9d2b6'
-down_revision: Union[str, Sequence[str], None] = 'b4e8f2a9c6d1'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'b4e8f2a9c6d1'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     # Raw SQL for exact column-direction control (user_email ASC,
     # created_at DESC, id DESC) — matches exactly what was measured with
     # EXPLAIN ANALYZE during analysis.
@@ -72,7 +70,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.create_index(
         op.f('ix_authorization_audit_log_user_email'),
         'authorization_audit_log',

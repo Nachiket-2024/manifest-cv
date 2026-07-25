@@ -1,7 +1,7 @@
 """
-Prompt templates for the knowledge-base structuring step (claude.md's
-Application Flow steps 2-3). Kept separate from gemini_client.py so the
-prompt itself — the actual enforcement of claude.md's AI Rules — can be
+Prompt templates for the knowledge-base structuring, resume generation, and
+refinement steps. Kept separate from gemini_client.py so the prompt itself
+— the actual enforcement of the invent-nothing constraint — can be
 reviewed/edited without touching API call plumbing.
 """
 
@@ -57,7 +57,7 @@ no code fences around it.
 
 
 def build_generate_resume_prompt(job_description: str, knowledge_chunks: list[str]) -> str:
-    """Initial resume generation (claude.md flow steps 7-8)."""
+    """Initial resume generation from a job description and matched knowledge base excerpts."""
     excerpts = "\n\n".join(knowledge_chunks) if knowledge_chunks else "(no matching excerpts found)"
     return (
         f"{GENERATE_RESUME_SYSTEM_PROMPT}\n\n---\n\nJob description:\n\n{job_description}"
@@ -72,8 +72,8 @@ def build_refine_resume_prompt(
     refinement_prompt: str,
 ) -> str:
     """
-    Iterative refinement (claude.md flow steps 9-11): re-matches the
-    knowledge base against the user's instruction while regenerating from
+    Iterative refinement: re-matches the knowledge base against the user's
+    instruction while regenerating from
     the previous draft, so unrelated sections stay stable across a
     refinement instead of being rewritten wholesale each time.
     """

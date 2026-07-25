@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...database.connection import database
-from ...redis.client import redis_client
 from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
 
 logger = get_logger(__name__)
 

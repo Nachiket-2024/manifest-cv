@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...auth.current_user.current_user_dependency import get_current_user
 from ...database.connection import database
-from ..services.authorization_service import authorization_service
 from ..context.request_context_builder import build_authorization_context
+from ..services.authorization_service import authorization_service
 
 
 def require_authorization(action: str, resource_type: str):

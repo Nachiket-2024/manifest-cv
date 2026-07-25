@@ -1,14 +1,14 @@
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from .password_service import password_service
-from ...taskiq_tasks.email_tasks import send_email_task
-from ...emails.email_template_service import render_transactional_email
-from ...user_crud.user_crud_collector import user_crud
 from ...core.settings import settings
-from ...redis.client import redis_client
-from ..refresh_token_logic.refresh_token_service import refresh_token_service
+from ...emails.email_template_service import render_transactional_email
 from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
+from ...taskiq_tasks.email_tasks import send_email_task
+from ...user_crud.user_crud_collector import user_crud
+from ..refresh_token_logic.refresh_token_service import refresh_token_service
+from .password_service import password_service
 
 logger = get_logger(__name__)
 
@@ -88,7 +88,7 @@ class PasswordResetService:
             exp = payload.get("exp")
             if not exp:
                 return
-            remaining = int(exp - datetime.now(timezone.utc).timestamp())
+            remaining = int(exp - datetime.now(UTC).timestamp())
             if remaining > 0:
                 await redis_client.set(redis_key, "1", ex=remaining)
 

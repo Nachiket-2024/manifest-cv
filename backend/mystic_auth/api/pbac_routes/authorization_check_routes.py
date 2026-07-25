@@ -1,25 +1,21 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database.connection import database
-from ...user_crud.user_crud_collector import user_crud
-
-from ...authorization.permissions import Permission
-from ...authorization.dependencies.authorization_dependency import require_authorization
-from ...authorization.services.authorization_service import authorization_service
-
 # The one place ip_address/current_time/security_context are derived from
 # the real request — batch-check builds this once, shared by every check
 # in the batch (they're all the same incoming request)
 from ...authorization.context.request_context_builder import build_authorization_context
-
-from ...authorization.schemas.policy_schema import AuthorizationCheckRequest, AuthorizationCheckResponse
+from ...authorization.dependencies.authorization_dependency import require_authorization
+from ...authorization.permissions import Permission
 from ...authorization.schemas.batch_authorization_schema import (
     BatchAuthorizationCheckRequest,
     BatchAuthorizationCheckResponse,
     BatchAuthorizationCheckResult,
 )
-
+from ...authorization.schemas.policy_schema import AuthorizationCheckRequest, AuthorizationCheckResponse
+from ...authorization.services.authorization_service import authorization_service
+from ...database.connection import database
+from ...user_crud.user_crud_collector import user_crud
 from ..route_helpers import get_or_404
 from .policy_shared import READ_DEPENDENCY
 

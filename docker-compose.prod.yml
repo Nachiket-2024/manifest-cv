@@ -26,7 +26,7 @@
 # writing, not just the noisy one. 10MB x 3 files per service is a small,
 # conservative cap; raise it if you need longer local log retention (this
 # has no bearing on Bugsink/Sentry-based error monitoring, which is
-# separate — see docs/error-monitoring/overview.md).
+# separate — see docs/mystic_auth/error-monitoring/overview.md).
 x-logging: &default-logging
   driver: json-file
   options:
@@ -47,8 +47,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # See docker-compose.yml's identical mount — creates the separate
-      # "bugsink" database the optional Bugsink service below uses, once,
-      # only against a fresh volume.
+      # "bugsink" database the Bugsink service below uses, once against a
+      # fresh volume.
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -228,14 +228,12 @@ services:
         condition: service_healthy
     logging: *default-logging
 
-  # Optional, self-hosted error monitoring — see docker-compose.yml's
-  # identical service for the full explanation. Same "off unless you
-  # explicitly ask for it" behavior in production:
-  #   docker compose -f docker-compose.prod.yml --profile monitoring up -d --build
+  # Self-hosted error monitoring — see docker-compose.yml's identical
+  # service for the full explanation. Starts by default in production too:
+  #   docker compose -f docker-compose.prod.yml up -d --build
   bugsink:
     image: bugsink/bugsink:2
     restart: unless-stopped
-    profiles: ["monitoring"]
     env_file:
       - ./.env
     environment:
@@ -243,9 +241,8 @@ services:
       CREATE_SUPERUSER: ${BUGSINK_SUPERUSER_EMAIL}:${BUGSINK_SUPERUSER_PASSWORD}
       PORT: "8000"
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
-      # Unlike the dev compose file, this one assumes a reverse proxy/TLS
-      # terminator in front (see the header comment above) — same
-      # assumption as TRUSTED_PROXY_IPS for the backend itself.
+      # Unlike dev, this file assumes a reverse proxy/TLS terminator in
+      # front (see header comment above).
       BEHIND_HTTPS_PROXY: "true"
       BASE_URL: ${BUGSINK_BASE_URL}
     depends_on:
@@ -263,26 +260,6 @@ services:
         limits:
           cpus: "1"
           memory: 512M
-
-  # One-shot seed — see docker-compose.yml's identical service.
-  seed_bugsink_project:
-    image: bugsink/bugsink:2
-    profiles: ["monitoring"]
-    env_file:
-      - ./.env
-    environment:
-      SECRET_KEY: ${BUGSINK_SECRET_KEY}
-      PORT: "8000"
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
-      BEHIND_HTTPS_PROXY: "true"
-      BASE_URL: ${BUGSINK_BASE_URL}
-    volumes:
-      - ./docker/bugsink-seed/seed_default_project.py:/seed_default_project.py:ro
-    command: sh -c "bugsink-manage shell < /seed_default_project.py"
-    depends_on:
-      bugsink:
-        condition: service_healthy
-    logging: *default-logging
 
 volumes:
   postgres_data:

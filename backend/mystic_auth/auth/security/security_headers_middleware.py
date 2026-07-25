@@ -1,17 +1,7 @@
-import re
-
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
 from ...core.settings import settings
-
-# ManifestCV's template preview route (document_routes.py) is deliberately
-# rendered by the frontend inside an <iframe>/<embed> (see
-# frontend/src/api/document_api.ts::resumeTemplatePreviewUrl) — the browser's
-# own PDF viewer displays it in place, without a round trip through JSON/JS.
-# Every other route on this API has no legitimate reason to ever be framed,
-# so the DENY/'none' default below is loosened only for this one path.
-_FRAMEABLE_PATH_RE = re.compile(r"^/resumes/[^/]+/templates/[^/]+/preview$")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -30,28 +20,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # X-Frame-Options / CSP default-src 'none': this is a JSON API with no
         # HTML pages of its own, so framing and inline scripts/styles are
-        # categorically prevented at zero functional cost — except the
-        # template preview route, which the frontend embeds by design.
-        #
-        # The frontend and backend are different origins (e.g. localhost:5173
-        # vs. localhost:8000 in dev; separate hosts in production), so
-        # "SAMEORIGIN" is the wrong value here — it only permits framing by a
-        # document on *this response's own* origin, which the frontend never
-        # is, and browsers correctly refuse to render the frame at all (blank
-        # <iframe>, net::ERR_ABORTED / ERR_BLOCKED_BY_RESPONSE in devtools).
-        # X-Frame-Options has no cross-browser-supported way to name a
-        # specific non-same origin (its ALLOW-FROM directive is deprecated
-        # and ignored by Chrome/Edge), so it's omitted entirely for this
-        # route; CSP's frame-ancestors — respected by every current browser,
-        # and the mechanism XFO was superseded by for exactly this case —
-        # names the real frontend origin instead.
-        if _FRAMEABLE_PATH_RE.match(request.url.path):
-            response.headers["Content-Security-Policy"] = (
-                f"default-src 'none'; frame-ancestors {settings.FRONTEND_BASE_URL}"
-            )
-        else:
-            response.headers["X-Frame-Options"] = "DENY"
-            response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+        # categorically prevented at zero functional cost.
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
 
         # Forces browsers to only reach this origin over HTTPS for a year,
         # including subdomains — protects against protocol-downgrade and

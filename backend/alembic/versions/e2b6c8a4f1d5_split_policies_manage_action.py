@@ -17,18 +17,18 @@ requires one of the fine-grained actions instead (see
 authorization/routes/policy_routes.py) — updating this one policy row is
 what keeps the system superuser able to do all of them, exactly as before.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'e2b6c8a4f1d5'
-down_revision: Union[str, Sequence[str], None] = 'd9a1e5c7f3b8'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'd9a1e5c7f3b8'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _OLD_ACTIONS = ["users:assign_system_role", "users:promote_to_admin", "policies:manage"]
 _NEW_ACTIONS = [
@@ -44,7 +44,6 @@ _NEW_ACTIONS = [
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     connection = op.get_bind()
     policies_table = sa.table(
         'policies',
@@ -59,7 +58,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     connection = op.get_bind()
     policies_table = sa.table(
         'policies',

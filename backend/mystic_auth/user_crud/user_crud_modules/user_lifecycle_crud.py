@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +24,7 @@ class UserLifecycleCRUD:
             return None
 
         db_obj.is_active = False
-        db_obj.deleted_at = datetime.now(timezone.utc)
+        db_obj.deleted_at = datetime.now(UTC)
 
         db.add(db_obj)
         await db.commit()

@@ -1,11 +1,10 @@
-from .user_crud_modules.user_base_crud import UserBaseCRUD
-from .user_crud_modules.user_email_crud import UserEmailCRUD
-from .user_crud_modules.user_role_crud import UserRoleCRUD
-from .user_crud_modules.user_lifecycle_crud import UserLifecycleCRUD
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..user_table.user_model import UserRole, User
+from ..user_table.user_model import User, UserRole
+from .user_crud_modules.user_base_crud import UserBaseCRUD
+from .user_crud_modules.user_email_crud import UserEmailCRUD
+from .user_crud_modules.user_lifecycle_crud import UserLifecycleCRUD
+from .user_crud_modules.user_role_crud import UserRoleCRUD
 
 
 class UserCRUDCollector:

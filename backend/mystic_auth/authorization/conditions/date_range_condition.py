@@ -1,8 +1,8 @@
 from datetime import date
 from zoneinfo import ZoneInfo
 
-from .condition_handler import ConditionHandler
 from .clock import resolve_current_datetime
+from .condition_handler import ConditionHandler
 
 
 class DateRangeCondition(ConditionHandler):
@@ -35,8 +35,6 @@ class DateRangeCondition(ConditionHandler):
 
             if start_str and current_date < date.fromisoformat(start_str):
                 return False
-            if end_str and current_date > date.fromisoformat(end_str):
-                return False
-            return True
+            return not (end_str and current_date > date.fromisoformat(end_str))
         except Exception:
             return False

@@ -1,5 +1,6 @@
-from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
 
 # Generous enough for a genuinely long multi-page resume/LinkedIn/GitHub
 # text dump, but bounded — without a cap, an oversized raw_input would be
@@ -10,10 +11,10 @@ _MAX_TEXT_LENGTH = 50_000
 
 class CareerKnowledgeBaseCreate(BaseModel):
     """
-    Bootstraps a user's knowledge base from their initial raw text dump
-    (claude.md flow step 1). `content` is generated from `raw_input` by
-    ai_integration.gemini_client.structure_knowledge_base (steps 2-3) —
-    see career_knowledge_routes.py.
+    Bootstraps a user's knowledge base from their initial raw text dump.
+    `content` is generated from `raw_input` by
+    ai_integration.gemini_client.structure_knowledge_base — see
+    career_knowledge_routes.py.
     """
 
     raw_input: str = Field(min_length=1, max_length=_MAX_TEXT_LENGTH)

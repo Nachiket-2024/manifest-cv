@@ -1,21 +1,33 @@
-from sqlalchemy import Column, Integer, Text, DateTime, ForeignKey, String
+import importlib
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.sql import func
 
-from mystic_auth.database.base import Base
+if TYPE_CHECKING:
+    # mypy can't follow the dynamic import below, so it gets a normal,
+    # statically-resolvable import instead — never executed at runtime,
+    # since TYPE_CHECKING is always False when the module actually runs.
+    from mystic_auth.database.base import Base
+else:
+    # See application_table/application_model.py's identical import for the
+    # full dual-context reasoning (same trick as app/sdk.py).
+    _pkg_root = __package__.split(".")[0] if __package__ else "app"
+    _mystic_auth_root = "backend.mystic_auth" if _pkg_root == "backend" else "mystic_auth"
+    Base = importlib.import_module(f"{_mystic_auth_root}.database.base").Base
 
 
 class ResumeDraft(Base):
     """
-    A tailored resume in progress for one job description (claude.md's
-    Application Flow steps 6-13). Many per user — unlike CareerKnowledgeBase,
-    which is a single source of truth, a user tailors a separate resume per
-    job they're applying to.
+    A tailored resume in progress for one job description. Many per user —
+    unlike CareerKnowledgeBase, which is a single source of truth, a user
+    tailors a separate resume per job they're applying to.
 
-    `resume_content` starts null until the first AI generation (step 8) and
-    is then either directly edited or regenerated via `refinement_prompt`
-    (steps 9-12) until the user approves (step 13, `status` -> "approved").
-    Approved drafts are content-locked (see resume_routes.py) — only
-    template selection/finalization (Phase 3) may proceed from there.
+    `resume_content` starts null until the first AI generation and is then
+    either directly edited or regenerated via `refinement_prompt` until the
+    user approves (`status` -> "approved"). Approved drafts are
+    content-locked (see resume_routes.py) — only template
+    selection/finalization may proceed from there.
     """
 
     __tablename__ = "resume_drafts"

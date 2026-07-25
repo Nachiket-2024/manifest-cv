@@ -1,14 +1,14 @@
 import traceback
 
-from fastapi.responses import JSONResponse
 from fastapi import Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...audit_log.audit_log_service import ACCOUNT_VERIFIED, log_security_event
+from ...logging.logging_config import get_logger
+from ..security.login_protection_service import login_protection_service
 from .account_verification_service import account_verification_service
 from .user_verification_service import user_verification_service
-from ..security.login_protection_service import login_protection_service
-from ...logging.logging_config import get_logger
-from ...audit_log.audit_log_service import log_security_event, ACCOUNT_VERIFIED
 
 logger = get_logger(__name__)
 

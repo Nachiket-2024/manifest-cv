@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 
 import { IfCan } from "../authorization/IfCan";
 import { NAV_ITEMS } from "./navItems";

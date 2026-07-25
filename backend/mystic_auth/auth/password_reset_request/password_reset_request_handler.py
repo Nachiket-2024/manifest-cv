@@ -1,11 +1,11 @@
 import traceback
 
-from fastapi.responses import JSONResponse
 from fastapi import Request
+from fastapi.responses import JSONResponse
 
-from ..password_logic.password_reset_service import password_reset_service
+from ...audit_log.audit_log_service import PASSWORD_RESET_REQUESTED, log_security_event
 from ...logging.logging_config import get_logger
-from ...audit_log.audit_log_service import log_security_event, PASSWORD_RESET_REQUESTED
+from ..password_logic.password_reset_service import password_reset_service
 
 logger = get_logger(__name__)
 

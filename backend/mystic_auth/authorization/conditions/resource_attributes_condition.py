@@ -16,7 +16,4 @@ class ResourceAttributesCondition(ConditionHandler):
             return True
         if resource is None:
             return False
-        for field, expected_value in condition_value.items():
-            if get_field(resource, field) != expected_value:
-                return False
-        return True
+        return all(get_field(resource, field) == expected_value for field, expected_value in condition_value.items())

@@ -18,7 +18,8 @@
     /* Path aliases — must match the "@" alias in vitest.config.ts so
        type-checking and the Vite/Vitest runtime agree on resolution */
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/mystic_auth/*"],
+      "@app/*": ["./src/app/*"]
     },
 
     /* Linting */

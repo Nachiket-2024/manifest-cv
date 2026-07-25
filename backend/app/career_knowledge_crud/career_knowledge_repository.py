@@ -1,5 +1,5 @@
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from ..career_knowledge_table.career_knowledge_model import CareerKnowledgeBase
 

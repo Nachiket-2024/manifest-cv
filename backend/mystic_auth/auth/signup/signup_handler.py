@@ -1,14 +1,14 @@
 import traceback
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.responses import JSONResponse
 from fastapi import Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from .signup_service import signup_service
+from ...audit_log.audit_log_service import SIGNUP, log_security_event
+from ...logging.logging_config import get_logger
 from ..password_logic.password_service import password_service
 from ..verify_account.account_verification_service import account_verification_service
-from ...logging.logging_config import get_logger
-from ...audit_log.audit_log_service import log_security_event, SIGNUP
+from .signup_service import signup_service
 
 logger = get_logger(__name__)
 
@@ -18,7 +18,7 @@ class SignupHandler:
 
     @staticmethod
     async def handle_signup(
-        name: str, email: str, password: str, db: AsyncSession = None, request: Request | None = None
+        name: str, email: str, password: str, db: AsyncSession | None = None, request: Request | None = None
     ):
         """
         Always returns the same generic response regardless of whether the

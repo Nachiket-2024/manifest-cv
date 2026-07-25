@@ -1,16 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mystic_auth.sdk import get_current_user, database, get_or_404, rate_limiter_service
-from ...manifestcv_sdk import get_user_id_by_email
-
-from ...resume_crud.resume_repository import resume_repository
-from ...resume_table.resume_schema import ResumeDraftCreate, ResumeDraftUpdate, ResumeDraftRead
-
-from ...ai_integration.gemini_client import generate_resume, refine_resume
 from ...ai_integration.exceptions import AIIntegrationError
+from ...ai_integration.gemini_client import generate_resume, refine_resume
+from ...app_sdk import get_user_id_by_email
+from ...resume_crud.resume_repository import resume_repository
+from ...resume_table.resume_schema import ResumeDraftCreate, ResumeDraftRead, ResumeDraftUpdate
 from ...retrieval.exceptions import RetrievalError
 from ...retrieval.knowledge_retrieval_service import search_knowledge_base
+from ...sdk import database, get_current_user, get_or_404, rate_limiter_service
 
 # Self-service only, one user's own resume drafts — no PBAC permission
 # required, same reasoning as career_knowledge_routes.py: ownership is
@@ -46,7 +44,7 @@ async def _matching_chunks(user_id: int, query: str) -> list[str]:
 @router.post("/", response_model=ResumeDraftRead, status_code=status.HTTP_201_CREATED)
 # Retrieval + generation is a real-cost Gemini call per request — same
 # rate-limiting protection as career_knowledge_routes.py's AI-triggering
-# routes, keyed per-account. See docs/concerns/README.md's now-fixed "No
+# routes, keyed per-account. See docs/app/concerns/README.md's now-fixed "No
 # rate limiting on AI-backed routes" entry.
 @rate_limiter_service.rate_limited(
     "resume_create", account_key_func=lambda kwargs: kwargs["current_user"]["email"]
@@ -58,9 +56,9 @@ async def create_resume_draft(
     db: AsyncSession = Depends(database.get_session),
 ):
     """
-    Starts a tailored resume for a job description (claude.md flow steps
-    6-8): semantically retrieves the caller's own matching knowledge base
-    excerpts, then AI generates an initial resume from them alone.
+    Starts a tailored resume for a job description: semantically retrieves
+    the caller's own matching knowledge base excerpts, then AI generates
+    an initial resume from them alone.
     """
     user_id = await _current_user_id(current_user, db)
 
@@ -80,7 +78,7 @@ async def list_my_resume_drafts(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
-    """Newest first, paginated — see docs/resumes/overview.md#pagination."""
+    """Newest first, paginated — see docs/app/resumes/overview.md#pagination."""
     user_id = await _current_user_id(current_user, db)
     return await resume_repository.list_by_user(user_id, db, limit=limit, offset=offset)
 
@@ -113,9 +111,8 @@ async def update_my_resume_draft(
 ):
     """
     Two edit paths (see ResumeDraftUpdate's docstring): `refinement_prompt`
-    re-matches the knowledge base and regenerates via AI (steps 9-11);
-    bare `content` is a direct manual edit (step 9), no AI call. Locked
-    once approved (step 13) — see claude.md's Phase 3 rule that content
+    re-matches the knowledge base and regenerates via AI; bare `content`
+    is a direct manual edit, no AI call. Locked once approved — content
     can't change after approval.
     """
     user_id = await _current_user_id(current_user, db)
@@ -153,9 +150,9 @@ async def approve_my_resume_draft(
     db: AsyncSession = Depends(database.get_session),
 ):
     """
-    Locks a draft's content (claude.md flow step 13) — from here on, only
-    template selection/finalization (Phase 3) may proceed; content edits
-    are rejected by the PUT endpoint above.
+    Locks a draft's content — from here on, only template
+    selection/finalization may proceed; content edits are rejected by the
+    PUT endpoint above.
     """
     user_id = await _current_user_id(current_user, db)
     draft = await get_or_404(

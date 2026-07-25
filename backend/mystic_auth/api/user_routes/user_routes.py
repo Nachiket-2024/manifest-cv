@@ -1,8 +1,41 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...audit_log.audit_log_service import (
+    ACCOUNT_DELETED,
+    ACCOUNT_PURGED,
+    ACCOUNT_REACTIVATED,
+    log_security_event,
+)
+
+# UserUpdate's `password` field name intentionally does not match any column on
+# the User model (only `hashed_password` is a real column); it must be hashed
+# and renamed here before reaching user_crud.update, or the submitted password
+# is silently discarded (set as an unmapped attribute SQLAlchemy never
+# persists) and the account keeps its old/no password.
+from ...auth.password_logic.password_service import password_service
+
+# Session invalidation on account deletion — the same mechanism logout-all
+# uses, reused here so a soft-deleted/purged account's existing refresh tokens
+# can't be used to mint a fresh access token even though
+# refresh_token_service.refresh_tokens() itself doesn't check the database
+# (it's Redis/JWT-claim only by design, see its own docstring).
+from ...auth.refresh_token_logic.refresh_token_service import refresh_token_service
+
+# Every real authorization check must build context from the actual request
+# the same way — see authorization_dependency.py.
+from ...authorization.context.request_context_builder import build_authorization_context
+from ...authorization.dependencies.authorization_dependency import require_authorization
+
+# PBAC: action vocabulary (permissions.py) and the authorization
+# dependency/service that decide access via assigned policies. Replaces the
+# removed RBAC-era require_permission / role_has_permission (a static role ->
+# permission mapping).
+from ...authorization.permissions import Permission
+from ...authorization.services.authorization_service import authorization_service
+from ...database.connection import database
+from ...emails.email_normalization import normalize_email
 from ...user_crud.user_crud_collector import user_crud
-from ..route_helpers import get_or_404
 
 # UserRole is used ONLY for the target-account guards below (e.g. "the system
 # account can never be modified via these generic endpoints"). This is
@@ -12,43 +45,8 @@ from ..route_helpers import get_or_404
 # general. Role may still be used as resource metadata/grouping; it must
 # simply never *grant* access, which this doesn't — it only narrows access.
 from ...user_table.user_model import UserRole
-from ...user_table.user_schema import UserRead, UserUpdate, UserRoleUpdate
-
-# UserUpdate's `password` field name intentionally does not match any column on
-# the User model (only `hashed_password` is a real column); it must be hashed
-# and renamed here before reaching user_crud.update, or the submitted password
-# is silently discarded (set as an unmapped attribute SQLAlchemy never
-# persists) and the account keeps its old/no password.
-from ...auth.password_logic.password_service import password_service
-
-# PBAC: action vocabulary (permissions.py) and the authorization
-# dependency/service that decide access via assigned policies. Replaces the
-# removed RBAC-era require_permission / role_has_permission (a static role ->
-# permission mapping).
-from ...authorization.permissions import Permission
-from ...authorization.dependencies.authorization_dependency import require_authorization
-from ...authorization.services.authorization_service import authorization_service
-
-# Every real authorization check must build context from the actual request
-# the same way — see authorization_dependency.py.
-from ...authorization.context.request_context_builder import build_authorization_context
-
-from ...database.connection import database
-
-# Session invalidation on account deletion — the same mechanism logout-all
-# uses, reused here so a soft-deleted/purged account's existing refresh tokens
-# can't be used to mint a fresh access token even though
-# refresh_token_service.refresh_tokens() itself doesn't check the database
-# (it's Redis/JWT-claim only by design, see its own docstring).
-from ...auth.refresh_token_logic.refresh_token_service import refresh_token_service
-
-from ...audit_log.audit_log_service import (
-    log_security_event,
-    ACCOUNT_DELETED,
-    ACCOUNT_PURGED,
-    ACCOUNT_REACTIVATED,
-)
-from ...emails.email_normalization import normalize_email
+from ...user_table.user_schema import UserRead, UserRoleUpdate, UserUpdate
+from ..route_helpers import get_or_404
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -162,12 +160,15 @@ async def update_any_user(
             detail="System user cannot be modified"
         )
 
-    if update_data.password is not None and user.hashed_password is not None:
-        if await password_service.verify_password(update_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="New password must be different from the current password",
-            )
+    if (
+        update_data.password is not None
+        and user.hashed_password is not None
+        and await password_service.verify_password(update_data.password, user.hashed_password)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the current password",
+        )
 
     prepared_data = await _prepare_update_data(update_data)
     updated_user = await user_crud.update(db_obj=user, update_data=prepared_data, db=db)

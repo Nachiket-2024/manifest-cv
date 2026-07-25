@@ -1,14 +1,14 @@
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from .audit_log_model import AuditLog
 
 
 class AuditLogRepository:
     """
-    Persistence layer for the  audit log. Append-only: entries are
-    created by audit.services._audit_service.log__event and
-    never updated; only queried back for inspection.
+    Persistence layer for the security audit log. Append-only: entries are
+    created by audit_log_service.log_security_event and never updated; only
+    queried back for inspection.
     """
 
     @staticmethod

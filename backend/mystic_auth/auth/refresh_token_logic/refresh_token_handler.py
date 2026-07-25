@@ -1,17 +1,19 @@
-from fastapi import HTTPException, Request
 import traceback
+
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from ...auth.refresh_token_logic.refresh_token_service import refresh_token_service
+from ...auth.security.login_protection_service import login_protection_service
+from ...auth.security.rate_limiter_service import rate_limiter_service
+from ...logging.logging_config import get_logger
 
 # Resolves the real client IP, honoring X-Forwarded-For only from a configured
 # trusted reverse proxy (see auth/security/client_ip.py).
 from ..security.client_ip import get_client_ip
-from ...auth.refresh_token_logic.refresh_token_service import refresh_token_service
-from ...auth.security.rate_limiter_service import rate_limiter_service
-from ...auth.security.login_protection_service import login_protection_service
-from ..token_logic.token_schema import TokenPairResponseSchema
 from ..token_logic.token_cookie_handler import token_cookie_handler
-from ...logging.logging_config import get_logger
+from ..token_logic.token_schema import TokenPairResponseSchema
 
 logger = get_logger(__name__)
 
@@ -20,7 +22,7 @@ class RefreshTokenHandler:
     """Validates and rotates refresh tokens, with rate limiting and brute-force protection."""
 
     @staticmethod
-    async def handle_refresh_tokens(request: Request, refresh_token: str | None, db: AsyncSession = None):
+    async def handle_refresh_tokens(request: Request, refresh_token: str | None, db: AsyncSession | None = None):
         try:
             # Same 401 outcome as an invalid token, so a client can't distinguish
             # "never had a session" from "had one that's now invalid" purely from
@@ -82,9 +84,9 @@ class RefreshTokenHandler:
         except HTTPException:
             raise
 
-        except Exception:
+        except Exception as exc:
             logger.error("Error in refresh token handler:\n%s", traceback.format_exc())
-            raise HTTPException(status_code=500, detail="Internal Server Error")
+            raise HTTPException(status_code=500, detail="Internal Server Error") from exc
 
 
 refresh_token_handler = RefreshTokenHandler()

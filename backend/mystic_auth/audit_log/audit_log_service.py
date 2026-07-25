@@ -3,9 +3,9 @@ import traceback
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .audit_log_repository import audit_log_repository
 from ..auth.security.client_ip import get_client_ip
 from ..logging.logging_config import get_logger
+from .audit_log_repository import audit_log_repository
 
 logger = get_logger(__name__)
 
@@ -48,7 +48,7 @@ def _redact_sensitive_metadata(metadata: dict | None) -> dict | None:
 
 async def log_security_event(
     event_type: str,
-    db: AsyncSession,
+    db: AsyncSession | None,
     *,
     user_email: str | None = None,
     success: bool = True,
@@ -59,7 +59,15 @@ async def log_security_event(
     Writes one security audit log row. A logging failure must never break the
     actual auth action it's describing — caught and logged as a warning here,
     never re-raised. Mirrors AuthorizationService._log_decision's reasoning.
+
+    `db=None` is accepted (rather than requiring a real session) purely so
+    unit tests can call handlers/services directly without wiring a session
+    through every mocked collaborator; a real request always supplies one via
+    Depends(database.get_session).
     """
+    if db is None:
+        return
+
     try:
         ip_address = None
         user_agent = None

@@ -1,25 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database.connection import database
-
-from ...authorization.services.authorization_service import authorization_service
-from ...authorization.repositories.policy_repository import policy_repository
-
 # Rejects a malformed `conditions` block before it's ever persisted — unknown
 # keys, wrong types, invalid timezones/IPs/dates must fail at write time, not
 # surface later as a silent always-deny at evaluation time.
-from ...authorization.conditions.condition_validator import validate_conditions, ConditionValidationError
-
-from ...authorization.schemas.policy_schema import PolicyCreate, PolicyUpdate, PolicyRead
-
+from ...authorization.conditions.condition_validator import ConditionValidationError, validate_conditions
+from ...authorization.repositories.policy_repository import policy_repository
+from ...authorization.schemas.policy_schema import PolicyCreate, PolicyRead, PolicyUpdate
+from ...authorization.services.authorization_service import authorization_service
+from ...database.connection import database
 from ..route_helpers import get_or_404
 from .policy_shared import (
-    READ_DEPENDENCY,
     CREATE_DEPENDENCY,
-    UPDATE_DEPENDENCY,
     DELETE_DEPENDENCY,
     PROTECTED_POLICY_NAMES,
+    READ_DEPENDENCY,
+    UPDATE_DEPENDENCY,
 )
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
@@ -36,7 +32,7 @@ async def create_policy(
     try:
         validate_conditions(policy_data.conditions)
     except ConditionValidationError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors) from exc
 
     # Reject a duplicate name up front with a clear 409, rather than letting
     # the database's unique constraint raise an opaque 500.
@@ -120,7 +116,7 @@ async def update_policy(
         try:
             validate_conditions(fields["conditions"])
         except ConditionValidationError as exc:
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors)
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=exc.errors) from exc
 
     if policy.name in PROTECTED_POLICY_NAMES and "name" in fields and fields["name"] != policy.name:
         raise HTTPException(

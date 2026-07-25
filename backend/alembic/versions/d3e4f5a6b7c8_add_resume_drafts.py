@@ -7,17 +7,17 @@ Create Date: 2026-07-16 00:00:01.000000
 A tailored resume in progress for one job description — many per user,
 unlike career_knowledge_bases (see resume_table/resume_model.py).
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'd3e4f5a6b7c8'
-down_revision: Union[str, Sequence[str], None] = 'c1d2e3f4a5b6'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'c1d2e3f4a5b6'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

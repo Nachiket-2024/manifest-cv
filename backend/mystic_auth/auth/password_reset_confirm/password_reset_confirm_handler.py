@@ -1,13 +1,13 @@
 import traceback
 
-from fastapi.responses import JSONResponse
 from fastapi import Request
+from fastapi.responses import JSONResponse
 
-from ..token_logic.jwt_service import jwt_service
+from ...audit_log.audit_log_service import PASSWORD_RESET_CONFIRMED, log_security_event
+from ...logging.logging_config import get_logger
 from ..password_logic.password_reset_service import password_reset_service
 from ..security.login_protection_service import login_protection_service
-from ...logging.logging_config import get_logger
-from ...audit_log.audit_log_service import log_security_event, PASSWORD_RESET_CONFIRMED
+from ..token_logic.jwt_service import jwt_service
 
 logger = get_logger(__name__)
 

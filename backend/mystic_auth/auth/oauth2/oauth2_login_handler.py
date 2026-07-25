@@ -1,15 +1,15 @@
 import traceback
 
-from fastapi.responses import RedirectResponse
 from fastapi import Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...audit_log.audit_log_service import OAUTH2_LOGIN_SUCCESS, log_security_event
 from ...core.settings import settings
-from .oauth2_service import oauth2_service, OAUTH2_STATE_TTL_SECONDS
+from ...logging.logging_config import get_logger
 from ..token_logic.token_cookie_handler import token_cookie_handler
 from ..token_logic.token_schema import TokenPairResponseSchema
-from ...logging.logging_config import get_logger
-from ...audit_log.audit_log_service import log_security_event, OAUTH2_LOGIN_SUCCESS
+from .oauth2_service import OAUTH2_STATE_TTL_SECONDS, oauth2_service
 
 logger = get_logger(__name__)
 
@@ -63,7 +63,7 @@ class OAuth2LoginHandler:
                 value=state,
                 httponly=True,
                 secure=True,
-                samesite="Lax",
+                samesite="lax",
                 max_age=OAUTH2_STATE_TTL_SECONDS,
             )
             return response
@@ -78,7 +78,7 @@ class OAuth2LoginHandler:
         state: str | None,
         oauth_state_cookie: str | None,
         error: str | None = None,
-        db: AsyncSession = None,
+        db: AsyncSession | None = None,
         request: Request | None = None,
     ):
         """

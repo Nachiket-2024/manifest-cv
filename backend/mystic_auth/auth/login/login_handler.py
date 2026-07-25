@@ -1,16 +1,16 @@
 import asyncio
 import traceback
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.responses import JSONResponse
 from fastapi import Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from .login_service import login_service
+from ...audit_log.audit_log_service import ACCOUNT_LOCKED, LOGIN_FAILURE, LOGIN_SUCCESS, log_security_event
+from ...logging.logging_config import get_logger
 from ..security.login_protection_service import login_protection_service
 from ..token_logic.token_cookie_handler import token_cookie_handler
 from ..token_logic.token_schema import TokenPairResponseSchema
-from ...logging.logging_config import get_logger
-from ...audit_log.audit_log_service import log_security_event, LOGIN_SUCCESS, LOGIN_FAILURE, ACCOUNT_LOCKED
+from .login_service import login_service
 
 logger = get_logger(__name__)
 
@@ -34,7 +34,7 @@ class LoginHandler:
         email: str,
         password: str,
         client_ip: str = "unknown",
-        db: AsyncSession = None,
+        db: AsyncSession | None = None,
         request: Request | None = None,
     ):
         """
@@ -73,14 +73,14 @@ class LoginHandler:
                 )
                 return self._lockout_response()
 
-            tokens: TokenPairResponseSchema = await login_service.login(
+            tokens: TokenPairResponseSchema | None = await login_service.login(
                 email=email, password=password, db=db
             )
 
             success = tokens is not None
 
-            # Best-effort security audit entry for the credential-check outcome
-            # itself, independent of any lockout state applied afterwards.
+            # Audit entry for the credential-check outcome, independent of any
+            # lockout state applied afterwards.
             await log_security_event(
                 LOGIN_SUCCESS if success else LOGIN_FAILURE,
                 db,

@@ -31,17 +31,12 @@ COPY frontend/package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY frontend/ .
 
-# VITE_* vars are inlined into the static bundle at build time (Vite's
-# import.meta.env / %VITE_APP_NAME% index.html substitution both resolve
-# here, never at container runtime) — unlike the dev target, this stage has
-# no bind-mounted frontend/.env to read them from, so they must arrive as
-# build args (wired from docker-compose.prod.yml, sourced from the repo
-# root .env — see .env.example). Declaring them ARG then re-exporting as
-# ENV is what makes `npm run build`'s child `vite build` process actually
-# see them, since ARG alone isn't inherited by RUN's subprocesses.
-# None of these are secrets: all four end up readable in the shipped
-# JS bundle regardless of how they reach the build, so having them pass
-# through `docker history` as build args is not a meaningful exposure.
+# VITE_* vars are inlined into the static bundle at build time, so unlike
+# the dev target (no frontend/.env bind mount here) they arrive as build
+# args, wired from docker-compose.prod.yml / repo root .env. Re-exporting
+# ARG as ENV is required for `vite build`'s child process to see them —
+# ARG alone isn't inherited by RUN's subprocesses. None of these are
+# secrets: all four end up readable in the shipped JS bundle regardless.
 ARG VITE_API_BASE_URL
 ARG VITE_APP_NAME
 ARG VITE_SENTRY_DSN

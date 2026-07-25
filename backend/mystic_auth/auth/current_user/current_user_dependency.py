@@ -1,8 +1,8 @@
 from fastapi import Cookie, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .current_user_handler import current_user_handler
 from ...database.connection import database
+from .current_user_handler import current_user_handler
 
 
 async def get_current_user(
@@ -11,8 +11,9 @@ async def get_current_user(
 ) -> dict:
     """
     Shared FastAPI dependency that authenticates the caller from their
-    access_token cookie and returns their {name, email, role} dict, or
-    raises 401/403 via current_user_handler.
+    access_token cookie and returns their user info dict (name, email,
+    role, permissions, has_password), or raises 401/403 via
+    current_user_handler.
 
     Centralized here — rather than redefined per router — so every router
     authenticates through the exact same path, and so the authorization

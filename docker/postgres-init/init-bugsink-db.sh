@@ -6,11 +6,12 @@
 #
 # Creates a second database on the SAME Postgres server/container this
 # template already runs, owned by the same $POSTGRES_USER, for the
-# optional self-hosted Bugsink error-monitoring service (see
-# docs/error-monitoring.md) to use — so enabling it doesn't require a
-# second Postgres container, just a second database on this one.
+# self-hosted Bugsink error-monitoring service (starts by default with
+# `docker compose up` — see docs/mystic_auth/error-monitoring/overview.md)
+# to use — so it doesn't need a second Postgres container, just a second
+# database on this one.
 #
-# If you're enabling Bugsink against an ALREADY-INITIALIZED postgres_data
+# If bugsink is running against an ALREADY-INITIALIZED postgres_data
 # volume (this script won't retroactively run), create the database
 # manually instead:
 #   docker compose exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE DATABASE bugsink;"

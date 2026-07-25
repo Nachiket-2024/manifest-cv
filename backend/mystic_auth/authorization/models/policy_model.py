@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, UniqueConstraint
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from ...database.base import Base
@@ -32,43 +34,40 @@ class Policy(Base):
 
     __tablename__ = "policies"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
     # Unique, human-readable identity for the policy (e.g. "self_service")
-    name = Column(String, unique=True, index=True, nullable=False)
-    description = Column(String, nullable=True)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
+    description: Mapped[str | None]
 
     # Action identifiers this policy grants (e.g. ["users:read_own"]).
     # Actions never grant access by themselves — only via an assigned,
     # active policy whose evaluation passes (see policy_evaluator.py).
-    actions = Column(ARRAY(String), nullable=False)
+    actions: Mapped[list[str]] = mapped_column(ARRAY(String))
 
     # Resource type this policy applies to (e.g. "users"). "*" matches any
     # resource type — used sparingly, for genuinely resource-agnostic grants.
-    resource_type = Column(String, nullable=False)
+    resource_type: Mapped[str]
 
     # Optional conditions narrowing the grant (e.g. ownership: only on the
     # caller's own resource). Null/empty means an unconditional grant for
     # the listed actions on the listed resource type.
-    conditions = Column(JSONB, nullable=True)
+    conditions: Mapped[dict | None] = mapped_column(JSONB)
 
     # Inactive policies are never evaluated as granting access, without
     # needing to delete (and lose the audit trail of) the policy row itself
-    is_active = Column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
     # Email of the admin who created this policy, or "system" for the
     # baseline policies seeded by migration — nullable since not every
     # historical row necessarily has one.
-    created_by = Column(String, nullable=True)
+    created_by: Mapped[str | None]
 
-    user_links = relationship("UserPolicy", back_populates="policy", cascade="all, delete-orphan")
+    user_links: Mapped[list["UserPolicy"]] = relationship(back_populates="policy", cascade="all, delete-orphan")
 
 
 class UserPolicy(Base):
@@ -86,14 +85,14 @@ class UserPolicy(Base):
         UniqueConstraint("user_id", "policy_id", name="uq_user_policy"),
     )
 
-    id = Column(Integer, primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    policy_id = Column(Integer, ForeignKey("policies.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    policy_id: Mapped[int] = mapped_column(ForeignKey("policies.id", ondelete="CASCADE"), index=True)
 
-    assigned_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # Email of the admin who made this assignment, or "system" for
     # migration-seeded / signup-time default assignments
-    assigned_by = Column(String, nullable=True)
+    assigned_by: Mapped[str | None]
 
-    policy = relationship("Policy", back_populates="user_links")
+    policy: Mapped["Policy"] = relationship(back_populates="user_links")

@@ -1,12 +1,14 @@
-from datetime import datetime, timedelta, timezone
 import asyncio
-import jwt
-import uuid
 import traceback
+import uuid
+from datetime import UTC, datetime, timedelta
+from typing import cast
+
+import jwt
 
 from ...core.settings import settings
-from ...redis.client import redis_client
 from ...logging.logging_config import get_logger
+from ...redis.client import redis_client
 
 logger = get_logger(__name__)
 
@@ -39,7 +41,7 @@ class JWTService:
     """
 
     async def create_access_token(self, email: str) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(UTC) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         jti = uuid.uuid4().hex
 
         # The "type" claim lets verify_token tell access and refresh tokens
@@ -50,7 +52,7 @@ class JWTService:
         return await asyncio.to_thread(jwt.encode, payload, settings.SECRET_KEY, settings.JWT_ALGORITHM)
 
     async def create_refresh_token(self, email: str) -> str:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(UTC) + timedelta(minutes=settings.REFRESH_TOKEN_EXPIRE_MINUTES)
         jti = uuid.uuid4().hex
 
         payload = {"email": email, "type": "refresh", "jti": jti, "exp": expire}
@@ -80,7 +82,7 @@ class JWTService:
             if not registry:
                 return
 
-            now = datetime.now(timezone.utc).timestamp()
+            now = datetime.now(UTC).timestamp()
             expired_jtis = [jti for jti, exp in registry.items() if float(exp) <= now]
 
             if expired_jtis:
@@ -105,7 +107,7 @@ class JWTService:
         clicking the link between 15-60 minutes in got a confusing
         invalid/expired error despite the email promising it should still
         work."""
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             minutes=expires_minutes if expires_minutes is not None else settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
         jti = uuid.uuid4().hex
@@ -204,7 +206,7 @@ class JWTService:
             # least momentarily.
             ttl = 1
             if exp is not None:
-                ttl = max(1, int(exp - datetime.now(timezone.utc).timestamp()))
+                ttl = max(1, int(exp - datetime.now(UTC).timestamp()))
 
             await redis_client.set(f"revoked:{jti}", "true", ex=ttl)
 
@@ -236,7 +238,7 @@ class JWTService:
         try:
             ttl = 1
             if exp is not None:
-                ttl = max(1, int(exp - datetime.now(timezone.utc).timestamp()))
+                ttl = max(1, int(exp - datetime.now(UTC).timestamp()))
 
             claimed = await redis_client.set(f"revoked:{jti}", "true", nx=True, ex=ttl)
 
@@ -272,7 +274,12 @@ class JWTService:
     async def get_all_refresh_tokens_for_user(self, email: str) -> dict[str, str]:
         """Returns the user's jti -> expiry (Unix timestamp, as a string)
         registry, or an empty dict if they have no active refresh tokens."""
-        registry = await redis_client.hgetall(REFRESH_TOKEN_REGISTRY_KEY.format(email=email))
+        # redis-py's hgetall() is typed for both raw-bytes and decoded-str
+        # responses; this client is constructed with decode_responses=True
+        # (see redis/client.py), so the result is always dict[str, str] here.
+        registry = cast(
+            "dict[str, str]", await redis_client.hgetall(REFRESH_TOKEN_REGISTRY_KEY.format(email=email))
+        )
 
         return registry or {}
 

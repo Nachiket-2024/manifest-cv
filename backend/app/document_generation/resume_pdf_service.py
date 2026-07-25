@@ -1,6 +1,6 @@
 from .markdown_to_latex import markdown_to_latex_body
-from .templates import render_latex_document
 from .tectonic_compiler import compile_latex_to_pdf
+from .templates import render_latex_document
 
 
 async def render_resume_pdf(resume_content: str, template_id: str) -> tuple[str, bytes]:

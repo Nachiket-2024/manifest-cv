@@ -1,25 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mystic_auth.sdk import get_current_user, capture_exception, database, get_or_404, get_logger, rate_limiter_service
-from ...manifestcv_sdk import get_user_id_by_email
-
+from ...ai_integration.exceptions import AIIntegrationError
+from ...ai_integration.gemini_client import structure_knowledge_base
+from ...app_sdk import get_user_id_by_email
 from ...career_knowledge_crud.career_knowledge_repository import career_knowledge_repository
 from ...career_knowledge_table.career_knowledge_schema import (
     CareerKnowledgeBaseCreate,
-    CareerKnowledgeBaseUpdate,
     CareerKnowledgeBaseRead,
+    CareerKnowledgeBaseUpdate,
     CareerKnowledgeSearchResult,
 )
-
-from ...ai_integration.gemini_client import structure_knowledge_base
-from ...ai_integration.exceptions import AIIntegrationError
 from ...retrieval.exceptions import RetrievalError
 from ...retrieval.knowledge_retrieval_service import (
-    index_knowledge_base,
     delete_knowledge_base,
+    index_knowledge_base,
     search_knowledge_base,
 )
+from ...sdk import capture_exception, database, get_current_user, get_logger, get_or_404, rate_limiter_service
 
 # Self-service only, one knowledge base per authenticated user — no PBAC
 # permission is required (same reasoning as audit_log_routes.py's
@@ -78,7 +76,7 @@ async def _delete_index_best_effort(user_id: int) -> None:
 # both real cost/latency, unlike a plain CRUD write — so this gets the same
 # rate-limiting protection as auth's expensive endpoints (signup/login),
 # keyed per-account so one caller can't drive up AI spend by hammering
-# their own account from many IPs. See docs/concerns/README.md's now-fixed
+# their own account from many IPs. See docs/app/concerns/README.md's now-fixed
 # "No rate limiting on AI-backed routes" entry.
 @rate_limiter_service.rate_limited(
     "career_knowledge_create", account_key_func=lambda kwargs: kwargs["current_user"]["email"]
@@ -91,8 +89,8 @@ async def create_career_knowledge_base(
 ):
     """
     Bootstraps the caller's knowledge base: AI structures `raw_input` into
-    Markdown `content` (claude.md flow steps 1-4), then that content is
-    embedded and indexed in Qdrant for later semantic search/retrieval.
+    Markdown `content`, then that content is embedded and indexed in
+    Qdrant for later semantic search/retrieval.
     """
     user_id = await _current_user_id(current_user, db)
 
@@ -153,7 +151,7 @@ async def update_my_career_knowledge_base(
         fields["content"] = await _structure_or_502(fields["raw_input"])
 
     updated = await career_knowledge_repository.update(entry, fields, db)
-    await _reindex_best_effort(user_id, updated.content)
+    await _reindex_best_effort(user_id, str(updated.content))
 
     return updated
 
@@ -175,7 +173,7 @@ async def delete_my_career_knowledge_base(
 @router.get("/search", response_model=list[CareerKnowledgeSearchResult])
 # Every call embeds `query` via a real Gemini call, same cost profile as the
 # create/update routes above — rate-limited the same way rather than left
-# open just because it's a GET. See docs/concerns/README.md.
+# open just because it's a GET. See docs/app/concerns/README.md.
 @rate_limiter_service.rate_limited(
     "career_knowledge_search", account_key_func=lambda kwargs: kwargs["current_user"]["email"]
 )
@@ -188,9 +186,9 @@ async def search_my_career_knowledge_base(
 ):
     """
     Semantic search over the caller's own indexed knowledge base chunks.
-    Scaffolding for Phase 2's job-description matching — exposed as its own
-    endpoint now so retrieval can be verified independently of that later
-    work.
+    Powers resume generation/refinement's own retrieval step (see
+    resume_routes.py) as well as this standalone endpoint, exposed
+    separately so retrieval correctness can be verified independently.
     """
     user_id = await _current_user_id(current_user, db)
     try:

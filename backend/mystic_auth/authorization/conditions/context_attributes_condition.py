@@ -14,7 +14,4 @@ class ContextAttributesCondition(ConditionHandler):
             return True
         if context is None:
             return False
-        for key, expected_value in condition_value.items():
-            if context.get(key) != expected_value:
-                return False
-        return True
+        return all(context.get(key) == expected_value for key, expected_value in condition_value.items())

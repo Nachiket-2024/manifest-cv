@@ -18,7 +18,7 @@
 
 ManifestCV turns one private career knowledge base into as many tailored, AI-assisted resumes as you need — one per job description — compiled to a polished PDF and tracked through to application. Paste in everything you know about your own career once; ManifestCV structures it, semantically retrieves the relevant parts for each job you apply to, generates and refines a resume from them, and lets you compile and track the result.
 
-Identity, sessions, and access control are provided by [mystic-auth](https://github.com/Nachiket-2024/mystic-auth), a full-stack auth/PBAC template, vendored in unmodified — see [Auth & Authorization](docs/auth/overview.md) for how ManifestCV is wired to it, and the [mystic-auth repository](https://github.com/Nachiket-2024/mystic-auth) itself for everything about how login, OAuth2, and policy-based access control actually work.
+Identity, sessions, and access control are provided by [mystic-auth](https://github.com/Nachiket-2024/mystic-auth), a full-stack auth/PBAC template, vendored in unmodified — see [Auth & Authorization](docs/app/auth/overview.md) for how ManifestCV is wired to it, and the [mystic-auth repository](https://github.com/Nachiket-2024/mystic-auth) itself for everything about how login, OAuth2, and policy-based access control actually work.
 
 See [`docs/README.md`](docs/README.md) for the full documentation set — architecture, product features, database, API reference, testing, Docker, CI/CD, and deployment.
 
@@ -68,13 +68,13 @@ See [`docs/README.md`](docs/README.md) for the full documentation set — archit
 
 ## ✨ Features
 
-- **Career Knowledge Base** — paste in your resume, LinkedIn export, project notes, whatever you have; Gemini structures it into clean, editable Markdown, always directly re-editable by hand afterward. See [Career Knowledge](docs/career-knowledge/overview.md).
-- **Semantic Retrieval** — your knowledge base is chunked and embedded into Qdrant, so resume generation retrieves only the sections relevant to a specific job description instead of dumping everything into one prompt. See [AI & Retrieval](docs/ai-and-retrieval/overview.md).
-- **AI-Assisted Resume Drafting** — generate an initial tailored resume from a job description, then refine it with natural-language instructions that re-match the knowledge base rather than just rephrasing the existing text. See [Resumes](docs/resumes/overview.md).
-- **PDF Document Generation** — once approved, compile a resume to a polished PDF via a Markdown→LaTeX pipeline and a self-contained `tectonic` engine — no LaTeX installation required, and multiple visual templates to choose from. See [Document Generation](docs/document-generation/overview.md).
-- **Application Tracking** — save a finalized resume against a job application; the resume content, template, and PDF are snapshotted at that moment, so tracked applications survive later edits to the source draft. See [Applications](docs/applications/overview.md).
-- **Real authentication, not a demo login** — email+password with Argon2 hashing, Google OAuth2/PKCE, JWT access+refresh tokens as httpOnly cookies, refresh-token rotation with reuse detection, rate limiting, and audit logging — all inherited from mystic-auth. See [Auth & Authorization](docs/auth/overview.md).
-- **Error monitoring, opt-in** — backend and frontend exceptions reportable to self-hosted Bugsink (or Sentry's hosted free tier) via the Sentry SDK protocol; zero SDK calls and zero added frontend bytes until you turn it on. See [Error Monitoring](docs/error-monitoring/overview.md).
+- **Career Knowledge Base** — paste in your resume, LinkedIn export, project notes, whatever you have; Gemini structures it into clean, editable Markdown, always directly re-editable by hand afterward. See [Career Knowledge](docs/app/career-knowledge/overview.md).
+- **Semantic Retrieval** — your knowledge base is chunked and embedded into Qdrant, so resume generation retrieves only the sections relevant to a specific job description instead of dumping everything into one prompt. See [AI & Retrieval](docs/app/ai-and-retrieval/overview.md).
+- **AI-Assisted Resume Drafting** — generate an initial tailored resume from a job description, then refine it with natural-language instructions that re-match the knowledge base rather than just rephrasing the existing text. See [Resumes](docs/app/resumes/overview.md).
+- **PDF Document Generation** — once approved, compile a resume to a polished PDF via a Markdown→LaTeX pipeline and a self-contained `tectonic` engine — no LaTeX installation required, and multiple visual templates to choose from. See [Document Generation](docs/app/document-generation/overview.md).
+- **Application Tracking** — save a finalized resume against a job application; the resume content, template, and PDF are snapshotted at that moment, so tracked applications survive later edits to the source draft. See [Applications](docs/app/applications/overview.md).
+- **Real authentication, not a demo login** — email+password with Argon2 hashing, Google OAuth2/PKCE, JWT access+refresh tokens as httpOnly cookies, refresh-token rotation with reuse detection, rate limiting, and audit logging — all inherited from mystic-auth. See [Auth & Authorization](docs/app/auth/overview.md).
+- **Error monitoring, on by default** — backend and frontend exceptions reported to self-hosted Bugsink (started automatically by `docker compose up`) or Sentry's hosted free tier, via the Sentry SDK protocol. See [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md).
 
 ---
 
@@ -89,7 +89,7 @@ See [`docs/README.md`](docs/README.md) for the full documentation set — archit
 - **State Management:** Zustand (client/session state) + TanStack Query (server state/caching)
 - **Database:** PostgreSQL (async)
 - **Caching & Tasks:** Redis + Taskiq (async background email delivery)
-- **Error monitoring:** Sentry SDK protocol, self-hosted Bugsink by default (or Sentry's hosted free tier) — optional, opt-in, disabled unless explicitly configured
+- **Error monitoring:** Sentry SDK protocol, self-hosted Bugsink by default (or Sentry's hosted free tier)
 - **Deployment:** Docker (dev and production Compose files)
 
 ---
@@ -125,6 +125,8 @@ npm install
 
 ## ⚙️ Environment Variables
 
+> Instructions below assume that you are at the root of the repository while running the commands.
+
 All environment variables — backend and frontend (`VITE_*`) alike — are defined in one place, root `.env.example`. Copy it to `.env` and fill in your own values:
 
 ```bash
@@ -157,13 +159,9 @@ Once the services are running:
 - **Taskiq worker:** Automatically listens for async tasks (email sending)
 - **Alembic migrations:** Run automatically on stack startup via the dedicated `alembic` service (`alembic upgrade head`) — applies mystic-auth's inherited schema and ManifestCV's own tables in one pass
 
-> **`docker compose up` never starts error monitoring (Bugsink).** It's a separate, opt-in Docker Compose profile — disabled by default so the stack's footprint doesn't grow for anyone who doesn't want it, whether you run the rest of the app via Docker or locally (Path 2 below):
-> ```bash
-> docker compose --profile monitoring up -d
-> ```
-> This adds Bugsink (`localhost:8010`) and a one-shot project-seeding container to whatever's already running — it doesn't replace or restart the rest of the stack. See [Error Monitoring](docs/error-monitoring/overview.md) for the full setup (env vars, DSN wiring, verifying it actually works). The app runs identically with or without it — `SENTRY_DSN`/`VITE_SENTRY_DSN` stay unset either way, so nothing calls out to it until you deliberately turn it on.
+> **`docker compose up` also starts self-hosted error monitoring (Bugsink)** at `localhost:8010`, matching mystic-auth's own template default — a one-shot seeding container creates a default project and wires its DSN into `backend`/`frontend` automatically, no setup needed. See [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md) for how it works and how to point at Sentry's hosted tier instead if you'd rather not run it locally.
 
-See [Docker Overview](docs/docker/overview.md) for the full service breakdown and [Deployment Guide](docs/deployment/guide.md) for production Compose usage and free/low-cost hosting options.
+See [Docker Overview](docs/app/docker/overview.md) for the full service breakdown and [Deployment Guide](docs/app/deployment/guide.md) for production Compose usage and free/low-cost hosting options.
 
 ---
 
@@ -181,10 +179,10 @@ alembic upgrade head
 
 #### 2. Start the FastAPI backend
 
-`PYTHONPATH=backend` is required from here on — mystic-auth (`backend/mystic_auth/`) and ManifestCV's own code (`backend/app/`) are separate top-level packages, and `main.py` crosses that boundary with plain `mystic_auth.*` imports (see [Auth & Authorization](docs/auth/overview.md)); Docker's `backend.Dockerfile` sets an equivalent `WORKDIR /app` so this is only needed for this local, non-Docker path.
+Run from the repo root — `app/` (ManifestCV) and `mystic_auth/` (vendored template) are separate top-level packages under `backend/`, bridged via `app/sdk.py`'s import helper, which resolves correctly whether `backend/` is on `sys.path` (this command, `uvicorn`'s own cwd auto-insertion) or `backend` itself is (Docker's `WORKDIR /app`). See [Auth & Authorization](docs/app/auth/overview.md).
 
 ```bash
-PYTHONPATH=backend uvicorn backend.app.main:app --reload
+uvicorn backend.app.main:app --reload
 ```
 
 - **Backend:** [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -195,7 +193,7 @@ PYTHONPATH=backend uvicorn backend.app.main:app --reload
 #### 3. Start the Taskiq Worker
 
 ```bash
-PYTHONPATH=backend taskiq worker backend.mystic_auth.taskiq_tasks.email_tasks:broker --reload
+taskiq worker backend.mystic_auth.taskiq_tasks.email_tasks:broker --reload
 ```
 
 #### 4. Run the React frontend
@@ -207,13 +205,15 @@ npm run dev
 
 - **Frontend:** [http://localhost:5173](http://localhost:5173)
 
-> **Error monitoring (Bugsink) still requires Docker even in this local-run path** — it only ships as a container in this template (`docker compose --profile monitoring up -d`), with no bare-metal install documented. See [Error Monitoring](docs/error-monitoring/overview.md) if you want it running alongside a locally-run backend/frontend.
+> **Error monitoring (Bugsink) still requires Docker even in this local-run path** — it only ships as a container in this template, with no bare-metal install documented. Run `docker compose up bugsink bugsink-seed` alongside your locally-run backend/frontend if you want it. See [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md).
 
 ---
 
 ## 🔑 First-Time Setup — Creating the System Superuser
 
 After starting the app for the first time, create the reserved system account — a one-time step inherited from mystic-auth that seeds the account holding the `system_superuser` policy.
+
+> Commands below assume you're at the root of the repository, unless a `cd` is shown explicitly.
 
 ### Docker
 
@@ -239,7 +239,7 @@ You will be prompted to enter a name, email, and password interactively. This on
 - **Redis + Taskiq** are used for async email delivery, caching, and rate limiting
 - **Qdrant** is used for semantic search over each user's career knowledge base
 - OAuth2 setup requires Google Cloud credentials; AI features require a Gemini API key
-- Error monitoring (self-hosted Bugsink) is opt-in — `docker compose up` alone never starts it; see [Error Monitoring](docs/error-monitoring/overview.md)
+- Error monitoring (self-hosted Bugsink) starts automatically with `docker compose up`; see [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md)
 - **Zustand** manages client-side session state; **TanStack Query** manages all server-state caching
 - **Type Safety:** Full TypeScript support across the frontend (`mystic_auth/ui/`, `mystic_auth/authorization/`, `mystic_auth/store/`, and every feature domain)
 
@@ -249,19 +249,19 @@ You will be prompted to enter a name, email, and password interactively. This on
 
 Full documentation lives in [`docs/`](docs/README.md), organized by feature/domain:
 
-- [Architecture](docs/README.md#architecture) (system overview, backend, frontend)
-- [Auth & Authorization](docs/auth/overview.md) — the boundary with mystic-auth
-- [Career Knowledge](docs/career-knowledge/overview.md), [Resumes](docs/resumes/overview.md), [Document Generation](docs/document-generation/overview.md), [Applications](docs/applications/overview.md)
-- [AI & Retrieval](docs/ai-and-retrieval/overview.md)
-- [Database Design](docs/database/design.md)
-- [API Reference](docs/api/reference.md)
-- [Background Workers](docs/background-workers/taskiq.md)
-- [Testing](docs/testing/overview.md)
-- [Error Monitoring](docs/error-monitoring/overview.md) — optional, disabled by default; self-hosted Bugsink or Sentry's hosted tier
-- [Docker](docs/docker/overview.md)
-- [CI/CD](docs/cicd/overview.md)
-- [Deployment](docs/deployment/guide.md)
-- [Known Issues & Concerns](docs/concerns/README.md)
+- [Architecture](docs/app/README.md#architecture) (system overview, backend, frontend)
+- [Auth & Authorization](docs/app/auth/overview.md) — the boundary with mystic-auth
+- [Career Knowledge](docs/app/career-knowledge/overview.md), [Resumes](docs/app/resumes/overview.md), [Document Generation](docs/app/document-generation/overview.md), [Applications](docs/app/applications/overview.md)
+- [AI & Retrieval](docs/app/ai-and-retrieval/overview.md)
+- [Database Design](docs/mystic_auth/database/design.md)
+- [API Reference](docs/app/api/reference.md)
+- [Background Workers](docs/mystic_auth/background-workers/taskiq.md)
+- [Testing](docs/app/testing/overview.md)
+- [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md) — on by default; self-hosted Bugsink or Sentry's hosted tier
+- [Docker](docs/app/docker/overview.md)
+- [CI/CD](docs/app/cicd/overview.md)
+- [Deployment](docs/app/deployment/guide.md)
+- [Known Issues & Concerns](docs/app/concerns/README.md)
 
 For the underlying authentication/authorization system itself — how login, OAuth2, JWT/cookie handling, and Policy-Based Access Control actually work — see [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) and its own documentation.
 

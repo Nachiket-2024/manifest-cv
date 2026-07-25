@@ -3,13 +3,13 @@ import asyncio
 from google import genai
 from google.genai import types
 
-from mystic_auth.sdk import settings
+from ..sdk import settings
+from .exceptions import AIIntegrationError
 from .prompts import (
-    build_structure_knowledge_base_prompt,
     build_generate_resume_prompt,
     build_refine_resume_prompt,
+    build_structure_knowledge_base_prompt,
 )
-from .exceptions import AIIntegrationError
 
 # Embedding vector size — must match retrieval/qdrant_client.py's
 # collection definition exactly, since Qdrant collections are fixed-size.
@@ -53,7 +53,7 @@ async def _generate_text(prompt: str, empty_result_error: str) -> str:
             client.aio.models.generate_content(model=settings.GEMINI_MODEL, contents=prompt),
             timeout=_REQUEST_TIMEOUT_SECONDS,
         )
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         raise AIIntegrationError(
             f"Gemini content generation did not respond within {_REQUEST_TIMEOUT_SECONDS}s"
         ) from exc
@@ -68,8 +68,8 @@ async def _generate_text(prompt: str, empty_result_error: str) -> str:
 
 async def structure_knowledge_base(raw_input: str) -> str:
     """
-    Reorganizes a user's raw career text dump into clean Markdown (claude.md
-    Application Flow steps 2-3). Permitted: rewrite, summarize, reorganize.
+    Reorganizes a user's raw career text dump into clean Markdown.
+    Permitted: rewrite, summarize, reorganize.
     Prohibited: inventing anything not present in raw_input — enforced by
     the prompt in prompts.py; no code-level fact-checking happens here (an
     LLM call can't be made to structurally guarantee this — the prompt is
@@ -82,9 +82,9 @@ async def structure_knowledge_base(raw_input: str) -> str:
 async def generate_resume(job_description: str, knowledge_chunks: list[str]) -> str:
     """
     Generates an initial tailored resume from semantically-matched
-    knowledge base excerpts (claude.md flow steps 7-8). Same
-    invent-nothing constraint as structure_knowledge_base, enforced via the
-    prompt (see build_generate_resume_prompt).
+    knowledge base excerpts. Same invent-nothing constraint as
+    structure_knowledge_base, enforced via the prompt (see
+    build_generate_resume_prompt).
     """
     prompt = build_generate_resume_prompt(job_description, knowledge_chunks)
     return await _generate_text(prompt, "Gemini returned an empty generated resume")
@@ -124,13 +124,13 @@ async def embed_text(text: str) -> list[float]:
             ),
             timeout=_REQUEST_TIMEOUT_SECONDS,
         )
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         raise AIIntegrationError(
             f"Gemini embedding generation did not respond within {_REQUEST_TIMEOUT_SECONDS}s"
         ) from exc
     except Exception as exc:
         raise AIIntegrationError(f"Gemini embedding generation failed: {exc}") from exc
 
-    if not response.embeddings:
+    if not response.embeddings or response.embeddings[0].values is None:
         raise AIIntegrationError("Gemini returned no embedding")
     return list(response.embeddings[0].values)

@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack, Heading, Text, StackSeparator } from "@chakra-ui/react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router";
 
 import PasswordResetConfirmForm from "./PasswordResetConfirmForm";
 

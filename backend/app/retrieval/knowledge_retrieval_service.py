@@ -4,8 +4,8 @@ import uuid
 
 from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
 
-from mystic_auth.redis.client import redis_client
 from ..ai_integration.gemini_client import embed_text
+from ..sdk import redis_client
 from .exceptions import RetrievalError
 from .qdrant_client import COLLECTION_NAME, get_client
 
@@ -43,7 +43,7 @@ async def _call(coro, action: str):
     """
     try:
         return await asyncio.wait_for(coro, timeout=_REQUEST_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError as exc:
+    except TimeoutError as exc:
         raise RetrievalError(f"Qdrant {action} did not respond within {_REQUEST_TIMEOUT_SECONDS}s") from exc
     except Exception as exc:
         raise RetrievalError(f"Qdrant {action} failed: {exc}") from exc
@@ -119,7 +119,7 @@ async def index_knowledge_base(user_id: int, content: str) -> None:
                 vector=vector,
                 payload={"user_id": user_id, "chunk": chunk},
             )
-            for i, (chunk, vector) in enumerate(zip(chunks, vectors))
+            for i, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True))
         ]
 
         await _call(

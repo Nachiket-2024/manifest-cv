@@ -4,24 +4,24 @@ Revision ID: f3c1a9d7e5b2
 Revises: a8d4f6c2b9e7
 Create Date: 2026-07-13 00:00:01.000000
 
-Data-only migration (per docs/authorization/adding-permissions.md's documented
+Data-only migration (per docs/mystic_auth/authorization/adding-permissions.md's documented
 process): grants the new security_audit:read permission (see
 authorization/permissions.py) to the seeded system_superuser policy only.
 This is a security log covering all users' auth events, not scoped to
 user_administration's day-to-day account management.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'f3c1a9d7e5b2'
-down_revision: Union[str, Sequence[str], None] = 'a8d4f6c2b9e7'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'a8d4f6c2b9e7'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _OLD_ACTIONS = [
     "users:assign_system_role",
@@ -37,7 +37,6 @@ _NEW_ACTIONS = _OLD_ACTIONS + ["security_audit:read"]
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     connection = op.get_bind()
     policies_table = sa.table(
         'policies',
@@ -52,7 +51,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     connection = op.get_bind()
     policies_table = sa.table(
         'policies',

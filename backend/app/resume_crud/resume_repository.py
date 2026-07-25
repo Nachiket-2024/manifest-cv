@@ -1,5 +1,5 @@
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
 from ..resume_table.resume_model import ResumeDraft
 

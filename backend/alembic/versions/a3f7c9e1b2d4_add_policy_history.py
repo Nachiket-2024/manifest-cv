@@ -16,22 +16,21 @@ and the history must keep reflecting exactly what existed *at the time*.
 `policy_name` is the durable identifier used to query a policy's full
 history even after the policy row itself is gone.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'a3f7c9e1b2d4'
-down_revision: Union[str, Sequence[str], None] = 'e2b6c8a4f1d5'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'e2b6c8a4f1d5'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.create_table(
         'policy_history',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -53,7 +52,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_index(op.f('ix_policy_history_created_at'), table_name='policy_history')
     op.drop_index(op.f('ix_policy_history_policy_name'), table_name='policy_history')
     op.drop_index(op.f('ix_policy_history_policy_id'), table_name='policy_history')

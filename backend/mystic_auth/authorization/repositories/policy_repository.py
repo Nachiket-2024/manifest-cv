@@ -1,18 +1,18 @@
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
-from ..models.policy_model import Policy, UserPolicy
 from ...user_table.user_model import User
-
-# Every create/update/delete below also stages a policy_history row in the
-# same transaction — see claude.md's "Policy Versioning and Change History":
-# every policy mutation must be traceable and reversible.
-from .policy_history_repository import policy_history_repository
 
 # The one centralized Redis abstraction for authorization data — see its own
 # docstring for exactly what is (and deliberately isn't) cached, and why.
 # Every mutation below invalidates whatever it could have made stale.
 from ..caching.authorization_cache_service import authorization_cache_service
+from ..models.policy_model import Policy, UserPolicy
+
+# Every create/update/delete below also stages a policy_history row in the
+# same transaction — see claude.md's "Policy Versioning and Change History":
+# every policy mutation must be traceable and reversible.
+from .policy_history_repository import policy_history_repository
 
 
 def _definition_snapshot(policy: Policy) -> dict:

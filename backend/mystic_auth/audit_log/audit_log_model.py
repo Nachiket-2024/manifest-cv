@@ -10,9 +10,9 @@ class AuditLog(Base):
     One row per security-sensitive auth event (login, logout, signup, OAuth2
     login, password reset, account verification, account lockout, refresh
     token reuse detection). Written best-effort by
-    audit.services.security_audit_service.log_security_event — never allowed
-    to raise, so a logging failure can never break the real action it
-    describes (same reasoning as AuthorizationAuditLog).
+    audit_log_service.log_security_event — never allowed to raise, so a
+    logging failure can never break the real action it describes (same
+    reasoning as AuthorizationAuditLog).
 
     Deliberately append-only and independent of the users table (no foreign
     key): a user row can be deleted while its audit history must remain —

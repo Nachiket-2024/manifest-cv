@@ -9,7 +9,8 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "types": ["vitest/globals"],
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./src/mystic_auth/*"],
+      "@app/*": ["./src/app/*"],
       // react/react-dom ship no inline .d.ts of their own — their types
       // live in the separate @types/react(-dom) packages, which
       // TypeScript normally finds via its own automatic lookup. The
@@ -26,6 +27,13 @@
       "react/jsx-dev-runtime": ["./node_modules/@types/react/jsx-dev-runtime"],
       "react-dom": ["./node_modules/@types/react-dom"],
       "react-dom/*": ["./node_modules/@types/react-dom/*"],
+      // react-router ships its own types, but only via a conditional
+      // "exports" map (no root-level "types"/"main" field) — the generic
+      // "*" fallback below maps a bare specifier straight to the package
+      // directory without resolving that map, so it'd otherwise miss the
+      // types entirely. Points directly at the same production types file
+      // "exports" resolves to for every other project in this repo.
+      "react-router": ["./node_modules/react-router/dist/production/index.d.ts"],
       // Explicit entries so jest-dom's `declare module 'vitest'` matcher
       // augmentation (imported by setup.ts) merges onto the exact same
       // module identities vitest's own type chain uses internally
@@ -64,5 +72,5 @@
   // augments Vitest's Assertion type with jest-dom's matchers — without
   // it in this compilation, `tsc` never sees that augmentation and
   // `.not`/`.toBeInTheDocument()` etc. type-check as missing.
-  "include": ["../tests/frontend", "src/vite-env.d.ts", "src/__tests__/setup.ts"]
+  "include": ["../tests/frontend", "src/mystic_auth/vite-env.d.ts", "src/mystic_auth/__tests__/setup.ts"]
 }

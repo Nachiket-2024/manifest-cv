@@ -1,10 +1,11 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict
 
 
 class AuditLogEntryRead(BaseModel):
     """Schema returned by the security audit log query API — mirrors
-    SecurityAuditLog (see audit_log_model.py).
+    AuditLog (see audit_log_model.py).
 
     Field name is event_metadata, matching the ORM model's Python attribute
     (the underlying DB/JSON column is named "metadata", but that name is

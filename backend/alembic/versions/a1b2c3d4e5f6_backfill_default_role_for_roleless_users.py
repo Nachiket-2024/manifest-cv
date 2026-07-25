@@ -19,20 +19,18 @@ password set by create_system_user.py), so this WHERE clause can never
 accidentally touch it, but the exclusion is still made explicit below for
 defense in depth.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 
-
 # revision identifiers, used by Alembic.
 revision: str = 'a1b2c3d4e5f6'
-down_revision: Union[str, Sequence[str], None] = 'f3c1a9d7e5b2'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'f3c1a9d7e5b2'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     # `role` is a native Postgres enum column (userrole), not varchar —
     # binding a plain string parameter through SQLAlchemy's table.update()
     # sends it as ::VARCHAR and Postgres refuses the implicit cast
@@ -43,7 +41,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     # Deliberately a no-op: there is no reliable way to distinguish "was
     # NULL before this migration ran" from "was genuinely created as
     # 'user' afterward" — reverting would risk blanking real accounts'

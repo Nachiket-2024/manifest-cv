@@ -1,18 +1,16 @@
 name: CI
 
 # Runs on every push and pull request targeting main. Five independent jobs
-# (backend, frontend, docker build, real-tectonic, secret-scan) run in parallel.
+# (backend, frontend, secrets scan, docker build, real-tectonic) run in parallel.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-# Least-privilege default: none of these jobs push commits, comment on
-# PRs, or otherwise need write access to the repo — they only check out code
-# and run tests/builds. Explicit here rather than relying on whatever the
-# repo/org's default GITHUB_TOKEN permissions happen to be, so a compromised
-# action dependency in this workflow can't do more than read the checkout.
+# Least-privilege default: none of these jobs need write access, they only
+# check out code and run tests/builds. Explicit here rather than relying on
+# the repo/org's default GITHUB_TOKEN permissions.
 permissions:
   contents: read
 
@@ -23,7 +21,11 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        # AWS ECR Public mirror of the Docker Official postgres image, not
+        # Docker Hub directly — sidesteps Docker Hub's anonymous-pull rate
+        # limiting, which is the most common cause of GitHub-hosted runners
+        # timing out ("context deadline exceeded") pulling service containers.
+        image: public.ecr.aws/docker/library/postgres:15
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -37,7 +39,8 @@ jobs:
           --health-retries 5
 
       redis:
-        image: redis:7
+        # Same ECR Public mirror reasoning as postgres above.
+        image: public.ecr.aws/docker/library/redis:7
         ports:
           - 6379:6379
         options: >-
@@ -87,12 +90,13 @@ jobs:
 
       # ManifestCV — GEMINI_API_KEY has no default (Settings refuses to
       # start without it), so CI needs *something*, same reasoning as every
-      # other required setting above. A placeholder is fine: the
-      # manifestcv integration suite mocks every Gemini/Qdrant call at each
-      # route module's import site rather than calling either service for
-      # real (see tests/backend/manifestcv/integration/*'s module
-      # docstrings), so nothing here ever needs to resolve to a live key or
-      # a reachable Qdrant instance.
+      # other required setting above. A placeholder is fine: the ManifestCV
+      # integration suite mocks every Gemini/Qdrant call at each route
+      # module's import site rather than calling either service for real
+      # (see tests/backend/app/integration/*'s module docstrings), so
+      # nothing here ever needs to resolve to a live key or a reachable
+      # Qdrant instance (no `qdrant` service container is spun up here,
+      # unlike `postgres`/`redis`).
       GEMINI_API_KEY: ci-test-gemini-api-key
       GEMINI_MODEL: gemini-flash-latest
       GEMINI_EMBEDDING_MODEL: gemini-embedding-001
@@ -110,43 +114,56 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install backend dependencies
-        run: pip install --no-cache-dir -r backend/requirements.txt
+        run: pip install --no-cache-dir -r backend/requirements.txt -r backend/requirements-dev.txt
 
       - name: Audit Python dependencies for known vulnerabilities
         run: |
           pip install --no-cache-dir pip-audit
           pip-audit -r backend/requirements.txt
 
-      # Static analysis (SAST) for ManifestCV's own code — injection,
-      # insecure crypto, unsafe deserialization, etc. Scoped to backend/app
-      # (ManifestCV's own product code) rather than backend/mystic_auth
-      # (the vendored, separately-reviewed template) to keep signal high;
-      # -ll (medium+ severity and confidence) filters out bandit's noisier
-      # low-confidence heuristics.
-      - name: Static security analysis (bandit)
-        run: |
-          pip install --no-cache-dir bandit
-          bandit -r backend/app -ll
+      - name: Lint (ruff)
+        working-directory: backend
+        run: ruff check app mystic_auth alembic ../tests/backend
+
+      - name: Type-check (mypy)
+        working-directory: backend
+        run: mypy app mystic_auth
+
+      # Scoped to both app (ManifestCV's own code) and mystic_auth (the
+      # vendored template) — matches upstream's own CI exactly; pyproject.toml's
+      # [tool.bandit] skips the one rule (B105) that otherwise false-positives
+      # on event-name constants shared by both trees.
+      - name: Security scan (bandit)
+        working-directory: backend
+        run: bandit -r app mystic_auth -c pyproject.toml
 
       - name: Run database migrations
         working-directory: backend
         run: alembic upgrade head
 
+      # Regression guard: fails if a model's columns/indexes drift from what
+      # the migrations actually create.
+      - name: Verify models match migrations (alembic check)
+        working-directory: backend
+        run: alembic check
+
+      # tests/backend/app covers ManifestCV's own domains; tests/backend/mystic_auth/unit
+      # covers the vendored mystic_auth package — both fast, no-DB, run as one coverage base.
       - name: Run backend unit tests
-        run: python -m pytest tests/backend/unit tests/backend/manifestcv/unit -q
+        run: python -m pytest tests/backend/app/unit tests/backend/mystic_auth/unit -q
 
       # --cov-append accumulates onto the unit run's coverage data rather
       # than starting fresh, so the threshold below the security step gates
       # cumulative unit+integration+security coverage (~87% currently), not
       # any single suite's coverage in isolation.
       - name: Run backend integration tests
-        run: python -m pytest tests/backend/integration tests/backend/manifestcv/integration -q --cov-append
+        run: python -m pytest tests/backend/app/integration tests/backend/mystic_auth/integration -q --cov-append
 
-      # Coverage is currently ~87% (see docs/testing/overview.md); the gate
+      # Coverage is currently ~87% (see docs/app/testing/overview.md); the gate
       # is set a few points below that as a regression alarm, not a strict
       # target, so incidental coverage drift doesn't flap CI red.
       - name: Run backend security tests
-        run: python -m pytest tests/backend/security -q --cov-append --cov-fail-under=80
+        run: python -m pytest tests/backend/mystic_auth/security -q --cov-append --cov-fail-under=80
 
       # Informational only: these assert generous, regression-alarm-level
       # thresholds (not a strict SLA) against a real Postgres/Redis, so
@@ -154,7 +171,7 @@ jobs:
       # should prompt a look, not block the merge.
       - name: Run backend performance tests (non-blocking)
         continue-on-error: true
-        run: python -m pytest tests/backend/performance -q
+        run: python -m pytest tests/backend/mystic_auth/performance -q
 
   frontend:
     name: Frontend (typecheck + lint + test + build)
@@ -178,12 +195,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # ESLint 10 requires Node ^20.19.0 || ^22.13.0 || >=24, and Vite 8
-          # requires ^20.19.0 || >=22.12.0 — both floors sit above Node 20's
-          # earlier releases, so "20" (major-only) isn't precise enough to
-          # guarantee compatibility on its own. Pinned to an explicit patch
-          # that satisfies both rather than trusting whatever "latest 20.x"
-          # resolves to.
+          # Pinned patch version: ESLint 10 and Vite 8 both require a Node 20
+          # floor above some earlier 20.x releases, so major-only "20" isn't
+          # precise enough to guarantee compatibility.
           node-version: "20.20.2"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
@@ -226,21 +240,20 @@ jobs:
       - uses: actions/checkout@v4
 
       # Validates docker-compose.yml and docker-compose.prod.yml still parse
-      # and reference existing service dependencies (e.g. would have caught
-      # dev's `backend` service missing an `alembic: service_completed_successfully`
-      # dependency that prod already had). Uses .env.example only to satisfy
-      # each file's `env_file: ./.env` directive — no real secrets involved.
-      # REDIS_PASSWORD is passed separately (not left as .env.example's
-      # intentionally-blank dev-convenience default) because
-      # docker-compose.prod.yml's `${REDIS_PASSWORD:?...}` fails variable
-      # interpolation outright on an empty value — that's the point of the
-      # check (see docs/deployment/guide.md), but it means this validation
-      # step needs a non-empty placeholder to get past parsing at all.
+      # and reference existing service dependencies. Uses .env.example only
+      # to satisfy each file's `env_file: ./.env` directive — no real
+      # secrets involved. REDIS_PASSWORD is appended separately: .env.example
+      # deliberately ships it empty (a documented local-only convenience — see
+      # docs/app/deployment/guide.md), but docker-compose.prod.yml's
+      # "${REDIS_PASSWORD:?...}" hard-requires a non-empty value just to
+      # parse, so `config` needs *some* placeholder here even though nothing
+      # actually runs against it in this step.
       - name: Validate docker-compose configs
         run: |
           cp .env.example .env
+          echo "REDIS_PASSWORD=ci-placeholder-redis-password" >> .env
           docker compose -f docker-compose.yml config > /dev/null
-          REDIS_PASSWORD=ci-placeholder-password docker compose -f docker-compose.prod.yml config > /dev/null
+          docker compose -f docker-compose.prod.yml config > /dev/null
           rm .env
 
       - name: Build backend image
@@ -266,20 +279,20 @@ jobs:
     name: Real tectonic PDF compilation
     runs-on: ubuntu-latest
 
-    # The `backend` job's own tests/backend/manifestcv/integration suite
-    # mocks render_resume_pdf everywhere (see that suite's tests), since
-    # tectonic isn't installed on a bare `ubuntu-latest` runner — only in
+    # The `backend` job's own tests/backend/app/integration suite mocks
+    # render_resume_pdf everywhere (see that suite's tests), since tectonic
+    # isn't installed on a bare `ubuntu-latest` runner — only in
     # docker/backend.Dockerfile. This job builds that exact image and runs
     # the two tests marked `real_tectonic` inside a container from it, so a
     # regression in markdown_to_latex.py's LaTeX escaping or a template's
     # preamble (document_generation/templates.py) — neither of which a
     # mocked render_resume_pdf can catch — fails CI, not just production.
-    # See tests/backend/manifestcv/integration/test_document_routes_integration.py's
-    # module docstring and docs/concerns/README.md's (removed) "Tectonic
+    # See tests/backend/app/integration/test_document_routes_integration.py's
+    # module docstring and docs/app/concerns/README.md's (removed) "Tectonic
     # not covered by tests" entry.
     services:
       postgres:
-        image: postgres:15
+        image: public.ecr.aws/docker/library/postgres:15
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -293,7 +306,7 @@ jobs:
           --health-retries 5
 
       redis:
-        image: redis:7
+        image: public.ecr.aws/docker/library/redis:7
         ports:
           - 6379:6379
         options: >-
@@ -368,8 +381,19 @@ jobs:
       # networking. -v .../:/repo -w /repo mirrors exactly how
       # docker-compose.yml's own dev backend service runs the top-level
       # test suite locally (`docker compose exec -w /repo backend
-      # pytest ...` — see docs/docker/overview.md), so this is the same
+      # pytest ...` — see docs/app/docker/overview.md), so this is the same
       # invocation shape a developer already uses, not a CI-only path.
+      # backend/mystic_auth/logging/logging_config.py creates backend/logs/
+      # (relative to its own file location, resolving to /repo/backend/logs
+      # here) at import time, unconditionally — same root cause as the
+      # --cov-report=html issue below, but for a vendored module with no env
+      # var to redirect it elsewhere. Pre-creating it here, writable by any
+      # uid, is a runner-side fix that doesn't touch vendored mystic_auth
+      # code (which this repo never hand-edits — see
+      # docs/mystic_auth/template-usage.md).
+      - name: Pre-create backend/logs, writable by the image's non-root user
+        run: mkdir -p backend/logs && chmod 777 backend/logs
+
       - name: Run real-tectonic PDF compilation tests inside the built image
         # -e VARNAME (no "=value") inherits the value from this step's own
         # shell environment, i.e. exactly the job-level `env:` block above
@@ -397,30 +421,22 @@ jobs:
             -e GEMINI_API_KEY -e GEMINI_MODEL -e GEMINI_EMBEDDING_MODEL -e QDRANT_URL \
             -e COVERAGE_FILE \
             backend:tectonic-ci \
-            pytest tests/backend/manifestcv/integration/test_document_routes_integration.py -k real_tectonic -v \
+            pytest tests/backend/app/integration/test_document_routes_integration.py -k real_tectonic -v \
             -o addopts="-v --cov=backend/app --cov=backend/mystic_auth --cov-report=term"
 
-  secret-scan:
-    name: Secret scanning (gitleaks)
+  secrets-scan:
+    name: Secrets scan (gitleaks)
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
         with:
-          # Full history, not the default shallow clone — gitleaks scans
-          # commits, and a secret introduced then removed in a later commit
-          # would be invisible to a depth-1 checkout even though it's still
-          # sitting in the repo's history for anyone who clones it.
+          # gitleaks scans git history, not just the working tree — needs
+          # the full commit log, not just the last commit, to catch a
+          # secret that was committed and later removed.
           fetch-depth: 0
 
-      # Uses the OSS gitleaks CLI directly (Apache-2.0, no license needed
-      # regardless of repo visibility) rather than the gitleaks-action
-      # wrapper, which gates private-repo usage behind a paid license.
-      - name: Install gitleaks
-        run: |
-          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o /tmp/gitleaks.tar.gz
-          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tar.gz" | sha256sum -c -
-          tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks
-
-      - name: Scan git history for committed secrets
-        run: gitleaks detect --source . --redact -v
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

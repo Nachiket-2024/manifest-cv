@@ -22,18 +22,18 @@ effective permissions. This is a data migration reading the old `role`
 column, not an ongoing dependency on it: from this point forward, role is
 metadata only, and authorization reads user_policies/policies exclusively.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'b7d3a1c9e4f2'
-down_revision: Union[str, Sequence[str], None] = 'f2754349a6c7'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'f2754349a6c7'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 # ---------------------------- Baseline Policy Definitions ----------------------------
@@ -68,7 +68,6 @@ _SYSTEM_SUPERUSER = {
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     # ---------------------------- Create policies table ----------------------------
     op.create_table(
         'policies',
@@ -171,7 +170,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_index(op.f('ix_user_policies_user_id'), table_name='user_policies')
     op.drop_index(op.f('ix_user_policies_policy_id'), table_name='user_policies')
     op.drop_index(op.f('ix_user_policies_id'), table_name='user_policies')

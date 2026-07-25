@@ -3,11 +3,11 @@ import traceback
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..token_logic.jwt_service import jwt_service
 # Refresh token reuse is likely theft, not a routine expired/invalid refresh —
 # see _handle_reuse_detected.
-from ...audit_log.audit_log_service import log_security_event, REFRESH_TOKEN_REUSE_DETECTED
+from ...audit_log.audit_log_service import REFRESH_TOKEN_REUSE_DETECTED, log_security_event
 from ...logging.logging_config import get_logger
+from ..token_logic.jwt_service import jwt_service
 
 logger = get_logger(__name__)
 
@@ -17,7 +17,7 @@ class RefreshTokenService:
 
     @staticmethod
     async def refresh_tokens(
-        refresh_token: str, db: AsyncSession = None, request: Request | None = None
+        refresh_token: str, db: AsyncSession | None = None, request: Request | None = None
     ) -> dict[str, str] | None:
         try:
             # Decoded once and threaded through the rest of this method — a
@@ -32,6 +32,9 @@ class RefreshTokenService:
                 return None
 
             jti = payload.get("jti")
+            if not jti:
+                logger.warning("Refresh token payload missing 'jti' claim")
+                return None
 
             # Type is checked before the token is ever claimed/revoked below —
             # a wrong-type token (e.g. an access token mistakenly presented
@@ -123,7 +126,7 @@ class RefreshTokenService:
 
     @staticmethod
     async def _handle_reuse_detected(
-        payload: dict, db: AsyncSession = None, request: Request | None = None
+        payload: dict, db: AsyncSession | None = None, request: Request | None = None
     ) -> None:
         """
         payload is the already-decoded claims of a refresh token whose jti Redis

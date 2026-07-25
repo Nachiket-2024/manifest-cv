@@ -1,7 +1,8 @@
 import traceback
+from typing import Any
 
 from taskiq import AsyncBroker, SimpleRetryMiddleware
-from taskiq_redis import RedisStreamBroker, RedisAsyncResultBackend
+from taskiq_redis import RedisAsyncResultBackend, RedisStreamBroker
 
 from ..core.settings import settings
 from ..emails.email_sender import email_sender
@@ -9,7 +10,7 @@ from ..logging.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-result_backend = RedisAsyncResultBackend(redis_url=settings.REDIS_URL)
+result_backend: RedisAsyncResultBackend[Any] = RedisAsyncResultBackend(redis_url=settings.REDIS_URL)
 
 # SimpleRetryMiddleware re-enqueues a task immediately (no backoff/delay) up
 # to a task's own `max_retries` label when the task raises — it does NOT

@@ -1,27 +1,24 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Cookie, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Cookie, Request
+
+from ...auth.current_user.current_user_handler import current_user_handler
+from ...auth.login.login_handler import login_handler
+from ...auth.login.login_schema import LoginSchema
+from ...auth.logout.logout_handler import logout_handler
+from ...auth.logout_all.logout_all_handler import logout_all_handler
+from ...auth.oauth2.oauth2_login_handler import oauth2_login_handler
+from ...auth.password_reset_confirm.password_reset_confirm_handler import password_reset_confirm_handler
+from ...auth.password_reset_confirm.password_reset_confirm_schema import PasswordResetConfirmSchema
+from ...auth.password_reset_request.password_reset_request_handler import password_reset_request_handler
+from ...auth.password_reset_request.password_reset_request_schema import PasswordResetRequestSchema
 
 # Honors X-Forwarded-For only from a configured trusted reverse proxy (see auth/security/client_ip.py)
 from ...auth.security.client_ip import get_client_ip
-
-from ...auth.signup.signup_schema import SignupSchema
-from ...auth.login.login_schema import LoginSchema
-from ...auth.password_reset_confirm.password_reset_confirm_schema import PasswordResetConfirmSchema
-from ...auth.password_reset_request.password_reset_request_schema import PasswordResetRequestSchema
-from ...auth.verify_account.verify_account_schema import VerifyAccountSchema
-
-from ...auth.signup.signup_handler import signup_handler
-from ...auth.login.login_handler import login_handler
-from ...auth.oauth2.oauth2_login_handler import oauth2_login_handler
-from ...auth.current_user.current_user_handler import current_user_handler
-from ...auth.password_reset_request.password_reset_request_handler import password_reset_request_handler
-from ...auth.password_reset_confirm.password_reset_confirm_handler import password_reset_confirm_handler
-from ...auth.logout.logout_handler import logout_handler
-from ...auth.logout_all.logout_all_handler import logout_all_handler
-from ...auth.verify_account.account_verification_handler import account_verification_handler
 from ...auth.security.rate_limiter_service import rate_limiter_service
-
+from ...auth.signup.signup_handler import signup_handler
+from ...auth.signup.signup_schema import SignupSchema
+from ...auth.verify_account.account_verification_handler import account_verification_handler
+from ...auth.verify_account.verify_account_schema import VerifyAccountSchema
 from ...database.connection import database
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])

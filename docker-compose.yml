@@ -11,19 +11,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Runs once, only against a fresh/empty data volume — creates the
-      # separate "bugsink" database the optional Bugsink service below
-      # uses, on this same Postgres server rather than a second container.
-      # See docker/postgres-init/init-bugsink-db.sh for the "already-
-      # initialized volume" fallback. Harmless to mount even if you never
-      # enable the "monitoring" profile — an unused empty database costs
-      # nothing.
+      # Runs once against a fresh volume — creates the separate "bugsink" DB
+      # the Bugsink service uses, on this same Postgres server. See
+      # docker/postgres-init/init-bugsink-db.sh for the already-initialized-volume fallback.
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     ports:
-      # Host-side port intentionally non-default (5432 is the single most
-      # common local collision point on dev machines running other Postgres
-      # instances/containers) — containers still reach this over the Docker
-      # network at postgres:5432 regardless of the host mapping.
+      # Non-default host port to avoid colliding with other local Postgres
+      # instances; containers still reach it at postgres:5432 internally.
       - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -34,14 +28,11 @@ services:
   redis:
     image: redis:7
     restart: always
-    # REDIS_PASSWORD empty (the local-dev default) makes --requirepass a
-    # no-op, preserving today's no-auth behavior; set it in .env to require
-    # auth (must also be embedded in REDIS_URL — see .env.example).
+    # Empty REDIS_PASSWORD (local-dev default) makes --requirepass a no-op;
+    # set it in .env to require auth (must also be in REDIS_URL — see .env.example).
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}"]
     ports:
-      # Same rationale as postgres above — non-default host port to dodge
-      # the common local 6379 collision; internal traffic still uses
-      # redis:6379 over the Docker network.
+      # Non-default host port, same rationale as postgres above.
       - "6380:6379"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:-}\" --no-auth-warning ping"]
@@ -68,7 +59,18 @@ services:
     working_dir: /app
     env_file:
       - ./.env
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --reload-dir mystic_auth --access-log
+    # Waits for bugsink-seed to write SENTRY_DSN into the shared bugsink_dsn
+    # volume, only when Bugsink is configured (BUGSINK_SUPERUSER_EMAIL set —
+    # see .env.example), so no manual restart is needed to pick up the DSN.
+    # Bounded at ~10s so a slow/broken seed doesn't delay a normal boot.
+    command: |
+      sh -c "if [ -n \"$$BUGSINK_SUPERUSER_EMAIL\" ]; then
+        for i in $$(seq 1 20); do
+          [ -f /shared/bugsink-dsn/backend.env ] && . /shared/bugsink-dsn/backend.env && break
+          sleep 0.5
+        done
+      fi
+      exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app --reload-dir mystic_auth --access-log"
     environment:
       DATABASE_URL: ${DATABASE_URL}
     depends_on:
@@ -83,19 +85,18 @@ services:
     volumes:
       - ./backend:/app
       # Whole repo root, additionally — lets `docker compose exec -w /repo
-      # backend pytest tests/backend/...` run the top-level test suite (which
-      # imports as `backend.app...`, matching the host repo layout) from
-      # inside the Docker network, reaching Postgres/Redis via their
-      # container hostnames. The main app process is unaffected since its
-      # own working_dir/mount above is untouched.
+      # backend pytest tests/backend/...` run the top-level test suite
+      # (imports as `backend.app...`/`backend.mystic_auth...`) from inside
+      # the Docker network, reaching Postgres/Redis via container hostnames.
       - .:/repo
+      # Read-only: only bugsink-seed writes here (see that service below).
+      - bugsink_dsn:/shared/bugsink-dsn:ro
     ports:
       - "8000:8000"
     healthcheck:
-      # Only defined here, not in the shared Dockerfile — taskiq_worker/alembic
-      # use the same image but don't serve HTTP. Hits /health/ready (checks DB +
-      # Redis connectivity), not just the static "/" welcome route, so a backend
-      # that's up but can't reach its dependencies is correctly reported unhealthy.
+      # Defined here (not in the shared Dockerfile) since taskiq_worker/alembic
+      # use the same image but serve no HTTP. Hits /health/ready, which checks
+      # DB + Redis connectivity, not just the static "/" welcome route.
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
       interval: 10s
       timeout: 3s
@@ -103,11 +104,27 @@ services:
       start_period: 10s
 
   frontend:
+    # Explicit, dev-specific tag — without it, Compose defaults to the same
+    # image name docker-compose.prod.yml's frontend resolves to, so building
+    # one after the other would silently overwrite the other's image.
+    image: manifest-cv-frontend:dev
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
       target: dev
     working_dir: /app
+    env_file:
+      - ./.env
+    # Same DSN-wait rationale as the backend service above — bounded wait,
+    # gated on BUGSINK_SUPERUSER_EMAIL so an unconfigured boot is unaffected.
+    command: |
+      sh -c "if [ -n \"$$BUGSINK_SUPERUSER_EMAIL\" ]; then
+        for i in $$(seq 1 20); do
+          [ -f /shared/bugsink-dsn/frontend.env ] && . /shared/bugsink-dsn/frontend.env && break
+          sleep 0.5
+        done
+      fi
+      exec npm run dev -- --host"
     environment:
       - CHOKIDAR_USEPOLLING=true
     ports:
@@ -115,16 +132,17 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      # Sibling of /app, additionally — lets `docker compose exec frontend
-      # npm test` run the top-level frontend test suite (vitest.config.ts
-      # resolves it as "../tests/frontend", i.e. /tests/frontend, relative
-      # to its own /app root) from inside the container. Same reasoning as
-      # backend's own ./:/repo mount above.
-      - ./tests:/tests
-      # vite.config.ts's envDir points at the repo root (one .env for both
-      # the dev server and the production build) — /app/.. resolves to
-      # container root, so the root .env needs to be reachable there too.
-      - ./.env:/.env:ro
+      - bugsink_dsn:/shared/bugsink-dsn:ro
+      # vitest.config.ts resolves test files at ../tests/frontend relative
+      # to /app, so it expects tests/frontend as a sibling of /app — without
+      # this mount `npm run test` reports "No test files found".
+      - ./tests/frontend:/tests/frontend
+      # Whole repo root, additionally — `npm run lint`'s `cd .. && eslint
+      # frontend tests/frontend` expects frontend/ and tests/frontend/ as
+      # siblings under a repo root. Run lint via
+      # `docker compose exec frontend sh -c "cd /repo/frontend && npm run lint"`,
+      # not from /app. Mirrors the backend service's `.:/repo` mount.
+      - .:/repo
     depends_on:
       backend:
         condition: service_healthy
@@ -179,29 +197,22 @@ services:
     volumes:
       - ./backend:/app
 
-  # Optional, self-hosted error monitoring (Sentry-SDK-compatible — see
-  # docs/error-monitoring/overview.md). Disabled by default: `docker compose up`
-  # never starts this service on its own. Bring it up explicitly with:
-  #   docker compose --profile monitoring up -d
-  # (or add bugsink to an explicit service list: `docker compose up backend
-  # frontend bugsink`, which also works regardless of profiles). This is
-  # infrastructure for local/self-hosted error monitoring, not part of the
-  # application itself — SENTRY_DSN (backend/mystic_auth/core/settings.py,
-  # frontend .env.example) is what actually turns error reporting on, and
-  # stays unset (fully disabled) whether or not this container is running.
+  # Self-hosted error monitoring (Sentry-SDK-compatible — see
+  # docs/mystic_auth/error-monitoring/overview.md). Starts by default with `docker
+  # compose up`. SENTRY_DSN (backend settings, frontend .env.example) is
+  # what actually turns error reporting on; it stays unset regardless of
+  # whether this container is running.
   bugsink:
     image: bugsink/bugsink:2
     restart: always
-    profiles: ["monitoring"]
     env_file:
       - ./.env
     environment:
       SECRET_KEY: ${BUGSINK_SECRET_KEY}
       CREATE_SUPERUSER: ${BUGSINK_SUPERUSER_EMAIL}:${BUGSINK_SUPERUSER_PASSWORD}
       PORT: "8000"
-      # Same Postgres server this template already runs, different
-      # database (see postgres service's init-bugsink-db.sh above) —
-      # avoids a second Postgres container just for this.
+      # Same Postgres server, separate database — avoids a second Postgres
+      # container just for Bugsink (see postgres's init-bugsink-db.sh above).
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
       BEHIND_HTTPS_PROXY: "false"
       BASE_URL: ${BUGSINK_BASE_URL:-http://localhost:8010}
@@ -209,9 +220,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      # Host-side port intentionally non-default and distinct from the
-      # backend's own 8000 — same "avoid collisions" reasoning as
-      # postgres/redis above.
+      # Non-default host port, distinct from the backend's own 8000.
       - "8010:8000"
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health/ready').raise_for_status()\""]
@@ -220,25 +229,53 @@ services:
       retries: 10
       start_period: 15s
 
-  # One-shot: seeds a default Bugsink Team + Project, then exits. Idempotent
-  # (a no-op once any project exists) — see docs/error-monitoring/overview.md.
-  seed_bugsink_project:
+  # Runs once against a healthy bugsink, then exits — creates Bugsink's
+  # team/project (idempotent via get_or_create, so reruns never duplicate)
+  # and writes the resulting DSNs into the bugsink_dsn volume, which
+  # backend/frontend read at startup. This avoids a manual "create a
+  # project, copy the DSN" step (see docs/mystic_auth/error-monitoring/overview.md).
+  bugsink-seed:
     image: bugsink/bugsink:2
-    profiles: ["monitoring"]
+    # Root only for this one-shot container: the default non-root "bugsink"
+    # user can't write into a fresh named volume (Docker creates those
+    # root-owned by default), needed to write the DSN files below.
+    user: root
     env_file:
       - ./.env
     environment:
       SECRET_KEY: ${BUGSINK_SECRET_KEY}
-      PORT: "8000"
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
-      BEHIND_HTTPS_PROXY: "false"
       BASE_URL: ${BUGSINK_BASE_URL:-http://localhost:8010}
-    volumes:
-      - ./docker/bugsink-seed/seed_default_project.py:/seed_default_project.py:ro
-    command: sh -c "bugsink-manage shell < /seed_default_project.py"
     depends_on:
       bugsink:
         condition: service_healthy
+    volumes:
+      - bugsink_dsn:/shared/bugsink-dsn
+    command: |
+      sh -c "bugsink-manage shell -c \"
+      import os
+      from django.contrib.auth import get_user_model
+      from teams.models import Team, TeamMembership, TeamRole
+      from projects.models import Project
+
+      User = get_user_model()
+      user = User.objects.get(username=os.environ['BUGSINK_SUPERUSER_EMAIL'])
+
+      team, _ = Team.objects.get_or_create(name='ManifestCV')
+      TeamMembership.objects.get_or_create(team=team, user=user, defaults={'role': TeamRole.ADMIN, 'accepted': True})
+      project, _ = Project.objects.get_or_create(team=team, name='ManifestCV')
+
+      key = project.sentry_key.hex
+      os.makedirs('/shared/bugsink-dsn', exist_ok=True)
+      with open('/shared/bugsink-dsn/backend.env', 'w') as f:
+          f.write('export SENTRY_DSN=http://' + key + '@bugsink:8000/' + str(project.id) + chr(10))
+      with open('/shared/bugsink-dsn/frontend.env', 'w') as f:
+          f.write('export VITE_SENTRY_DSN=http://' + key + '@localhost:8010/' + str(project.id) + chr(10))
+      print('Seeded Bugsink project ' + str(project.id) + ', key ' + key)
+      \""
 
 volumes:
   postgres_data:
+  # Shared between bugsink-seed (writer) and backend/frontend (readers) —
+  # see the bugsink-seed service above for why this exists.
+  bugsink_dsn:

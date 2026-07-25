@@ -1,22 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database.connection import database
-from ...user_crud.user_crud_collector import user_crud
-
-from ...authorization.services.authorization_service import authorization_service
-from ...authorization.repositories.policy_repository import policy_repository
-from ...authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
-
 # Authentication-only dependency (no permission required) — used by
 # /users/me/policies, where a user inspects their own assignments regardless
 # of whether they hold policies:read.
 from ...auth.current_user.current_user_dependency import get_current_user
-
+from ...authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
+from ...authorization.repositories.policy_repository import policy_repository
 from ...authorization.schemas.policy_schema import PolicyAssignmentRequest, UserPoliciesRead
-
+from ...authorization.services.authorization_service import authorization_service
+from ...database.connection import database
+from ...user_crud.user_crud_collector import user_crud
 from ..route_helpers import get_or_404
-from .policy_shared import ASSIGN_DEPENDENCY, REVOKE_DEPENDENCY, READ_DEPENDENCY
+from .policy_shared import ASSIGN_DEPENDENCY, READ_DEPENDENCY, REVOKE_DEPENDENCY
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
 

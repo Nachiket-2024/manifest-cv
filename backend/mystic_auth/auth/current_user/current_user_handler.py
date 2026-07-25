@@ -1,10 +1,8 @@
 import traceback
 
-from sqlalchemy.exc import SQLAlchemyError
 from fastapi import HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 
-from ..token_logic.jwt_service import jwt_service
-from ...user_crud.user_crud_collector import user_crud
 # PBAC: resolve the caller's actual *assigned policies* into the set of actions they
 # grant, so GET /auth/me exposes real, current permissions — letting clients (the
 # frontend, or any future consumer) make authorization-adjacent UI/behavior
@@ -14,6 +12,8 @@ from ...user_crud.user_crud_collector import user_crud
 # permissions here.
 from ...authorization.repositories.policy_repository import policy_repository
 from ...logging.logging_config import get_logger
+from ...user_crud.user_crud_collector import user_crud
+from ..token_logic.jwt_service import jwt_service
 
 logger = get_logger(__name__)
 
@@ -76,22 +76,22 @@ class CurrentUserHandler:
                 "has_password": user.hashed_password is not None,
             }
 
-        except SQLAlchemyError:
+        except SQLAlchemyError as exc:
             logger.error("Database error fetching current user:\n%s", traceback.format_exc())
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Database error"
-            )
+            ) from exc
 
         except HTTPException:
             raise
 
-        except Exception:
+        except Exception as exc:
             logger.error("Error fetching current user:\n%s", traceback.format_exc())
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error"
-            )
+            ) from exc
 
 
 current_user_handler = CurrentUserHandler()

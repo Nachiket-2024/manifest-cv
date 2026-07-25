@@ -13,22 +13,21 @@ survives account deletion), append-only, written best-effort by
 audit/services/security_audit_service.py's log_security_event so a logging
 failure can never break the real action it describes.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'a8d4f6c2b9e7'
-down_revision: Union[str, Sequence[str], None] = 'c7f1a3e9d2b6'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'c7f1a3e9d2b6'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.create_table(
         'security_audit_log',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -55,7 +54,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_index(op.f('ix_security_audit_log_created_at'), table_name='security_audit_log')
     op.drop_index(op.f('ix_security_audit_log_event_type'), table_name='security_audit_log')
     op.drop_index(op.f('ix_security_audit_log_user_email'), table_name='security_audit_log')

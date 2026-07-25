@@ -9,24 +9,24 @@ Schema + data migration:
    NULL means never deleted; set on soft delete, cleared on reactivation.
 2. Grants the two new lifecycle permissions (users:purge, users:reactivate
    — see authorization/permissions.py) to the seeded system_superuser
-   policy, following the same process docs/authorization/adding-permissions.md
+   policy, following the same process docs/mystic_auth/authorization/adding-permissions.md
    documents (mirrors f3c1a9d7e5b2's grant of security_audit:read).
    Deliberately NOT granted to user_administration: hard delete
    (irreversible data destruction) and reactivation (restoring access) are
    both more sensitive than day-to-day account management.
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'b2c3d4e5f6a7'
-down_revision: Union[str, Sequence[str], None] = 'a1b2c3d4e5f6'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'a1b2c3d4e5f6'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _OLD_ACTIONS = [
     "users:assign_system_role",
@@ -43,7 +43,6 @@ _NEW_ACTIONS = _OLD_ACTIONS + ["users:purge", "users:reactivate"]
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.add_column('users', sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True))
 
     connection = op.get_bind()
@@ -60,7 +59,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     connection = op.get_bind()
     policies_table = sa.table(
         'policies',

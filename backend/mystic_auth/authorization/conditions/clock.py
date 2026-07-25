@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
 
@@ -19,6 +19,6 @@ def resolve_current_datetime(context: dict | None, tz: ZoneInfo) -> datetime:
     if override:
         parsed = datetime.fromisoformat(override)
         if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=dt_timezone.utc)
+            parsed = parsed.replace(tzinfo=UTC)
         return parsed.astimezone(tz)
     return datetime.now(tz)
