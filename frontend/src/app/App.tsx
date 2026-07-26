@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { Flex, Heading, Text, VStack, Button } from "@chakra-ui/react";
 import type { StackProps } from "@chakra-ui/react";
 

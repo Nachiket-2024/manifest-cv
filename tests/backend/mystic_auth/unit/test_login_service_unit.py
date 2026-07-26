@@ -131,7 +131,7 @@ async def test_login_missing_credentials_returns_none_without_hash_comparison(mo
 @pytest.mark.asyncio
 async def test_dummy_hash_is_a_real_argon2_hash_not_a_placeholder_string():
     # The dummy hash must be a genuine hash so verify_password performs
-    # real Argon2 work on it — a plain sentinel string would let passlib
-    # short-circuit before doing any actual hashing/comparison, reopening
-    # the exact timing gap this fix closes.
+    # real Argon2 work on it — a plain sentinel string would let the
+    # verify call short-circuit before doing any actual hashing/comparison,
+    # reopening the exact timing gap this fix closes.
     assert password_service.DUMMY_HASH.startswith("$argon2")

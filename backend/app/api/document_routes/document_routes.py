@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...app_sdk import get_user_id_by_email
+from ...app_sdk import get_logger, get_user_id_by_email, rate_limiter_service
 from ...document_generation.exceptions import LatexCompilationError
 from ...document_generation.resume_pdf_service import render_resume_pdf
 from ...document_generation.templates import TEMPLATES, list_templates
@@ -13,7 +13,7 @@ from ...resume_document_table.resume_document_schema import (
     ResumeDocumentRead,
     TemplateInfo,
 )
-from ...sdk import database, get_current_user, get_logger, get_or_404, rate_limiter_service
+from ...sdk import database, get_current_user, get_or_404
 
 # Nested under /resumes/{draft_id} — document generation always operates on
 # one specific resume draft, never independently of it.

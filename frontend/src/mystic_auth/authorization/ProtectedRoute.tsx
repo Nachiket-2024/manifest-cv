@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate } from "react-router";
+import { Navigate } from "react-router-dom";
 
 import { useAuthorization } from "./useAuthorization";
 import LoadingState from "../ui/LoadingState";

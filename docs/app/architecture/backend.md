@@ -70,7 +70,7 @@ All configuration is centralized in `mystic_auth/core/settings.py` (`pydantic-se
 
 ## Database layer
 
-SQLAlchemy 2.0, fully async (`asyncpg` driver). `mystic_auth/database/connection.py`'s `Database` class wraps the async engine and session factory; a module-level `database` singleton is imported everywhere a session is needed (`Depends(database.get_session)`). Schema is managed entirely through Alembic migrations (`backend/alembic/versions/`) — no `create_all()` anywhere in application startup. ManifestCV's four tables chain directly after mystic-auth's own migration history rather than branching — see [Database Design](../../mystic_auth/database/design.md).
+SQLAlchemy 2.0, fully async (`asyncpg` driver). `mystic_auth/database/connection.py`'s `Database` class wraps the async engine and session factory; a module-level `database` singleton is imported everywhere a session is needed (`Depends(database.get_session)`). Schema is managed entirely through Alembic migrations (`backend/alembic/versions/`) — no `create_all()` anywhere in application startup. ManifestCV's four tables chain directly after mystic-auth's own migration history rather than branching — see [ManifestCV's Own Tables: Migrations](../database/design.md#migrations).
 
 ## Error handling
 

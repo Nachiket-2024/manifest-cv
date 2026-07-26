@@ -113,7 +113,22 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    # Same DSN-wait rationale as docker-compose.yml's backend service: waits
+    # for bugsink-seed to write SENTRY_DSN into the shared bugsink_dsn
+    # volume, only when Bugsink is configured (BUGSINK_SUPERUSER_EMAIL set).
+    # Bounded at ~10s so a slow/broken seed doesn't delay a normal boot. This
+    # is safe to share with dev unchanged because SENTRY_DSN is a
+    # container-to-container address (bugsink:8000) in both environments —
+    # unlike VITE_SENTRY_DSN below, it never depends on how Bugsink is
+    # reverse-proxied for public/browser access.
+    command: |
+      sh -c "if [ -n \"$$BUGSINK_SUPERUSER_EMAIL\" ]; then
+        for i in $$(seq 1 20); do
+          [ -f /shared/bugsink-dsn/backend.env ] && . /shared/bugsink-dsn/backend.env && break
+          sleep 0.5
+        done
+      fi
+      exec uvicorn app.main:app --host 0.0.0.0 --port 8000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
     depends_on:
@@ -125,6 +140,9 @@ services:
         condition: service_started
       alembic:
         condition: service_completed_successfully   # Don't serve traffic on a schema the migration hasn't applied yet
+    volumes:
+      # Read-only: only bugsink-seed writes here (see that service below).
+      - bugsink_dsn:/shared/bugsink-dsn:ro
     ports:
       - "8000:8000"
     healthcheck:
@@ -152,6 +170,14 @@ services:
       # unrecognized keys, so VITE_-prefixed ones being in there too is
       # fine), or from the shell environment if exported there instead
       # (overrides .env — useful for a CI pipeline with no checked-out .env).
+      # VITE_SENTRY_DSN specifically can't be auto-wired from bugsink-seed
+      # the way backend's SENTRY_DSN is above: it needs whatever *publicly*
+      # reaches Bugsink in production (a reverse-proxy route you set up
+      # deliberately, per Bugsink's no-exposed-port-by-default posture —
+      # see docs/mystic_auth/error-monitoring/overview.md#security-notes),
+      # which bugsink-seed has no way to know, and it's baked in at this
+      # build step rather than read at container startup regardless. Set it
+      # manually in .env once you know that address.
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
         VITE_APP_NAME: ${VITE_APP_NAME}
@@ -261,6 +287,53 @@ services:
           cpus: "1"
           memory: 512M
 
+  # Runs once against a healthy bugsink, then exits — see docker-compose.yml's
+  # identical service for the full explanation. No restart policy, same as
+  # alembic above: it's one-shot and idempotent (get_or_create), not a
+  # long-running process to keep alive.
+  bugsink-seed:
+    image: bugsink/bugsink:2
+    # Root only for this one-shot container: the default non-root "bugsink"
+    # user can't write into a fresh named volume (Docker creates those
+    # root-owned by default), needed to write the DSN files below.
+    user: root
+    env_file:
+      - ./.env
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/bugsink
+      BASE_URL: ${BUGSINK_BASE_URL}
+    depends_on:
+      bugsink:
+        condition: service_healthy
+    volumes:
+      - bugsink_dsn:/shared/bugsink-dsn
+    command: |
+      sh -c "bugsink-manage shell -c \"
+      import os
+      from django.contrib.auth import get_user_model
+      from teams.models import Team, TeamMembership, TeamRole
+      from projects.models import Project
+
+      User = get_user_model()
+      user = User.objects.get(username=os.environ['BUGSINK_SUPERUSER_EMAIL'])
+
+      team, _ = Team.objects.get_or_create(name='MysticAuth')
+      TeamMembership.objects.get_or_create(team=team, user=user, defaults={'role': TeamRole.ADMIN, 'accepted': True})
+      project, _ = Project.objects.get_or_create(team=team, name='MysticAuth')
+
+      key = project.sentry_key.hex
+      os.makedirs('/shared/bugsink-dsn', exist_ok=True)
+      with open('/shared/bugsink-dsn/backend.env', 'w') as f:
+          f.write('export SENTRY_DSN=http://' + key + '@bugsink:8000/' + str(project.id) + chr(10))
+      print('Seeded Bugsink project ' + str(project.id) + ', key ' + key)
+      \""
+
 volumes:
   postgres_data:
   qdrant_storage:
+  # Shared between bugsink-seed (writer) and backend (reader) — see the
+  # bugsink-seed service above for why this exists. Unlike docker-compose.yml,
+  # frontend doesn't read from this: VITE_SENTRY_DSN is a build arg here (see
+  # the frontend service above), not something read at container startup.
+  bugsink_dsn:

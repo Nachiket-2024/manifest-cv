@@ -2,8 +2,6 @@
 
 Covers signup, email verification, login, refresh, logout, password reset, Google OAuth2, and the JWT/cookie mechanics underneath all of them. For *authorization* (what an authenticated caller is allowed to do), see [../authorization/architecture.md](../authorization/architecture.md).
 
-> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) — every mechanism below is vendored code. See [ManifestCV's own auth notes](../../app/auth/overview.md) for how ManifestCV's feature routes consume `get_current_user` via `backend/app/sdk.py`.
-
 ## Tokens and cookies
 
 Every session is a pair of JWTs, delivered as httpOnly cookies — never readable by frontend JavaScript, never stored in `localStorage`/Zustand (see `frontend/src/mystic_auth/store/authStore.ts`, which holds only the profile/permissions `GET /auth/me` returns, not tokens).
@@ -91,7 +89,7 @@ Refresh tokens are tracked purely in Redis (a `jti → expiry` registry per user
 1. **CSRF protection**: a random `state` value (`secrets.token_urlsafe(32)`) is generated, stored in Redis, and set as a cookie. The callback validates the query-param `state` against both the Redis entry and the cookie, then atomically consumes it (`GETDEL`) — a callback can't be replayed or forged from a different browser session.
 2. **PKCE** (S256) is layered on top of `state` — exceeds typical OAuth2 CSRF protection for a template of this kind.
 3. **Redirect URI**: hardcoded server-side (`settings.GOOGLE_REDIRECT_URI`), never influenced by the client — rules out an open-redirect-via-OAuth attack.
-4. **`verified_email` is checked explicitly** — an OAuth2 login where Google itself hasn't verified the email is rejected. This is the only email-ownership proof the flow trusts.
+4. **`email_verified` is checked explicitly** — an OAuth2 login where Google itself hasn't verified the email is rejected. This is the only email-ownership proof the flow trusts.
 5. **First-time login** (`oauth2_service.OAuth2Service.login_or_create_user`): creates a new user with `role=UserRole.user` (same default as password signup — see [Account Lifecycle](../database/design.md#account-lifecycle)), `is_verified=True` (Google already verified it), `hashed_password=None`, and assigns `self_service` — mirroring `signup_service.py`'s policy assignment exactly.
 6. **Account-hijacking guard**: if an email was already registered via password signup but never verified, and someone later "logs in" via Google with that same address, the pre-existing account's `hashed_password` is **cleared** on the spot. Rationale: an attacker could have pre-registered a victim's email with a password *they* chose, hoping the victim later verifies it (e.g. by using "forgot password") without realizing an attacker-known password already works. Clearing it the moment Google's own verification (a stronger proof of ownership than clicking an email link) confirms the real owner closes that window. An *already-verified* account's password is left untouched — this guard only fires for the specific pre-registration-hijack scenario.
 7. The reserved system account (`role=UserRole.system`) is blocked from OAuth2 login entirely — it must always go through the password login originally set by `scripts/create_system_user.py`.

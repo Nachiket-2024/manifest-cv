@@ -2,7 +2,7 @@
 
 Documentation for this full-stack template, organized by feature/domain to mirror the actual code layout (`backend/mystic_auth/<domain>/`, `frontend/src/mystic_auth/<domain>/`). If something here disagrees with the code, the code wins — file an issue or update the doc.
 
-This is the template's own reference documentation — upstream's, not yours to edit. Your own project's docs go in [`docs/app/`](../app/README.md) instead, so they never conflict with a future `git merge upstream/main`. See [Using This Repository as a Template: the `app/` + `mystic_auth/` split](template-usage.md#the-app--mystic_auth-split) for the full reasoning.
+This is the template's own reference documentation — upstream's, not yours to edit. Your own project's docs go in [`docs/app/`](../app/README.md) instead, so they never conflict with a future `scripts/sync-upstream.sh` run. See [Using This Repository as a Template: the `app/` + `mystic_auth/` split](template-usage.md#the-app--mystic_auth-split) for the full reasoning.
 
 ## Architecture
 

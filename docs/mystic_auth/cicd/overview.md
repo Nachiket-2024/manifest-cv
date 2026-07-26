@@ -17,7 +17,7 @@ flowchart LR
 ### `backend` — Backend (unit + integration)
 
 - Spins up Postgres 15 and Redis 7 as GitHub Actions **service containers** (not Docker Compose — a deliberate, lower-overhead equivalent for CI; Compose remains the source of truth for local development).
-- All required settings (`SECRET_KEY`, `GOOGLE_CLIENT_ID`, `APP_NAME`, etc. — `core/settings.py` has no defaults for most of them) are provided as job-level env vars with clearly-fake CI-only values, since there's no checked-in `.env` for CI to read. `APP_NAME` in particular is set to `MysticAuth` here purely because `Settings` requires *some* value and refuses to start without one — it has no bearing on the actual product name. If you've cloned this repo as a template and renamed the app (see [Using This Repository as a Template: renaming the app](../template-usage.md#renaming-the-app)), there's no need to touch this CI value to match — it's a placeholder for test runs, not branding that needs to stay in sync with your `.env`.
+- All required settings (`SECRET_KEY`, `GOOGLE_CLIENT_ID`, `APP_NAME`, etc. — `core/settings.py` has no defaults for most of them) are provided as job-level env vars with clearly-fake CI-only values, since there's no checked-in `.env` for CI to read. `APP_NAME` in particular is set to `MysticAuth` here purely because `Settings` requires *some* value and refuses to start without one — it has no bearing on the actual product name. If you've cloned this repo as a template and renamed the app (see [Using This Repository as a Template: environment configuration](../template-usage.md#environment-configuration)), there's no need to touch this CI value to match — it's a placeholder for test runs, not branding that needs to stay in sync with your `.env`.
 - Installs both `backend/requirements.txt` and `backend/requirements-dev.txt` (ruff, mypy, bandit — static-analysis-only, never installed in the runtime image), then runs `pip-audit -r backend/requirements.txt` (dependency vulnerability scan) before proceeding.
 - Runs `ruff check`, `mypy`, and `bandit -c pyproject.toml` (all three configured in `backend/pyproject.toml`) — lint, type-check, and a Python-specific security scan, each as its own step so the specific failing tool is visible in the Actions UI.
 - Runs `alembic upgrade head`, then `alembic check` — the latter fails if any SQLAlchemy model's columns/indexes have drifted from what the migrations actually create (e.g. a model field changed without a matching migration).
@@ -27,7 +27,7 @@ flowchart LR
 ### `frontend` — Frontend (typecheck + lint + test + build)
 
 - Node version is pinned to an explicit patch (`20.20.2`), not a bare major (`20`) — ESLint 10 requires Node `^20.19.0 || ^22.13.0 || >=24` and Vite 8 requires `^20.19.0 || >=22.12.0`, both above some earlier Node 20 releases, so an explicit patch guarantees the floor is met rather than trusting whichever latest-20.x a runner happens to resolve.
-- `npm ci --legacy-peer-deps`, then `npm audit --audit-level=high` (dependency vulnerability scan), then `npm run typecheck`, `npm run lint`, `npm run test:coverage` (not plain `test` — coverage must actually be collected for `vitest.config.ts`'s `coverage.thresholds` to be evaluated at all), `npm run build`, each as a separate step (so the specific failing stage is visible in the Actions UI).
+- `npm ci --legacy-peer-deps`, then `npm audit --audit-level=high` (dependency vulnerability scan — currently **non-blocking**, `continue-on-error: true`, solely because of one open advisory with no fix released yet; see [Concerns: react-router-dom advisory](../concerns/README.md#react-router-dom-carries-an-open-high-severity-advisory-with-no-fix-released-yet)), then `npm run typecheck`, `npm run lint`, `npm run test:coverage` (not plain `test` — coverage must actually be collected for `vitest.config.ts`'s `coverage.thresholds` to be evaluated at all), `npm run build`, each as a separate step (so the specific failing stage is visible in the Actions UI).
 
 ### `secrets-scan` — Secrets scan (gitleaks)
 
@@ -46,7 +46,7 @@ flowchart LR
 - A model/migration drift check (`alembic check`) — fails if a SQLAlchemy model's columns or indexes don't match what the checked-in migrations actually produce.
 - Full frontend type-check, lint, test (with coverage thresholds enforced), and production build.
 - Both Docker images still build.
-- Dependency vulnerability scanning on every push/PR: `pip-audit` (backend) and `npm audit --audit-level=high` (frontend). There is no scheduled/automated dependency-update bot in this repo — dependency bumps are a manual, deliberate action (see the header comment in `backend/requirements.txt`), not something that opens PRs on its own.
+- Dependency vulnerability scanning on every push/PR: `pip-audit` (backend, blocking) and `npm audit --audit-level=high` (frontend, currently non-blocking — see [Concerns](../concerns/README.md#react-router-dom-carries-an-open-high-severity-advisory-with-no-fix-released-yet)). There is no scheduled/automated dependency-update bot in this repo — dependency bumps are a manual, deliberate action (see the header comment in `backend/requirements.txt`), not something that opens PRs on its own.
 - Secret scanning across full git history (`gitleaks`), independent of the backend/frontend jobs.
 
 ## What's not covered (tracked, not silently missing)

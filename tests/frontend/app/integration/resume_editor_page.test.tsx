@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import MockAdapter from 'axios-mock-adapter';
 
 import api from '@/api/axiosInstance';
@@ -156,6 +156,36 @@ describe('ResumeEditorPage', () => {
 
     await waitFor(() => expect(mock.history.post.filter((r) => r.url === '/resumes/1/approve')).toHaveLength(1));
     expect(await screen.findByText('approved')).toBeInTheDocument();
+  });
+
+  // Regression test for a UX bug: the template preview iframe only appeared
+  // once fetchResumeTemplatePreviewBlob resolved, with nothing shown while
+  // it was in flight — server-side PDF compilation isn't instant, so the
+  // preview area just looked blank/broken rather than loading.
+  it('shows a loading indicator while the template preview compiles, then the preview iframe', async () => {
+    mock.onGet('/resumes/1').reply(200, { ...DRAFT, status: 'approved' });
+    mock.onGet('/resumes/1/templates').reply(200, [{ id: 'classic', label: 'Classic' }]);
+    mock.onGet('/resumes/1/finalize').reply(404);
+
+    let resolvePreview: (() => void) | undefined;
+    mock.onGet('/resumes/1/templates/classic/preview').reply(() => {
+      return new Promise((resolve) => {
+        resolvePreview = () => resolve([200, new Blob(['%PDF-fake'], { type: 'application/pdf' })]);
+      });
+    });
+
+    renderEditor();
+
+    expect(await screen.findByText(/compiling preview/i)).toBeInTheDocument();
+    // .not.toBeInTheDocument() doesn't type-check here — see
+    // docs/mystic_auth/testing/overview.md's ".not chaining" note — toBeNull() on
+    // queryByTitle's result is the positive-assertion equivalent.
+    expect(screen.queryByTitle('Resume preview')).toBeNull();
+
+    resolvePreview?.();
+
+    expect(await screen.findByTitle('Resume preview')).toBeInTheDocument();
+    expect(screen.queryByText(/compiling preview/i)).toBeNull();
   });
 
   it('finalizes the resume with the selected template via POST /resumes/:id/finalize', async () => {

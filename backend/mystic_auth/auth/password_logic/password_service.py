@@ -2,11 +2,12 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import jwt
-from passlib.context import CryptContext
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
 
 from ...core.settings import settings
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+_hasher = PasswordHasher()
 
 
 class PasswordService:
@@ -20,20 +21,27 @@ class PasswordService:
     # hash comparison takes, letting a timing attack distinguish "no such
     # account" from "wrong password on a real one". Computed once at import time
     # so it always matches this process's actual Argon2 parameters.
-    DUMMY_HASH: str = pwd_context.hash("timing-attack-mitigation-placeholder")
+    DUMMY_HASH: str = _hasher.hash("timing-attack-mitigation-placeholder")
 
     @staticmethod
     async def hash_password(password: str) -> str:
         # Off the event loop: Argon2 is deliberately slow (that's the point), and
         # calling it synchronously inside a coroutine blocks every other
         # concurrent request on this worker for the duration of the hash.
-        return await asyncio.to_thread(pwd_context.hash, password)
+        return await asyncio.to_thread(_hasher.hash, password)
 
     @staticmethod
     async def verify_password(plain_password: str, hashed_password: str) -> bool:
         # Off the event loop — same rationale as hash_password: this runs on
         # every login attempt (including the DUMMY_HASH timing-mitigation path).
-        return await asyncio.to_thread(pwd_context.verify, plain_password, hashed_password)
+        # argon2-cffi raises on a mismatch (VerifyMismatchError) or a
+        # malformed/foreign hash (InvalidHashError) rather than returning
+        # False, unlike passlib's `.verify` — normalized to a bool here so
+        # callers don't need to know that.
+        try:
+            return await asyncio.to_thread(_hasher.verify, hashed_password, plain_password)
+        except (VerifyMismatchError, InvalidHashError):
+            return False
 
     @staticmethod
     async def validate_password_strength(password: str) -> bool:

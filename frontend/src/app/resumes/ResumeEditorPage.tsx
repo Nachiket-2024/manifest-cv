@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams } from "react-router-dom";
 import {
     Badge,
     Button,
@@ -12,6 +12,7 @@ import {
     Textarea,
 } from "@chakra-ui/react";
 
+import { settings } from "../sdk";
 import {
     PageContainer,
     Card,
@@ -19,16 +20,20 @@ import {
     FormAlert,
     toaster,
     useUnsavedChangesWarning,
-    settings,
-} from "../sdk";
+} from "../app_sdk";
 
-import { useResumeDraftQuery, useResumeTemplatesQuery, useFinalizedResumeDocumentQuery } from "./resumeQueries";
+import {
+    useResumeDraftQuery,
+    useResumeTemplatesQuery,
+    useResumeTemplatePreviewQuery,
+    useFinalizedResumeDocumentQuery,
+} from "./resumeQueries";
 import {
     useUpdateResumeDraftMutation,
     useApproveResumeDraftMutation,
     useFinalizeResumeDocumentMutation,
 } from "./resumeMutations";
-import { fetchResumeTemplatePreviewBlob, resumeDocumentDownloadUrl } from "../api/document_api";
+import { resumeDocumentDownloadUrl } from "../api/document_api";
 import { useCreateApplicationMutation } from "../applications/applicationMutations";
 
 const APPLICATION_STATUS_OPTIONS = ["applied", "interviewing", "offered", "rejected"] as const;
@@ -76,44 +81,39 @@ const ResumeEditorPage: React.FC = () => {
 
     const [selectedTemplateOverride, setSelectedTemplateOverride] = useState<string | null>(null);
     const selectedTemplateId = selectedTemplateOverride ?? templatesQuery.data?.[0]?.id ?? null;
-    const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+    const previewQuery = useResumeTemplatePreviewQuery(draftId, selectedTemplateId);
     const [companyName, setCompanyName] = useState("");
     const [applicationDate, setApplicationDate] = useState(() => new Date().toISOString().slice(0, 10));
     const [applicationTime, setApplicationTime] = useState("");
     const [applicationStatus, setApplicationStatus] = useState<string>("applied");
 
-    // Fetches the preview PDF as a blob and hands the <iframe> a `blob:`
-    // object URL instead of the backend's own cross-origin URL — see
-    // fetchResumeTemplatePreviewBlob's own docstring for why a direct src
-    // no longer renders (mystic-auth's SecurityHeadersMiddleware always
-    // sends X-Frame-Options: DENY now, with no per-route opt-out).
+    // Hands the <iframe> a `blob:` object URL instead of the backend's own
+    // cross-origin URL — see fetchResumeTemplatePreviewBlob's own docstring
+    // for why a direct src no longer renders (mystic-auth's
+    // SecurityHeadersMiddleware always sends X-Frame-Options: DENY now, with
+    // no per-route opt-out). The object URL is a side effect of rendering
+    // previewQuery.data, not itself query-cacheable state, so it's derived
+    // here with useMemo (re-created only when the underlying Blob changes)
+    // rather than duplicated into its own useState.
+    const previewBlobUrl = React.useMemo(
+        () => (previewQuery.data ? URL.createObjectURL(previewQuery.data) : null),
+        [previewQuery.data]
+    );
     useEffect(() => {
-        // Nothing to fetch — the render guard below (`selectedTemplateId &&
-        // previewBlobUrl`) already hides any stale iframe, and the cleanup
-        // from whichever effect run created the last object URL (if any)
-        // revokes it, so there's no need to synchronously reset state here.
-        if (!selectedTemplateId) return;
-
-        let cancelled = false;
-        let objectUrl: string | null = null;
-
-        fetchResumeTemplatePreviewBlob(draftId, selectedTemplateId)
-            .then((blob) => {
-                if (cancelled) return;
-                objectUrl = URL.createObjectURL(blob);
-                setPreviewBlobUrl(objectUrl);
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    toaster.create({ title: "Failed to load template preview", type: "error" });
-                }
-            });
-
+        // Revocation only — no setState here, so this never fights React's
+        // effect-ordering guidance the way setting loading/data state
+        // directly in an effect body would (see resumeQueries.ts's
+        // useResumeTemplatePreviewQuery for where that state now lives).
         return () => {
-            cancelled = true;
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
         };
-    }, [draftId, selectedTemplateId]);
+    }, [previewBlobUrl]);
+
+    useEffect(() => {
+        if (previewQuery.isError) {
+            toaster.create({ title: "Failed to load template preview", type: "error" });
+        }
+    }, [previewQuery.isError]);
 
     const handleSave = (e: React.FormEvent) => {
         e.preventDefault();
@@ -321,7 +321,11 @@ const ResumeEditorPage: React.FC = () => {
                                     <NativeSelect.Indicator />
                                 </NativeSelect.Root>
 
-                                {selectedTemplateId && previewBlobUrl && (
+                                {selectedTemplateId && previewQuery.isFetching && (
+                                    <LoadingState message="Compiling preview..." />
+                                )}
+
+                                {selectedTemplateId && !previewQuery.isFetching && previewBlobUrl && (
                                     <iframe
                                         title="Resume preview"
                                         src={previewBlobUrl}

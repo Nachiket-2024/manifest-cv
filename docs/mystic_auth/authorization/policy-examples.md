@@ -1,7 +1,5 @@
 # Policy JSON Examples
 
-> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth). These are all mystic-auth's own PBAC policies (users/policies resource types) — ManifestCV's own resources (career knowledge, resumes, applications) don't use policies at all, see [PBAC Architecture: Integration points](architecture.md#integration-points).
-
 A policy's fields (see `authorization/models/policy_model.py` / `authorization/schemas/policy_schema.py`):
 
 | Field | Type | Notes |

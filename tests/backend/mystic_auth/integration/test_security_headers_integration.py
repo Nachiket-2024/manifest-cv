@@ -38,6 +38,37 @@ async def test_hsts_header_absent_outside_production(client, mocker):
 
 
 @pytest.mark.asyncio
+async def test_docs_page_gets_a_csp_that_allows_its_cdn_assets(client):
+    # Regression guard: the blanket `default-src 'none'` CSP applied
+    # everywhere else also blocked Swagger UI's CDN-hosted JS/CSS and its
+    # inline init script, so /docs returned 200 but rendered as a blank
+    # page in a real browser — nothing on it could actually execute.
+    resp = await client.get("/docs")
+
+    assert resp.status_code == 200
+    csp = resp.headers["Content-Security-Policy"]
+    assert "cdn.jsdelivr.net" in csp
+    assert "'unsafe-inline'" in csp
+
+
+@pytest.mark.asyncio
+async def test_redoc_page_gets_a_csp_that_allows_its_cdn_assets(client):
+    resp = await client.get("/redoc")
+
+    assert resp.status_code == 200
+    csp = resp.headers["Content-Security-Policy"]
+    assert "cdn.jsdelivr.net" in csp
+    assert "fonts.googleapis.com" in csp
+
+
+@pytest.mark.asyncio
+async def test_ordinary_routes_keep_the_strict_csp_docs_relaxation_does_not_leak(client):
+    resp = await client.get("/")
+
+    assert resp.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+
+
+@pytest.mark.asyncio
 async def test_security_headers_present_even_on_error_responses(client):
     # A 404 (unmatched route) still passes through the middleware stack —
     # headers must not be skipped just because the request failed.

@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { Badge, Button, HStack, NativeSelect, Text } from "@chakra-ui/react";
 
 import Pager from "../ui/Pager";
+import { settings } from "../sdk";
 import {
     PageContainer,
     DataTable,
     type DataTableColumn,
     ConfirmDialog,
     toaster,
-    settings,
-} from "../sdk";
+} from "../app_sdk";
 import { useApplicationsQuery, APPLICATIONS_PAGE_SIZE } from "./applicationQueries";
 import { useUpdateApplicationMutation, useDeleteApplicationMutation } from "./applicationMutations";
 import { applicationPdfDownloadUrl, type ApplicationRead } from "../api/application_api";

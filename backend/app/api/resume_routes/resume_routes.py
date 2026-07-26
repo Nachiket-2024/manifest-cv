@@ -3,12 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...ai_integration.exceptions import AIIntegrationError
 from ...ai_integration.gemini_client import generate_resume, refine_resume
-from ...app_sdk import get_user_id_by_email
+from ...app_sdk import get_user_id_by_email, rate_limiter_service
 from ...resume_crud.resume_repository import resume_repository
 from ...resume_table.resume_schema import ResumeDraftCreate, ResumeDraftRead, ResumeDraftUpdate
 from ...retrieval.exceptions import RetrievalError
 from ...retrieval.knowledge_retrieval_service import search_knowledge_base
-from ...sdk import database, get_current_user, get_or_404, rate_limiter_service
+from ...sdk import database, get_current_user, get_or_404
 
 # Self-service only, one user's own resume drafts — no PBAC permission
 # required, same reasoning as career_knowledge_routes.py: ownership is

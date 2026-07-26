@@ -1,7 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { listResumeDraftsApi, getResumeDraftApi, type ResumeDraftRead } from "../api/resume_api";
-import { listResumeTemplatesApi, getFinalizedResumeDocumentApi, type TemplateInfo, type ResumeDocumentRead } from "../api/document_api";
+import {
+    listResumeTemplatesApi,
+    getFinalizedResumeDocumentApi,
+    fetchResumeTemplatePreviewBlob,
+    type TemplateInfo,
+    type ResumeDocumentRead,
+} from "../api/document_api";
 import axios from "axios";
 
 export const RESUME_DRAFTS_QUERY_KEY = ["resume-drafts"] as const;
@@ -14,6 +20,8 @@ export const resumeDraftsListQueryKey = (limit: number, offset: number) =>
 export const resumeDraftQueryKey = (draftId: number) => ["resume-drafts", draftId] as const;
 export const resumeTemplatesQueryKey = (draftId: number) => ["resume-drafts", draftId, "templates"] as const;
 export const resumeDocumentQueryKey = (draftId: number) => ["resume-drafts", draftId, "document"] as const;
+export const resumeTemplatePreviewQueryKey = (draftId: number, templateId: string) =>
+    ["resume-drafts", draftId, "template-preview", templateId] as const;
 
 export const RESUME_DRAFTS_PAGE_SIZE = 20;
 
@@ -41,6 +49,25 @@ export function useResumeTemplatesQuery(draftId: number, enabled: boolean) {
         queryKey: resumeTemplatesQueryKey(draftId),
         queryFn: async () => (await listResumeTemplatesApi(draftId)).data,
         enabled,
+    });
+}
+
+// Returns the raw Blob, not an object URL — object URLs are a side effect
+// (must be revoked) that doesn't belong in cached query data, which can be
+// reused/replayed by the cache independently of any one component's
+// lifetime. The caller derives (and revokes) its own object URL from the
+// Blob via useMemo/useEffect instead.
+export function useResumeTemplatePreviewQuery(draftId: number, templateId: string | null) {
+    return useQuery<Blob>({
+        queryKey: resumeTemplatePreviewQueryKey(draftId, templateId ?? ""),
+        queryFn: () => fetchResumeTemplatePreviewBlob(draftId, templateId!),
+        enabled: templateId !== null,
+        // Every render freshly compiles the PDF server-side (no persistence —
+        // see fetchResumeTemplatePreviewBlob's own docstring), so a cached
+        // blob from a prior visit is never known-fresh against the resume's
+        // current content.
+        staleTime: 0,
+        gcTime: 0,
     });
 }
 

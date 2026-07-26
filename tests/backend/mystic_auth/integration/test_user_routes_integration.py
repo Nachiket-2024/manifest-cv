@@ -29,6 +29,31 @@ def _unique_email(prefix: str = "inttest") -> str:
     return f"{prefix}-{uuid.uuid4().hex}@example.com"
 
 
+# conftest.py's `client` fixture uses base_url="https://testserver" — a
+# dotless hostname, which CPython's http.cookiejar (what httpx's cookie jar
+# is built on) normalizes to "testserver.local" internally for matching
+# purposes. Cookies set manually here must match that (domain, path, name)
+# key exactly, or they land as a second, separate jar entry instead of
+# overwriting the real one from a prior response — see
+# _post_with_refresh_cookie's docstring below for why that matters.
+_TEST_COOKIE_DOMAIN = "testserver.local"
+
+
+async def _post_with_refresh_cookie(client, url: str, refresh_token: str):
+    """Posts to a refresh_token-cookie-gated endpoint with an explicit cookie
+    value, independent of whatever the client's shared cookie jar currently
+    holds — needed to simulate stale/reused/forged/cross-session tokens.
+    httpx deprecated per-request `cookies=` in favor of setting cookies on
+    the client itself, hence setting it here rather than passing `cookies=`.
+    Both domain and path must match the real cookie's (see
+    _TEST_COOKIE_DOMAIN above) — the jar keys cookies by (domain, path,
+    name), so an inexact match creates a second entry alongside the real one
+    instead of overwriting it, which then survives the endpoint's own
+    cookie-clearing response untouched."""
+    client.cookies.set("refresh_token", refresh_token, domain=_TEST_COOKIE_DOMAIN, path="/auth")
+    return await client.post(url)
+
+
 async def _assign_policies(email: str, policy_names: list[str]) -> None:
     """Grants real capability the same way the policy management API
     would (see backend/mystic_auth/api/pbac_routes/policy_assignment_routes.py) —
@@ -454,9 +479,7 @@ async def test_soft_delete_revokes_the_deleted_users_active_session(client, crea
 
     # The deleted user's OLD refresh token, presented independently of the
     # (now admin-owned) cookie jar, must be rejected.
-    refresh_resp = await client.post(
-        "/auth/refresh/", cookies={"refresh_token": target_refresh_token}
-    )
+    refresh_resp = await _post_with_refresh_cookie(client, "/auth/refresh/", target_refresh_token)
     assert refresh_resp.status_code == 401
 
 
@@ -475,9 +498,7 @@ async def test_self_password_change_revokes_existing_sessions(client, created_em
     )
     assert update_resp.status_code == 200
 
-    refresh_resp = await client.post(
-        "/auth/refresh/", cookies={"refresh_token": old_refresh_token}
-    )
+    refresh_resp = await _post_with_refresh_cookie(client, "/auth/refresh/", old_refresh_token)
     assert refresh_resp.status_code == 401
 
     # The new password actually works.
@@ -557,7 +578,7 @@ async def test_logout_after_admin_password_change_for_another_user_still_succeed
 
     # The target's own now-revoked cookie, explicitly presented — the jar
     # currently holds the admin's session, not the target's.
-    logout_resp = await client.post("/auth/logout", cookies={"refresh_token": target_refresh_token})
+    logout_resp = await _post_with_refresh_cookie(client, "/auth/logout", target_refresh_token)
 
     assert logout_resp.status_code == 200
     # The response's Set-Cookie deletes "refresh_token" at path=/auth
@@ -577,10 +598,10 @@ async def test_repeated_logout_calls_with_the_same_token_both_succeed(client, cr
     login_resp = await _create_verified_user(client, created_emails, email)
     refresh_token = login_resp.cookies["refresh_token"]
 
-    first_logout = await client.post("/auth/logout", cookies={"refresh_token": refresh_token})
+    first_logout = await _post_with_refresh_cookie(client, "/auth/logout", refresh_token)
     assert first_logout.status_code == 200
 
-    second_logout = await client.post("/auth/logout", cookies={"refresh_token": refresh_token})
+    second_logout = await _post_with_refresh_cookie(client, "/auth/logout", refresh_token)
     assert second_logout.status_code == 200
 
 
@@ -592,7 +613,7 @@ async def test_logout_with_malformed_refresh_token_cookie_still_succeeds_and_cle
     email = _unique_email()
     await _create_verified_user(client, created_emails, email)
 
-    logout_resp = await client.post("/auth/logout", cookies={"refresh_token": "not-a-real-jwt"})
+    logout_resp = await _post_with_refresh_cookie(client, "/auth/logout", "not-a-real-jwt")
 
     assert logout_resp.status_code == 200
     assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
@@ -605,7 +626,7 @@ async def test_logout_all_with_malformed_refresh_token_cookie_still_succeeds_and
     email = _unique_email()
     await _create_verified_user(client, created_emails, email)
 
-    logout_all_resp = await client.post("/auth/logout/all", cookies={"refresh_token": "not-a-real-jwt"})
+    logout_all_resp = await _post_with_refresh_cookie(client, "/auth/logout/all", "not-a-real-jwt")
 
     assert logout_all_resp.status_code == 200
     assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
@@ -717,9 +738,7 @@ async def test_self_profile_update_without_password_does_not_revoke_sessions(cli
     update_resp = await client.put("/users/me", json={"name": "New Name"})
     assert update_resp.status_code == 200
 
-    refresh_resp = await client.post(
-        "/auth/refresh/", cookies={"refresh_token": refresh_token}
-    )
+    refresh_resp = await _post_with_refresh_cookie(client, "/auth/refresh/", refresh_token)
     assert refresh_resp.status_code == 200
 
 
@@ -737,9 +756,7 @@ async def test_admin_password_change_revokes_targets_existing_sessions(client, c
     )
     assert update_resp.status_code == 200
 
-    refresh_resp = await client.post(
-        "/auth/refresh/", cookies={"refresh_token": target_refresh_token}
-    )
+    refresh_resp = await _post_with_refresh_cookie(client, "/auth/refresh/", target_refresh_token)
     assert refresh_resp.status_code == 401
 
 

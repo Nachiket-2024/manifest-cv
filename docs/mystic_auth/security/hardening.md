@@ -2,11 +2,9 @@
 
 Consolidates the concrete hardening mechanisms in the codebase — rate limiting, lockout, response headers, CORS, and cookie flags. For the *why* behind non-obvious choices, see [Security Decisions](decisions.md).
 
-> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) — including `security_headers_middleware.py`, which sends `X-Frame-Options: DENY` unconditionally on every response, with no per-route carve-out. ManifestCV's resume-template-preview route used to rely on a route-specific exception here; that customization has been removed so this file matches upstream exactly. The frontend now fetches that PDF as a blob and frames a same-origin `blob:` object URL instead, sidestepping the header entirely — see `frontend/src/app/api/document_api.ts`'s `fetchResumeTemplatePreviewBlob` and [Document Generation](../../app/document-generation/overview.md).
-
 ## Rate limiting
 
-`backend/mystic_auth/auth/security/rate_limiter_service.py` — a generic sliding-window-by-fixed-bucket limiter backed by Redis (`INCR` + `EXPIRE` on first request in a window), applied via the `@rate_limiter_service.rate_limited("endpoint_name", account_key_func=...)` decorator on every route in `auth_routes.py` (signup, login, OAuth2 initiate/callback, `/auth/me`, logout, logout-all, password-reset request/confirm, verify-account) — and, in this repo, ManifestCV's own AI-triggering routes (`career_knowledge_routes.py`, `resume_routes.py`, `document_routes.py`, re-exported through `backend/app/sdk.py` rather than imported from `mystic_auth` internals directly — see [Career Knowledge](../../app/career-knowledge/overview.md#rate-limiting) and [Resumes](../../app/resumes/overview.md#rate-limiting)). **Not** applied to `refresh_token_routes.py` (`POST /auth/refresh/`) — that route relies instead on its own single-use-token rotation and reuse-detection protection (see [Security Decisions](decisions.md#rate-limiting-and-lockout-are-layered-not-singular)), which a generic request-volume limiter would only duplicate.
+`backend/mystic_auth/auth/security/rate_limiter_service.py` — a generic sliding-window-by-fixed-bucket limiter backed by Redis (`INCR` + `EXPIRE` on first request in a window), applied via the `@rate_limiter_service.rate_limited("endpoint_name", account_key_func=...)` decorator on every route in `auth_routes.py` (signup, login, OAuth2 initiate/callback, `/auth/me`, logout, logout-all, password-reset request/confirm, verify-account). **Not** applied to `refresh_token_routes.py` (`POST /auth/refresh/`) — that route relies instead on its own single-use-token rotation and reuse-detection protection (see [Security Decisions](decisions.md#rate-limiting-and-lockout-are-layered-not-singular)), which a generic request-volume limiter would only duplicate.
 
 - **Always applies a per-IP limit** (`{endpoint_name}:ip:{ip}`), resolved via [`auth/security/client_ip.py`](../authorization/architecture.md#authorization-context-builder) (trusted-proxy-aware).
 - **Optionally applies a per-account limit** when `account_key_func` is given (e.g. signup/password-reset-request key on the submitted email) — closes the gap where an attacker spreads requests targeting one account across many source IPs to stay under the per-IP threshold alone.
@@ -33,14 +31,16 @@ See [Security Decisions: timing-attack mitigations](decisions.md#timing-attack-m
 | Header | Value | Reasoning |
 |---|---|---|
 | `X-Content-Type-Options` | `nosniff` | Stops MIME-type sniffing |
-| `X-Frame-Options` | `DENY` | This is a JSON API with no HTML pages — no framing use case exists |
-| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` | Same rationale — zero functional cost since there's no HTML/script to allow |
+| `X-Frame-Options` | `DENY` | This is a JSON API with no HTML pages of its own beyond the auto-generated docs below — no framing use case exists |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` on every route except `/docs`/`/redoc`/`/openapi.json` (see below) | Zero functional cost on the real API surface since there's no HTML/script to allow |
 | `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` (production only — see below) | Forces HTTPS for a year, protecting the cookies from protocol downgrade |
 | `Referrer-Policy` | `no-referrer` | URLs here can carry sensitive query params (OAuth2 `state`/`code`) |
 
 **HSTS is gated on `settings.ENVIRONMENT == "production"`** (checked fresh per request, not cached at import time). Sending it unconditionally would pin HSTS for a full year against real browser traffic even in a non-production deployment served over plain HTTP, with no way to turn it off short of a code change — browsers ignore the header over plain HTTP today, but that's not a reason to send a year-long pin somewhere it isn't intended to apply yet.
 
-Note: no `Strict-Transport-Security` is set by the nginx layer serving the frontend static build (`docker/nginx.frontend.conf`) — HSTS is only emitted by the backend API responses. See [Docker Overview](../../app/docker/overview.md).
+**`/docs`, `/redoc`, and `/openapi.json` get a relaxed CSP, carved out by request path.** FastAPI's auto-generated Swagger UI (`/docs`) and ReDoc (`/redoc`) pages — enabled whenever `ENVIRONMENT != "production"`, see `backend/app/main.py` — are the one place this API actually serves HTML, and both load their JS/CSS from a CDN (`cdn.jsdelivr.net`) plus an inline `<script>`/`<style>` block; ReDoc additionally pulls a Google Fonts stylesheet. The blanket `default-src 'none'` policy used to apply here too, which didn't error or warn — the page returned 200 and rendered as silently blank, every asset blocked with nothing in the response to say why. `security_headers_middleware.py`'s `_DOCS_PATHS`/`_DOCS_CSP` scope a permissive-but-specific policy (`cdn.jsdelivr.net`, `fonts.googleapis.com`/`fonts.gstatic.com`, `'unsafe-inline'`) to exactly those three paths; every other route keeps the strict policy above.
+
+Note: no `Strict-Transport-Security` is set by the nginx layer serving the frontend static build (`docker/nginx.frontend.conf`) — HSTS is only emitted by the backend API responses. See [Docker Overview](../docker/overview.md).
 
 ## CORS
 
@@ -78,4 +78,4 @@ A single global exception handler (`main.py`) catches every otherwise-unhandled 
 
 ## Known accepted gaps
 
-See [Concerns](../../app/concerns/README.md) for the current open list (automated backup scheduling, the single global rate-limit threshold, no deploy automation) — everything else previously tracked there has since been resolved and folded into this document. Error monitoring is on by default (Bugsink) rather than a tracked gap now — see [Error Monitoring](../error-monitoring/overview.md).
+See [Concerns](../concerns/README.md) for the current open list (automated backup scheduling, the single global rate-limit threshold, no deploy automation) — everything else previously tracked there has since been resolved and folded into this document. Error monitoring is available (opt-in) rather than a tracked gap now — see [Error Monitoring](../error-monitoring/overview.md).

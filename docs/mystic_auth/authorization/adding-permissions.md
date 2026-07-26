@@ -1,7 +1,5 @@
 # Adding New Permissions
 
-> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth).
-
 ## Where to define a new action
 
 Add it to the `Permission` enum in `backend/mystic_auth/authorization/permissions.py`:
@@ -21,7 +19,7 @@ Naming convention: `"<resource>:<action>[_<scope>]"` — e.g. `USERS_UPDATE_OWN`
 Every member of `Permission` is treated as one of this app's own **known-sensitive actions** — see `AuthorizationService.assert_authorized_to_grant`'s `_KNOWN_SENSITIVE_ACTIONS` set, which is derived directly from this enum. Adding a permission here means:
 
 - It's subject to the privilege-escalation guard: a caller can never create/update/assign a policy granting this action unless they already hold it themselves.
-- It's meant for **this application's own identity/authorization concerns** (user management, policy management). A downstream project's own business-domain actions (e.g. `"documents:view"`, `"projects:create"`) do **not** need to go in this enum at all — policies can grant arbitrary action strings freely, and only strings actually listed in `Permission` are escalation-guarded. Only add an enum member here if the action is sensitive enough that you want that guard to apply. **ManifestCV's own resources (career knowledge, resume drafts, applications) don't use `Permission`/PBAC at all** — see [PBAC Architecture: Integration points](architecture.md#integration-points) for why those routes are strictly self-service instead.
+- It's meant for **this application's own identity/authorization concerns** (user management, policy management). A downstream project's own business-domain actions (e.g. `"documents:view"`, `"projects:create"`) do **not** need to go in this enum at all — policies can grant arbitrary action strings freely, and only strings actually listed in `Permission` are escalation-guarded. Only add an enum member here if the action is sensitive enough that you want that guard to apply.
 
 ## How to update seed policies
 

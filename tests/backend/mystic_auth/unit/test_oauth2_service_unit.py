@@ -44,7 +44,7 @@ async def test_login_or_create_user_existing_user_does_not_write_orphaned_sessio
 async def test_login_or_create_user_marks_unverified_existing_user_verified(mocker):
     # An existing password account that never clicked our verification email.
     # oauth2_login_handler only calls this method after confirming Google's
-    # own verified_email flag, which is equally valid proof of ownership.
+    # own email_verified flag, which is equally valid proof of ownership.
     mocker.patch(f"{MODULE}.user_crud.get_by_email", return_value=_FakeUser(is_verified=False))
     update_mock = mocker.patch(
         f"{MODULE}.user_crud.update_by_email",
@@ -91,7 +91,7 @@ async def test_login_or_create_user_clears_password_on_pre_hijacked_unverified_a
 
 @pytest.mark.asyncio
 async def test_login_or_create_user_rejects_reserved_system_account(mocker):
-    # OAuth2 login trusts Google's verified_email alone — there is no
+    # OAuth2 login trusts Google's email_verified alone — there is no
     # password check in this flow at all. Without this guard, anyone who
     # controls a Google account matching the (operator-chosen, potentially
     # real/Google-verifiable) email of the reserved system superuser could

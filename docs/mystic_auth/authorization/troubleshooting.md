@@ -1,7 +1,5 @@
 # Operational Troubleshooting Guide
 
-> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth). See [Testing Overview](../../app/testing/overview.md#troubleshooting) for ManifestCV-specific test-running gotchas (e.g. the frontend container's test mount).
-
 ## Common issues and solutions
 
 ### "Why was this user denied?" — use the audit log or the inspection endpoint

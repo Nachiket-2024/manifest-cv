@@ -1,116 +1,107 @@
 # Using This Repository as a Template
 
-You've created your own repository from this template (via GitHub's **Use this template** button) to build your own product's authentication and authorization layer on top of it. This doc is the "never seen this codebase before" starting point — what you get, how to stand it up, and where to make it yours. Every other doc in [`docs/`](README.md) describes *how the system works*; this one is about *what to do with it*.
+You've created your own repository from this template (via GitHub's **Use this template** button) to build your own product's authentication and authorization layer on top of it. This doc is a fast overview — what you get, how to run it, and where to make it yours. For how any specific piece actually works, see the rest of [`docs/`](README.md).
 
 ## What this template provides
 
-- **Authentication**: email+password signup with Argon2 hashing, email verification, login with dual rate limiting and brute-force lockout, Google OAuth2 with PKCE, JWT access+refresh tokens delivered as httpOnly cookies, refresh-token rotation with reuse detection, logout / logout-all, and a full forgot-password → reset-password flow. See [Authentication Overview](authentication/overview.md).
-- **Authorization**: Policy-Based Access Control (PBAC), not RBAC. Every protected route is gated by an assigned, active `Policy` — not by a user's `role`. Policies are data (rows in Postgres), not code, so a new access pattern is a new policy, not a new deploy. See [PBAC Architecture](authorization/architecture.md) and [Security Decisions: role is never used to decide access](security/decisions.md#role-is-never-used-to-decide-access).
-- **Audit logging**: two independent, append-only audit tables — a security/session-event log (login, logout, signup, lockout, account lifecycle) and a PBAC decision log (every `allow`/`deny` authorization check, with the policies that were evaluated). See [Database Design: why two audit tables](database/design.md#why-two-audit-tables-not-one).
-- **Frontend**: React 19 + TypeScript SPA built with Vite, Chakra UI v3 for components/theming, Zustand for client/session state, TanStack Query for server-state caching. Feature-organized to mirror the backend's domain split. See [Frontend Architecture](architecture/frontend.md).
-- **Infrastructure**: Docker Compose for local dev and production, PostgreSQL, Redis (caching/rate-limiting/token registry/Taskiq broker), Taskiq for async email delivery, Alembic for migrations, and a GitHub Actions CI workflow.
-- **Error monitoring**: enabled by default via a self-hosted Bugsink container that starts with `docker compose up`. Backend (`sentry-sdk[fastapi]`) and frontend (`@sentry/react`) report to it via the Sentry SDK protocol; clear `SENTRY_DSN`/`VITE_SENTRY_DSN` to turn reporting off without stopping the container. See [Error Monitoring](error-monitoring/overview.md).
+- **Authentication**: email+password with Argon2 hashing, email verification, rate limiting + brute-force lockout, Google OAuth2 (PKCE), JWT access+refresh tokens as httpOnly cookies, refresh-token rotation with reuse detection, logout/logout-all, forgot/reset password. See [Authentication Overview](authentication/overview.md).
+- **Authorization**: Policy-Based Access Control (PBAC), not RBAC. Every protected route is gated by an assigned `Policy` — not by a user's `role`. Policies are data (rows in Postgres), so a new access rule is a new policy, not a new deploy. See [PBAC Architecture](authorization/architecture.md).
+- **Audit logging**: two append-only tables — security/session events, and every PBAC allow/deny decision. See [Database Design](database/design.md#why-two-audit-tables-not-one).
+- **Frontend**: React 19 + TypeScript, Vite, Chakra UI v3, Zustand, TanStack Query. See [Frontend Architecture](architecture/frontend.md).
+- **Infrastructure**: Docker Compose (dev + prod), PostgreSQL, Redis, Taskiq for async email, Alembic migrations, GitHub Actions CI.
+- **Error monitoring**: self-hosted Bugsink, on by default with `docker compose up`. See [Error Monitoring](error-monitoring/overview.md).
 
 ## Quickstart
 
-Click **[Use this template](https://github.com/Nachiket-2024/mystic-auth/generate)** on GitHub to create your own repository from this one — this gives you a fresh repo with no shared git history or fork relationship to the original, so it's entirely yours from the first commit. Then clone *your* new repository and set up the environment:
+1. Click **[Use this template](https://github.com/Nachiket-2024/mystic-auth/generate)**, then clone *your* new repo.
+2. `cp .env.example .env` — prefilled with working (fake) values, so this just works for local dev as-is. Only two things need real values before those specific features work: `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` ([OAuth setup](#oauth-setup-google)) and `FROM_EMAIL`/`GMAIL_APP_PASSWORD` ([Email setup](#email-setup)). Everything else runs fine without them.
+3. `docker compose up` — brings up backend, frontend, Postgres, Redis, Taskiq, and Bugsink, migrations included.
 
-```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
-cp .env.example .env
-```
+Once it's up:
 
-`.env.example` is prefilled with working (but obviously-fake, `change_me_in_production`-style) values for everything that isn't a real personal credential — `SECRET_KEY`, the Postgres credentials, and the Bugsink secret key/admin login all just work as-is, so `docker compose up` boots the whole stack, migrations included, straight after the copy above. Verified: a completely untouched `cp .env.example .env` brings up all six services healthy and Bugsink fully seeded. Change those dummy values before using this for anything beyond local dev, and set `APP_NAME`/`VITE_APP_NAME` if you want your own product name from the start.
+- **Backend docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Bugsink** (error monitoring): [http://localhost:8010](http://localhost:8010)
+- **Taskiq** (background worker, e.g. sending emails): no UI or port — it just runs. See [Background Workers: Taskiq](background-workers/taskiq.md) if you want to watch its logs (`docker compose logs -f taskiq_worker`) or add your own tasks.
+- Postgres/Redis are reachable on `localhost:5433`/`localhost:6380` (non-default host ports, to avoid clashing with anything else you have running locally).
 
-Two things genuinely need your own real values, and can be filled in later — the app runs without them, but signup/login via those specific paths won't work until they're set: `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` (see [OAuth setup](#oauth-setup-google) below) and `FROM_EMAIL`/`GMAIL_APP_PASSWORD` (see [Email setup](#email-setup) below).
-
-`frontend/.env.example` → `frontend/.env` is only needed if you run the frontend locally with `npm run dev` instead of Docker — under `docker compose up`, the frontend container reads the root `.env`'s `VITE_*` values directly, so `frontend/.env` isn't read at all and can be skipped.
-
-```bash
-docker compose up
-```
-
-Once the stack is up:
-
-- **Backend**: [http://localhost:8000/docs](http://localhost:8000/docs) — FastAPI interactive docs
-- **Frontend**: [http://localhost:5173](http://localhost:5173) — Vite dev server
-- **PostgreSQL**: `localhost:5433` (host-side; containers reach it at `postgres:5432` internally — the non-default host port dodges the common local-Postgres collision, see [Docker Overview](docker/overview.md))
-- **Redis**: `localhost:6380` (host-side; containers reach it at `redis:6379` internally, same reasoning)
-- **Bugsink**: [http://localhost:8010](http://localhost:8010) — self-hosted error monitoring UI, starts by default alongside everything above. See [Error Monitoring](error-monitoring/overview.md) if you want to turn reporting off or point at a hosted alternative instead.
-
-Then create the reserved system superuser (one-time, CLI-only — it can never be created or promoted via any API route):
+Then create the reserved system superuser (one-time, CLI-only):
 
 ```bash
 docker compose exec -it backend python -m mystic_auth.scripts.create_system_user
 ```
 
-See root [`README.md`](../../README.md#-first-time-setup--creating-the-system-superuser) for the interactive prompts, and [Policy JSON Examples: system superuser policy](authorization/policy-examples.md#system-superuser-policy-seeded) for what that account can do out of the box.
+See root [`README.md`](../../README.md#-first-time-setup--creating-the-system-superuser) for the prompts.
 
 ## Environment configuration
 
-Full variable-by-variable reference lives in [`.env.example`](../../.env.example) — every setting is documented inline there with a one-line comment, grouped by category (database, JWT/tokens, OAuth2, Redis, email, login protection, rate limiting, logging, environment, reverse proxy, error monitoring, frontend). Copy it to `.env` and treat that file as the source of truth, not this doc. `frontend/.env.example` also exists, but only matters if you run the frontend locally with `npm run dev`, outside Docker — under `docker compose up` (dev or prod), the frontend reads the root `.env`'s `VITE_*` values directly.
+Every setting is documented inline in [`.env.example`](../../.env.example) — treat that file as the source of truth, not this doc. `frontend/.env.example` only matters if you run the frontend locally with `npm run dev` instead of Docker.
 
-One pair is worth calling out specifically, since it's the main "make this yours" hook:
-
-| Variable | File | Purpose |
-|---|---|---|
-| `APP_NAME` | `.env` | Product name used in email templates and the root `/` API response. Required — no fallback. |
-| `VITE_APP_NAME` | `.env` (root) | Product name shown in the UI (navbar, auth pages) and the browser tab title (`frontend/index.html`'s `%VITE_APP_NAME%` substitution, resolved by Vite at build time). Only needs setting in `frontend/.env` too if you're running the frontend locally, outside Docker. |
-
-## Renaming the app
-
-Change `APP_NAME` and `VITE_APP_NAME` in the root `.env`, then restart (`docker compose up --build` if the frontend image was already built, since `VITE_APP_NAME` is baked in at build time, not read at runtime). If you're running the frontend locally with `npm run dev` instead of Docker, also update `VITE_APP_NAME` in `frontend/.env` — that path never reads the root `.env`. Nothing else in the codebase hardcodes a product name — there's no other file to touch.
-
-**CI still uses `APP_NAME=MysticAuth`, and that's fine.** `.github/workflows/ci.yml` sets `APP_NAME` (and every other required setting) directly as a job-level environment variable, since there's no checked-in `.env` for CI to read — `Settings` refuses to start without a value for it, so CI needs *something*. That value is a placeholder for test runs, not branding: it doesn't need to match whatever you renamed the app to locally, and you don't need to touch `ci.yml` after renaming (see [CI/CD Overview](cicd/overview.md)).
+To rename the app: set `APP_NAME` and `VITE_APP_NAME` in the root `.env`, then `docker compose up --build` (the frontend value is baked in at build time). Nothing else hardcodes a product name. CI keeps using its own placeholder `APP_NAME` regardless — that's expected, not something to sync.
 
 ## The `app/` + `mystic_auth/` split
 
-Both the backend and the frontend are split into two top-level trees, and understanding the split is the key to customizing this template without fighting future updates from it:
+Both backend and frontend are split into two trees, and every file in the repo falls into exactly one of three ownership tiers. This is purely a **file-path convention** — there's no tooling enforcing it (no `CODEOWNERS`, no merge driver), just a rule both this template and your own code agree to follow. Knowing which tier a file is in tells you whether you can edit it freely, should never edit it, or should expect the occasional merge conflict there.
 
-- **`backend/mystic_auth/`** and **`frontend/src/mystic_auth/`** are the template's own internals — auth, PBAC, the API layer, UI components, everything described throughout the rest of `docs/mystic_auth/`. Treat this as the "pizza base": you generally don't edit it directly, you `git merge` updates into it (see [Staying in sync with upstream template updates](#staying-in-sync-with-upstream-template-updates) below).
-- **`backend/app/`** and **`frontend/src/app/`** are the thin, project-specific shell: the entry point (`main.py`/`main.tsx`, `App.tsx`), and two extension files, `sdk.*` and `app_sdk.*` (below). This is where your own toppings go.
+| Tier | Files | Who edits it | Why |
+|---|---|---|---|
+| **Upstream-owned** — never edit | `backend/mystic_auth/`, `backend/app/sdk.py`, `frontend/src/mystic_auth/`, `frontend/src/app/sdk.ts`, `docs/mystic_auth/` | Only upstream | This is the template's actual implementation. Since you never touch it, every `scripts/sync-upstream.sh` merge applies here cleanly — there's nothing of yours for it to conflict with. |
+| **Yours — upstream never touches it again** | `backend/app/app_sdk.py`, `frontend/src/app/app_sdk.ts`, `docs/app/`, root `README.md`, `SECURITY.md` | Only you | Upstream ships these once (`app_sdk.*` empty, the READMEs as generic starting points) and never edits them again in any future release. Since only you write to them, they never conflict either. |
+| **Shared — extend in place, expect occasional conflicts** | `backend/app/main.py`, `frontend/src/app/App.tsx` | Both, over time | These have to ship as real, working code (an entry point that mounts routers, a router that renders routes) — they can't start empty the way `app_sdk.*` does. You're expected to extend them (register your own router, add your own `<Route>`), and upstream may also touch them later (e.g. a middleware-ordering fix). This is the one place a sync merge can genuinely conflict, and it's a normal, expected part of syncing when it happens. |
 
-Only four files live in `backend/app/`: `main.py` (FastAPI entry point), `sdk.py` and `app_sdk.py` (below), and `__init__.py`. Only four in `frontend/src/app/`: `main.tsx`, `App.tsx`, `sdk.ts`, `app_sdk.ts`.
+```mermaid
+flowchart TB
+    subgraph upstream["🔒 Upstream-owned — never edit"]
+        MA["mystic_auth/\ntemplate internals: auth, PBAC, API, UI"]
+        SDK["sdk.py / sdk.ts\nextension surface — DO NOT hand-edit"]
+    end
 
-The docs mirror the same split: **[`docs/mystic_auth/`](README.md)** is this template's own reference documentation — upstream's, don't edit it. **[`docs/app/`](../app/README.md)** is empty by default, yours to fill with your own project's docs. Root `README.md` and `SECURITY.md` are yours too — rewrite them for your own product on day one; upstream won't touch them again after you do, so they won't conflict on future merges the way a file both sides keep editing would.
+    subgraph shared["⚠️ Shared — extend in place, expect occasional conflicts"]
+        ENTRY["main.py / App.tsx\nentry point, ships working"]
+    end
+
+    subgraph yours["✅ Yours — upstream never touches again"]
+        APPSDK["app_sdk.py / app_sdk.ts\nyour re-exports — shipped empty"]
+        FEATURES["your feature folders\ne.g. app/projects/"]
+        DOCSAPP["docs/app/\nyour own docs"]
+    end
+
+    MA -->|re-exported by| SDK
+    SDK -->|imported by| ENTRY
+    SDK -->|imported by| FEATURES
+    APPSDK -->|imported by| ENTRY
+    APPSDK -->|imported by| FEATURES
+    ENTRY -.->|your imports go here, not app_sdk| APPSDK
+
+    style MA fill:#4a5568,color:#fff
+    style SDK fill:#c05621,color:#fff
+    style ENTRY fill:#b7791f,color:#fff
+    style APPSDK fill:#2f855a,color:#fff
+    style FEATURES fill:#2f855a,color:#fff
+    style DOCSAPP fill:#2f855a,color:#fff
+```
+
+`sdk.py`/`sdk.ts` re-export the pieces you're meant to build on (`require_authorization`, `Permission`, `useAuthorization`, `ProtectedRoute`, the shared `api` client, and more) — import from there, not from internal `mystic_auth/` paths directly.
+
+Your own new feature folders (`backend/app/projects/`, `frontend/src/app/projects/`) are effectively a fourth, unlisted case: upstream has no idea they exist, so they behave like the "yours" tier automatically, with no path convention needed.
 
 ## Frontend customization
 
-- **Design tokens / theme**: `frontend/src/mystic_auth/theme/system.ts` — Chakra UI v3 tokens (colors, semantic tokens for brand/surface/border/text). Change the `brand` color scale here to re-skin the whole app; components reference tokens (`colorPalette="brand"`, `bg="bg.surface"`, etc.), not raw hex values.
-- **Pages/features**: `frontend/src/mystic_auth/` is organized by feature, one folder per domain — `auth/` (login, signup, logout, oauth2, password reset, account verification), `dashboard/`, `profile/`, `users/`, `policies/`, `audit_log/`. Each auth sub-feature is its own folder with its Page/Form/mutation-hook/types together. Import `PERMISSIONS`, `useAuthorization`, `ProtectedRoute`, `api`, etc. from `frontend/src/app/sdk.ts` (below), not from their internal locations. See [Frontend Architecture: module layout](architecture/frontend.md#module-layout) for the full table.
-- **Routing**: all routes are declared in `frontend/src/app/App.tsx` — add a new `<Route>` there, wrapped in `ProtectedRoute` (optionally with a `permission` prop, see [Frontend Architecture: routing](architecture/frontend.md#routing)) and `AppLayout` if it needs the sidebar/top-bar shell.
-- **State**: `frontend/src/mystic_auth/store/` — Zustand for client state (`authStore`, `themeStore`). `frontend/src/mystic_auth/core/queryClient.ts` holds the shared TanStack Query client. `frontend/src/mystic_auth/api/` holds Axios-based typed call functions per backend domain. `authStore` and `queryClient` are re-exported from `frontend/src/app/sdk.ts`.
-- **Your own feature code** should live under `frontend/src/app/` (e.g. a `frontend/src/app/projects/` folder of your own), importing template pieces via `sdk.ts`/`app_sdk.ts` — not inside `frontend/src/mystic_auth/`, which stays reserved for the template's own code so upstream merges stay clean.
-
-## The extension surface: `sdk.py`/`sdk.ts` and `app_sdk.py`/`app_sdk.ts`
-
-`backend/app/sdk.py` and `frontend/src/app/sdk.ts` are the intended door into this template for your own domain/feature code — a single file on each side that re-exports the pieces you're meant to build on (`require_authorization`, `Permission`, `useAuthorization`, `ProtectedRoute`, the shared `api` client, `capture_exception`/`reportError` for [error monitoring](error-monitoring/overview.md), and so on). Your own code imports from `app.sdk` / `@app/sdk`, not by reaching into internal paths like `mystic_auth.authorization.dependencies.authorization_dependency` or `frontend/src/mystic_auth/authorization/useAuthorization` directly.
-
-`backend/app/app_sdk.py` and `frontend/src/app/app_sdk.ts` are the counterpart, empty by default: the place *you* add re-exports for *your own* domain code, once you have some, kept in a separate file from `sdk.py`/`sdk.ts` specifically so a template update never conflicts with something you added.
-
-This isn't a published package — it's just plain files, each with a docstring at the top listing everything it re-exports and why. Two things it buys you over importing internals directly everywhere:
-
-1. **One place to read**, instead of hunting through the template's internals for "what am I actually supposed to import here."
-2. **One place a merge conflict can land**, instead of many. If a future upstream update moves or renames something internal (this template's own backend and frontend went through exactly that reorganization recently — splitting into `app/` + `mystic_auth/` — see [Backend Architecture](architecture/backend.md) and [Frontend Architecture](architecture/frontend.md)), only `sdk.py`/`sdk.ts` need reconciling to match the new internal path. Your own domain code underneath it, which only ever imported from the SDK file (or your own `app_sdk.*`), doesn't need to change at all. See [Staying in sync with upstream template updates](#staying-in-sync-with-upstream-template-updates) below for why that matters.
-
-It's deliberately *not* a full abstraction layer — it doesn't wrap or hide the underlying APIs, it just re-exports them under one stable, greppable path. You're still reading the real docs (PBAC Architecture, Authentication Overview, Frontend Architecture) to understand what each piece actually does; the SDK file only changes *where you import it from*.
+- **Theme**: `frontend/src/mystic_auth/theme/system.ts` — change the `brand` color scale to re-skin the app.
+- **Pages**: `frontend/src/mystic_auth/` is organized one folder per feature (`auth/`, `dashboard/`, `profile/`, `users/`, `policies/`, `audit_log/`). See [Frontend Architecture](architecture/frontend.md#module-layout).
+- **Routing**: declared in `frontend/src/app/App.tsx` — add a `<Route>`, wrapped in `ProtectedRoute`.
+- **State**: Zustand (`frontend/src/mystic_auth/store/`) for client state, TanStack Query for server state — both re-exported from `sdk.ts`.
+- **Your own code** lives under `frontend/src/app/` (e.g. `frontend/src/app/projects/`), importing template pieces via `sdk.ts`/`app_sdk.ts`.
 
 ## Backend customization
 
-- **Adding your own domain/resource** (e.g. `projects`, `documents`): create it as a new top-level package under `backend/app/` (e.g. `backend/app/projects/`, sibling to `mystic_auth/`) with its own `*_model.py`, `*_schema.py`, `*_crud*.py`, and router — mounted in `backend/app/main.py`, importing `require_authorization`, `Permission`, `get_current_user`, `database`, `settings`, etc. from `backend/app/sdk.py` (above), not from their internal `mystic_auth/` locations. Keeping your own domains out of `backend/mystic_auth/` is what keeps future template updates a clean merge. See [Backend Architecture: module layout](architecture/backend.md#module-layout) for how the existing modules (`auth/`, `user_table/`, `user_crud/`) are shaped as a reference.
-- **Database changes**: every schema change is an Alembic migration under `backend/alembic/versions/` — no `create_all()` anywhere. See [Database Design](database/design.md#migrations).
-- **Configuration**: all settings are centralized in `backend/mystic_auth/core/settings.py` (`pydantic-settings`, env-driven) — add new settings there, never read `os.environ` directly elsewhere. Re-exported from `backend/app/sdk.py` as `settings`.
+- **New domain/resource**: a new top-level package under `backend/app/` (sibling to `mystic_auth/`) with its own model/schema/CRUD/router, mounted in `backend/app/main.py`, importing from `backend/app/sdk.py`. See [Backend Architecture](architecture/backend.md#module-layout) for the shape to follow.
+- **Database changes**: an Alembic migration under `backend/alembic/versions/` — no `create_all()`. See [Database Design](database/design.md#migrations).
+- **Configuration**: settings live in `backend/mystic_auth/core/settings.py` — add new ones there, re-exported from `sdk.py` as `settings`.
 
 ## PBAC usage
 
-### Adding a new permission
-
-Business-domain actions (e.g. `"projects:create"`, `"documents:view"`) don't need to go in the `Permission` enum at all — a policy can grant any action string freely. Only add an enum member in `backend/mystic_auth/authorization/permissions.py` if the action is sensitive enough that you want the privilege-escalation guard applied (see [Adding New Permissions](authorization/adding-permissions.md) for the full guidance, including how to update seed policies via a data-only migration).
-
-### Protecting a new route
-
-Every protected route depends on `require_authorization(action, resource_type)` — never a role check. A real, worked example, adapted from `backend/mystic_auth/api/user_routes/user_routes.py` to import from the SDK surface (above) the way your own new route module should:
+Protecting a route always goes through `require_authorization(action, resource_type)` — never a role check:
 
 ```python
 from fastapi import APIRouter, Depends
@@ -127,130 +118,170 @@ async def list_all_projects(
     return await project_crud.get_all(db)
 ```
 
-`require_authorization(action, resource_type)` is a dependency factory (`backend/mystic_auth/authorization/dependencies/authorization_dependency.py`, re-exported from `app.sdk`) that builds the request's authorization context and calls `AuthorizationService.require(...)` for you — raising `403` if no assigned, active policy grants that action on that resource type (optionally condition-gated by time, network, ownership, etc.). For your own resources, `resource_type` doesn't need to be a `Permission` enum value at all — pass any string you want (`"projects"`, `"documents"`) and grant the matching action string via a policy (see [Writing and Testing Policies](authorization/writing-testing-policies.md#policy-creation-workflow)).
-
-If the route needs to check a *different* action depending on runtime data (like `user_routes.py`'s role-assignment route does — assigning `system` role needs a stricter action than assigning any other role), call `authorization_service.require(...)` directly inside the handler instead of relying solely on the route-level dependency; see that route's own code for the pattern.
+`resource_type`/`action` don't need to be `Permission` enum values — any string works, granted via a policy (see [Writing and Testing Policies](authorization/writing-testing-policies.md#policy-creation-workflow)). Only add a `Permission` enum member if the action is sensitive enough to need the privilege-escalation guard (see [Adding New Permissions](authorization/adding-permissions.md)).
 
 ## Replacing the frontend entirely
 
-The backend has no frontend-specific coupling — it's a stateless JSON API you can drive from any client. What it expects:
-
-- **Cookie-based JWT auth**: `access_token` (path `/`) and `refresh_token` (path `/auth`, scoped), both httpOnly/secure/`SameSite=Strict`. There is no bearer-token/header auth mode — a replacement client must send/receive cookies (`withCredentials`/`credentials: "include"` equivalent) and be served from an origin matching `FRONTEND_BASE_URL` (CORS only allows that one origin).
-- **The full route contract** (paths, methods, auth requirements, request/response shapes): [API Reference](api/reference.md).
-
-Nothing in the backend imports from or references `frontend/` — deleting the entire `frontend/` directory and building a new client (a different SPA, a mobile app, a server-rendered app) against the same API is a supported use of this template.
+The backend is a stateless JSON API with no frontend-specific coupling — deleting `frontend/` and building a different client against it is supported. It expects cookie-based JWT auth (`access_token` + `refresh_token`, both httpOnly/secure/`SameSite=Strict`) from an origin matching `FRONTEND_BASE_URL`. Full route contract: [API Reference](api/reference.md).
 
 ## OAuth setup (Google)
 
-Mechanics (PKCE, CSRF `state`, account-hijack handling) are covered in [OAuth2 / PKCE](authentication/oauth2-pkce.md). To get it working for your own Google Cloud project:
-
 1. Create an OAuth 2.0 Client ID in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (Web application type).
-2. Add an authorized redirect URI that exactly matches `GOOGLE_REDIRECT_URI` below (scheme, host, path, and trailing slash all matter — a mismatch is the most common setup failure, see [OAuth2 / PKCE: troubleshooting](authentication/oauth2-pkce.md#troubleshooting)).
-3. Fill in `.env`:
+2. Add an authorized redirect URI matching `GOOGLE_REDIRECT_URI` exactly (scheme, host, path, trailing slash all matter).
+3. Fill in `.env`: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (e.g. `http://localhost:8000/auth/oauth2/callback/google` locally).
 
-   | Variable | Value |
-   |---|---|
-   | `GOOGLE_CLIENT_ID` | From the Cloud Console credential |
-   | `GOOGLE_CLIENT_SECRET` | From the Cloud Console credential |
-   | `GOOGLE_REDIRECT_URI` | Must match the Console-registered URI exactly, e.g. `http://localhost:8000/auth/oauth2/callback/google` for local dev |
+See [OAuth2 / PKCE](authentication/oauth2-pkce.md) for the mechanics and troubleshooting.
 
 ## Email setup
 
-Mechanics (Taskiq broker, HTML templates, failure handling) are covered in [Background Workers: Taskiq](background-workers/taskiq.md). To send real email:
-
 | Variable | Purpose |
 |---|---|
-| `FROM_EMAIL` | The Gmail account sending mail (also the SMTP auth username) |
-| `GMAIL_APP_PASSWORD` | A Gmail [App Password](https://myaccount.google.com/apppasswords) (not your normal account password — requires 2FA enabled on the Google account) |
-| `SUPPORT_EMAIL` | Optional; used as the `Reply-To` header, falls back to `FROM_EMAIL` if unset |
+| `FROM_EMAIL` | The Gmail account sending mail (also the SMTP username) |
+| `GMAIL_APP_PASSWORD` | A Gmail [App Password](https://myaccount.google.com/apppasswords) (needs 2FA enabled) |
+| `SUPPORT_EMAIL` | Optional `Reply-To`, falls back to `FROM_EMAIL` |
 
-Without valid values here, signup/verification/password-reset emails will fail to send — `send_email_task` logs the full traceback and retries up to 3 times (see [Background Workers: Taskiq](background-workers/taskiq.md)) — but the rest of the app keeps working.
+Without these, signup/verification/reset emails just fail to send (logged, retried 3 times) — the rest of the app keeps working. See [Background Workers: Taskiq](background-workers/taskiq.md).
 
 ## Deployment
 
-Covered in full in the [Deployment Guide](deployment/guide.md) — dev vs. production Compose topology, required production environment variables, database migrations, backup runbook, and free/low-cost hosting options for each of the four pieces (backend, frontend, Postgres, Redis). Production Compose file: [`docker-compose.prod.yml`](../../docker-compose.prod.yml).
+See the [Deployment Guide](deployment/guide.md) for prod Compose topology, required env vars, migrations, backups, and low-cost hosting options. Production Compose file: [`docker-compose.prod.yml`](../../docker-compose.prod.yml).
 
 ## Staying in sync with upstream template updates
 
-You cloned this repo at a point in time. This template keeps changing after that — bug fixes (like a real one: logout used to fail right after a password change, since that change revokes the session's own refresh token — fixed in `backend/mystic_auth/auth/logout/logout_handler.py`, see [Security Decisions](security/decisions.md)), new docs, small architectural cleanups. This section is how to keep pulling those in without it turning into a mess, explained from scratch — none of this assumes you already know git remotes.
+"Upstream" just means the original mystic-auth template repo — the one you clicked **Use this template** on. Every so often it gets new fixes or features, and you can pull those into your own project whenever you want.
 
-### The quick way: `scripts/sync-upstream.sh`
+**Before anything else, the thing most people worry about here: this will not fill your project's history with the template's own commits.** Your `git log` stays exactly what it's always been — just your own commits — plus, after a sync, one extra commit for whatever you just pulled in. Upstream's own commit-by-commit history (all the work that went into building this template) never gets attached to your project at all, no matter how many times you sync over the life of your project. What follows is purely about *file changes* landing in your project, not upstream's history becoming part of it.
+
+If you've never done this before — pulled updates from a "template" repo into your own project — that's fine, it's not a common everyday git workflow. Nothing below requires git knowledge beyond `git add` and `git commit`. Just follow the steps in order.
+
+---
+
+### Step by step
+
+#### Step 1 — Check that you don't have unsaved work
+
+```bash
+git status
+```
+
+If this lists any files, save your work first — either commit it normally, or run `git stash` to set it aside temporarily. Why: the next steps will write changes into your project files, and if you also have your *own* unsaved changes sitting there at the same time, it gets confusing to tell which change came from where. Starting clean avoids that.
+
+#### Step 2 — Run the sync script
+
+Do this from the main folder of your project (the repo you created from **Use this template**). If you're on Windows, use **Git Bash** or **WSL** to run it, not PowerShell or the regular Command Prompt — it's a bash script and won't run there.
 
 ```bash
 ./scripts/sync-upstream.sh
 ```
 
-Run this whenever *you* decide to check for updates — nothing runs it for you automatically. It adds the `upstream` remote if it's not already there, fetches, shows you exactly what commits are incoming before touching anything, and asks for confirmation before merging. If you'd rather understand (or do) each step yourself, the rest of this section walks through exactly what the script does.
+The very first time you run this, it also quietly sets up a second connection to the original template repo (git calls this a "remote", and this one's named `upstream`) — that's just so the script knows where to download updates from. It does not touch your existing GitHub connection (`origin`) and does not push or upload anything anywhere. It only downloads.
 
-### What a "remote" is, and why you'll want two
+#### Step 3 — Read what it found, and say yes or no
 
-When you `git clone` a repository, git records where you cloned it from as a **remote** named `origin` by convention. Since you created your own repository via **Use this template** and cloned *that*, `origin` already points at *your own* repo, not this original template — there's no fork relationship between the two, and no shared commit history either.
+You'll see something like this printed:
 
-A remote is nothing more than "a name git has for some other repository's URL, so you can type the name instead of the URL every time." You're not limited to one. Add a second remote pointing at the *original* template repo, conventionally named `upstream`:
+```
+Incoming commits from upstream/main:
+a1b2c3d Add rate limiting to login
+9f8e7d6 Fix OAuth redirect edge case
 
-```bash
-git remote add upstream https://github.com/Nachiket-2024/mystic-auth.git
+Sync these into the current branch now? [y/N]
 ```
 
-Check it worked:
+That's the list of what's new upstream since you last synced (or ever, if this is your first time). Type `y` and press Enter if you want to bring those changes in. Type `N` (or just press Enter) if you'd rather wait — nothing will be changed, and you can run the script again later whenever you're ready.
 
-```bash
-git remote -v
-# origin    <your fork's URL> (fetch)
-# origin    <your fork's URL> (push)
-# upstream  https://github.com/Nachiket-2024/mystic-auth.git (fetch)
-# upstream  https://github.com/Nachiket-2024/mystic-auth.git (push)
+#### Step 4 — The script copies upstream's changes into your files
+
+This step is fully automatic — you don't type or decide anything here. For almost every file, this just quietly works: your code and upstream's code are kept in separate files/folders by design (see the ownership table above), so there's usually nothing to fight over. When it's done, one of two things will have happened:
+
+- Everything applied without a problem → go to **Step 5**.
+- It hit what's called a "conflict" → go to **Step 6**.
+
+#### Step 5 — Clean sync: you're basically done
+
+You'll see normal `git commit` output on screen, ending with a message confirming the sync succeeded. Skip ahead to **Step 7**.
+
+#### Step 6 — Conflict: resolve it
+
+A "conflict" just means: you had made your own edit to a line, and upstream also changed that same line — so git can't automatically decide which version should win, and needs a human (you) to pick. This can only ever happen in two files in the whole project, `backend/app/main.py` or `frontend/src/app/App.tsx`, and only if you genuinely edited the exact same lines upstream did — for most syncs it never happens at all. You'll see something like:
+
+```
+Conflicts staged above -- resolve them in your working tree, then:
+  git add <resolved files>
+  git commit -m "Sync upstream template updates (mystic-auth@<sha>)"
 ```
 
-You only need to do this once, ever, per local clone.
+To fix it:
 
-### Pulling in updates
+1. Open the file it mentions in your editor.
+2. Look for blocks marked with `<<<<<<<`, `=======`, and `>>>>>>>` — this is git showing you both versions of the same spot: your version above the `=======`, upstream's version below it.
+3. Decide what the combined result should look like — almost always this means **keeping both** changes, just written one after another — then delete the `<<<<<<<`/`=======`/`>>>>>>>` marker lines themselves.
+4. Save the file, then run the two commands the script printed for you (shown above): `git add <the file>`, then `git commit -m "..."` with the message it suggested.
 
-```bash
-git fetch upstream
-```
+See [Resolving a conflict in `main.py` / `App.tsx`](#resolving-a-conflict-in-mainpy--apptsx) below for a full worked example with real code, if you want to see one before you hit this for real.
 
-`fetch` downloads upstream's commits into your local git history *without touching your working files yet* — it's the safe, look-before-you-leap step. Before merging anything, see what actually changed:
+#### Step 7 — Rebuild and test before you trust any of it
 
-```bash
-git log HEAD..upstream/main --oneline
-```
-
-(`main` here is upstream's default branch — check `git remote show upstream` if you're unsure it's still called that.) When you're ready to actually bring those commits into your own branch:
-
-```bash
-git merge upstream/main --allow-unrelated-histories
-```
-
-The `--allow-unrelated-histories` flag is only needed the *first* time: since your repo was created via **Use this template** rather than forked, git doesn't see any common ancestor between your history and upstream's, and refuses to merge by default as a safety check. After this first merge, the two histories share a common commit, so every merge after this one is a normal `git merge upstream/main` with no extra flag.
-
-Aside from that one-time flag, this is a normal git merge — same mechanics as merging any other branch. If your own changes and upstream's changes touched different files (the common case, if you've been extending via new files as this doc recommends), it merges cleanly with no extra steps. If both sides touched the same lines of the same file, git stops and asks you to resolve the conflict by hand, same as any merge conflict.
-
-### What's likely to conflict, and what almost never will
-
-- **Your own new top-level packages/feature folders** (`backend/app/projects/`, `frontend/src/app/projects/`) — upstream has no idea they exist and will never touch them. These should essentially never conflict.
-- **`backend/app/sdk.py` / `frontend/src/app/sdk.ts`** — the one place expected to occasionally conflict, and by design: if upstream moves or renames something internal (see [The extension surface](#the-extension-surface-sdkpysdkts-and-app_sdkpyapp_sdkts) above), the conflict is contained to these two files instead of scattered across every place your own code imported the old internal path directly. Resolving it here is a normal, expected part of syncing — not a sign something went wrong. `app_sdk.py`/`app_sdk.ts` should never conflict at all, since upstream never touches them.
-- **Files you customized directly instead of extending** — if you added your own settings fields into the middle of `backend/mystic_auth/core/settings.py`, or edited `backend/app/main.py`'s router registration in place, or hand-edited `frontend/src/app/App.tsx`'s route list, those are exactly the files upstream is also most likely to touch over time. This is the tradeoff for customizing in place rather than through the SDK/extension points above — it's not wrong, it's just where you should expect to spend conflict-resolution time.
-- **Root `README.md` and `SECURITY.md`** — upstream ships these once and then never edits them again, specifically so they never conflict once you've rewritten them for your own product. `docs/mystic_auth/` follows the same rule as the code split — you don't edit it, so it merges cleanly; `docs/app/` is yours and upstream never touches it.
-
-### After merging
-
-Rebuild and re-run the full test suite before trusting the merge — a merge can silently change behavior underneath you even when git resolved every conflict automatically:
+Even a sync that applied with zero conflicts can quietly change how the app behaves, so don't skip this:
 
 ```bash
 docker compose up -d --build
 docker compose exec -w /repo backend python -m pytest tests/backend/mystic_auth/unit tests/backend/mystic_auth/integration tests/backend/mystic_auth/security
-# frontend: see docs/mystic_auth/testing/overview.md for the equivalent typecheck/lint/test/build commands
 ```
+
+#### Step 8 — Push whenever you're happy with it
+
+At this point you just have one new, ordinary commit sitting on top of your project's history — same as any commit you'd normally make. Push it to your branch, or open your own internal pull request to have a teammate look it over first — entirely up to you, same as any other change. There's no PR or step required back against the original template repo; the sync only ever pulls, it never pushes anywhere.
+
+---
+
+<details>
+<summary>How it stays fast and accurate even after 20+ syncs (optional, for the curious)</summary>
+
+Behind the scenes, the script keeps a small tracked file, `.mystic-auth-sync-state`, containing the exact upstream commit you last synced to — updated automatically every time you sync, right alongside the sync commit itself. Each new sync uses that file to look at only what changed upstream *since then*, rather than re-checking your entire codebase from scratch every time. That's what keeps the "what's new" list accurate and keeps unrelated files from ever being flagged, no matter how many releases you've already pulled in. You never read or edit this file yourself — just don't delete it. If it ever does go missing, the next sync safely falls back to checking everything from scratch (same as a first sync) rather than breaking.
+
+</details>
+
+`scripts/sync-upstream.sh` itself is upstream-owned, same rule as [the rest of `mystic_auth/`](#the-app--mystic_auth-split) — don't hand-edit it. If you're contributing a change to the sync mechanism itself, `scripts/test-sync-upstream.sh` regression-tests it end-to-end against throwaway fake repos, without touching this repo's own history — run it after any change to `sync-upstream.sh`.
+
+---
+
+### Resolving a conflict in `main.py` / `App.tsx`
+
+Before running the sync, it's worth keeping a throwaway copy of these two files (`cp backend/app/main.py /tmp/main.py.bak`, or just note the output of `git diff HEAD~<n> -- backend/app/main.py` if you know when you last edited it) — cheap insurance so you have something to compare against if a merge does something unexpected. `git stash` works too, if you'd rather not touch anything until after the merge.
+
+Most of the time this isn't even a real conflict: if your router registration is on its own line and upstream's change landed elsewhere in the file, git applies both changes automatically — you won't see a conflict marker at all. A real conflict only happens when both sides touch the exact same lines, e.g. you both added a new router registration right after the same existing one:
+
+```python
+app.include_router(health_router)
+<<<<<<< HEAD
+app.include_router(projects_router)          # yours
+=======
+app.include_router(some_new_upstream_router)  # upstream's
+>>>>>>> upstream/main
+```
+
+Resolve it like any git conflict: decide what the merged result should be — almost always **both** lines — delete the `<<<<<<<`/`=======`/`>>>>>>>` markers, then continue. Neither sync path (squash merge or incremental apply) leaves an in-progress merge state, so "continue" just means staging and committing yourself — there's no `git merge --continue` or `git apply --continue` to run:
+
+```python
+app.include_router(health_router)
+app.include_router(some_new_upstream_router)
+app.include_router(projects_router)          # yours
+```
+
+```bash
+git add backend/app/main.py
+git commit -m "Sync upstream template updates (mystic-auth@<sha>)"
+```
+
+Same process for `App.tsx`'s route list. After committing, rebuild and re-run the test suite before trusting it — see [Testing Overview](testing/overview.md).
 
 ## Where to go next
 
-- New to the codebase generally? Start at [`docs/mystic_auth/README.md`](README.md) for the full documentation index.
-- Building your first protected feature? [Adding New Permissions](authorization/adding-permissions.md) → protect the route (above) → [Writing and Testing Policies](authorization/writing-testing-policies.md) to create and assign the policy that grants it.
-- Something not behaving as documented? [PBAC Troubleshooting](authorization/troubleshooting.md) covers the most common authorization/Docker/Redis issues.
+- New to the codebase? Start at [`docs/mystic_auth/README.md`](README.md) for the full index.
+- Building a protected feature? [Adding New Permissions](authorization/adding-permissions.md) → protect the route (above) → [Writing and Testing Policies](authorization/writing-testing-policies.md).
+- Something not behaving as documented? [PBAC Troubleshooting](authorization/troubleshooting.md).
 
 ## Getting help
 
-Stuck on something this doc set doesn't answer? Search [existing GitHub Issues](https://github.com/Nachiket-2024/mystic-auth/issues) first, then open a new one with clear reproduction steps if you can't find it. Fixes and improvements are welcome as Pull Requests — see the root [README](../../README.md#-getting-help--contributing).
-
-**Found a security vulnerability?** Don't open a public Issue for it — see [SECURITY.md](../../SECURITY.md) for how to report it privately.
+Search [existing Issues](https://github.com/Nachiket-2024/mystic-auth/issues) first, then open a new one with clear repro steps. PRs welcome. **Found a security vulnerability?** Don't open a public Issue — see [SECURITY.md](../../SECURITY.md).

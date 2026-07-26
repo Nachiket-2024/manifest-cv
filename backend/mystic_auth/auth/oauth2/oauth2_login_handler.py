@@ -128,11 +128,12 @@ class OAuth2LoginHandler:
             # Account creation/linking is keyed entirely on email, so an
             # unverified address would let an attacker who merely controls an
             # inbox-less Google account take over (or get silently linked to) an
-            # existing account of the same email. Google's userinfo response
-            # always includes verified_email for accounts using the standard
-            # email/profile scopes; treat a missing field the same as False
-            # rather than assuming trust.
-            if not user_info.get("verified_email"):
+            # existing account of the same email. The v3 userinfo endpoint
+            # (see oauth2_service.get_user_info) returns this as email_verified,
+            # the OIDC-standard claim name -- not verified_email, which is only
+            # what the older v2 endpoint used. Treat a missing field the same
+            # as False rather than assuming trust.
+            if not user_info.get("email_verified"):
                 logger.warning(
                     "OAuth2 callback rejected: unverified Google email for %s",
                     user_info.get("email"),

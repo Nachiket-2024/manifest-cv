@@ -1,7 +1,5 @@
 # Architecture Overview
 
-> Inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth). ManifestCV's own routes deliberately opt out of this pipeline for self-service resources — see the note under [Integration points](#integration-points) below.
-
 ## Request flow
 
 ```mermaid
@@ -82,7 +80,6 @@ The engine has **zero condition-specific logic**. It doesn't know what `"time"` 
 - **Every protected route** depends on `Depends(require_authorization(action, resource_type))` — see `authorization/dependencies/authorization_dependency.py`. This is the only supported way to gate a route; it builds context and calls `AuthorizationService.require` for you.
 - **Policy mutations** (`create`/`update`/`delete`/`assign_policy_to_user`/`remove_policy_from_user` in `authorization/repositories/policy_repository.py`) each: (a) stage a `policy_history` row in the same transaction (see [Writing and Testing Policies](writing-testing-policies.md)), and (b) invalidate the Redis policy cache (see [Troubleshooting](troubleshooting.md#redis-cache-management)).
 - **The Batch Authorization API** (`POST /authorization/batch-check`) reuses the exact same `PolicyEvaluationEngine`/`ConditionEvaluationService` calls as a single `authorize()` — it only changes how many times policies are *fetched* (once per batch, not once per check), never how a decision is computed.
-- **ManifestCV's own routes deliberately don't use this pipeline.** `career_knowledge_routes.py`, `resume_routes.py`, `document_routes.py`, and `application_routes.py` require no PBAC permission at all — every resource they touch is strictly self-service (a caller can only ever see/edit their own rows, enforced by `user_id`-scoped queries built from `get_current_user`'s email via `app_sdk.get_user_id_by_email`, never a caller-supplied id or a policy check). See each route module's own top-of-file comment for the reasoning, and [ManifestCV's own auth notes](../../app/auth/overview.md) for how this differs from every route in `user_routes.py`/`pbac_routes/*`, which do go through the full pipeline above.
 
 ## Full route list
 

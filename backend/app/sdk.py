@@ -13,6 +13,14 @@ downstream app code share one boundary.
 
 Everything below is a straight re-export; see the original module's
 docstring for the "why" behind any given piece.
+
+DO NOT hand-edit this file. Treat it as a drop-in you receive from upstream,
+not a place to add your own re-exports — this is the one file a
+`scripts/sync-upstream.sh` sync is expected to touch, and local edits here
+are exactly what turns that sync into a manual conflict instead of applying
+cleanly. If you need your own re-exports for your own domain code, add
+them to app_sdk.py instead — it's the counterpart file kept empty by
+upstream for exactly this purpose, so it never conflicts on a sync.
 """
 
 import importlib
@@ -92,18 +100,6 @@ _sentry_service = _m("error_monitoring.sentry_service")
 init_sentry = _sentry_service.init_sentry
 capture_exception = _sentry_service.capture_exception
 
-# Generic Redis-backed request-rate limiter, independent of the login-lockout
-# feature it was originally built for — usable as
-# rate_limiter_service.rate_limited(...) (a decorator) or
-# rate_limiter_service.record_request(key) directly for any endpoint that
-# needs a max-requests-per-window guard. Not part of the upstream template's
-# own sdk.py (its own demo app has no need for it) — added here because
-# ManifestCV's own AI/compute-triggering routes need it (see
-# career_knowledge_routes.py/resume_routes.py/document_routes.py), so
-# reaching for it doesn't mean reaching into mystic_auth's internal module
-# path directly.
-rate_limiter_service = _m("auth.security.rate_limiter_service").rate_limiter_service
-
 __all__ = [
     "Permission",
     "require_authorization",
@@ -131,5 +127,4 @@ __all__ = [
     "get_logger",
     "init_sentry",
     "capture_exception",
-    "rate_limiter_service",
 ]

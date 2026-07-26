@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Badge, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 
 import Pager from "../ui/Pager";
 import {
@@ -11,7 +11,7 @@ import {
     FormAlert,
     ConfirmDialog,
     toaster,
-} from "../sdk";
+} from "../app_sdk";
 import { useResumeDraftsQuery, RESUME_DRAFTS_PAGE_SIZE } from "./resumeQueries";
 import { useCreateResumeDraftMutation, useDeleteResumeDraftMutation } from "./resumeMutations";
 import type { ResumeDraftRead } from "../api/resume_api";

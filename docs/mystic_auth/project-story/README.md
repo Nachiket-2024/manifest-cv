@@ -32,7 +32,7 @@ What started as a shortcut for future projects became a project of its own.
 
 ## How it evolved
 
-The commit history shows the real evolution, not a fully planned architecture from day one — 47 commits on `main`, from the first on 18 Aug 2025 to the most recent on 25 Jul 2026. There's a several-month gap between October 2025 and February 2026. Below, days committed back-to-back are grouped into one range; an isolated day stands on its own.
+The commit history shows the real evolution, not a fully planned architecture from day one — 48 commits on `main`, from the first on 18 Aug 2025 to the most recent on 26 Jul 2026. There's a several-month gap between October 2025 and February 2026. Below, days committed back-to-back are grouped into one range; an isolated day stands on its own.
 
 ```mermaid
 timeline
@@ -47,13 +47,15 @@ timeline
     Apr 2026 : Role tables collapsed into one users table
              : Forgot-password flow, HTML emails
     Jul 2026 : PBAC + audit logging + CI/CD (single commit)
-             : Bugsink error monitoring, sdk.py/sdk.ts
-             : app / mystic_auth template split
+             : Follow-up hardening, Bugsink + sdk.py/sdk.ts
+             : app / mystic_auth split, docker prod + dependency fixes
 ```
 
 ### Aug 18–23, 2025
 
-The first version focused on authentication. It started with a bare FastAPI skeleton, then in quick succession: modular auth logic with role-based tables, OAuth2 plus rate limiting and brute-force protection, a refactor of the auth flow and role tables around standard security practices, and a logout-from-all-devices endpoint (both on the 21st), then role-based routes with `main.py`. The run closed with a move to generic, permission-injected routes and the first Alembic migration — and, the same day, the frontend's first commits: a bare TypeScript + React setup.
+The first version focused on authentication. It started with a bare FastAPI skeleton, then in quick succession: modular auth logic with role-based tables, OAuth2 plus rate limiting and brute-force protection, a refactor of the auth flow and role tables around standard security practices, and a logout-from-all-devices endpoint (both on the 21st).
+
+Then role-based routes landed with `main.py`, and the run closed with a move to generic, permission-injected routes plus the first Alembic migration — the same day the frontend's first commits appeared: a bare TypeScript + React setup.
 
 Rate limiting and brute-force protection showed up on day three, because security concerns became obvious while building the foundation — not because they were planned upfront.
 
@@ -213,51 +215,67 @@ That same commit also added audit logging, security hardening, improved headers 
 
 ### Jul 18, 2026
 
-Documentation was updated and a round of audit findings fixed, tightening up loose ends from the previous entry's big commit.
+A follow-up pass over the 14th's big commit, hardening it further now that it had had a few days to settle. The main fixes: a couple of real session/token bugs (a roleless OAuth2 account getting logged out on refresh, a race condition in refresh-token rotation, an expired-token cleanup that never ran), a password-change flow that now asks for your current password and logs out other sessions, and a handful of smaller admin/config fixes. CI also got a real coverage gate and dependency scanning for the first time. This is roughly where `template-usage.md` and this file were first written, and the known-issues doc got trimmed down to what was still actually true.
 
 ### Jul 20, 2026
 
-`main` picked up Bugsink self-hosted error monitoring, an `sdk.py`/`sdk.ts` extension-surface pattern, a reorganization of `frontend/src/` (moving `components/`, `hooks/`, and `users_admin/` into feature folders like `auth/`, `authorization/`, `layout/`, `ui/`, and `users/`), and logout/rate-limiter fixes.
+Self-hosted error monitoring landed via Bugsink, so real errors get logged somewhere instead of just showing up in server logs. The `sdk.py`/`sdk.ts` files were introduced too — a single file on each side that re-exports the pieces meant to be built on, so future code doesn't have to reach into the template's internals directly. The frontend also got reorganized into proper feature folders, and a couple of small logout and rate-limiter bugs were fixed along the way.
 
 ### Jul 25, 2026
 
-Calling this "a template" only went so far while the template's own code and a real project's code would have lived in the same undifferentiated `backend/app/` and `frontend/src/` trees — there was no boundary marking which files were "the template" (safe to pull upstream updates into) versus "your project" (never touched by an update).
+Split the codebase in two: `backend/mystic_auth/` / `frontend/src/mystic_auth/` for the template's own internals, and a thin `backend/app/` / `frontend/src/app/` shell for project-specific code, connected by an `sdk.py`/`sdk.ts` + `app_sdk.py`/`app_sdk.ts` re-export surface (see [Using This Repository as a Template](../template-usage.md)). Docs and tests got the same split, and a `scripts/sync-upstream.sh` script was added to pull future template updates into a project built from it.
 
-Both backend and frontend were split in two. `backend/mystic_auth/` and `frontend/src/mystic_auth/` hold the template's own internals going forward. A thin `backend/app/` / `frontend/src/app/` shell — entry point, routing, and a `sdk.py`/`sdk.ts` + `app_sdk.py`/`app_sdk.ts` re-export surface — is where project-specific code is meant to live and grow (see [Using This Repository as a Template](../template-usage.md) for the full mechanics). The test suite (`tests/backend/`, `tests/frontend/`) was restructured to mirror the same split — `mystic_auth/` for template-internals coverage, `app/` for the shell itself.
+### Jul 26, 2026
 
-The docs got the same split, in the same pass: everything that used to live directly under `docs/` moved into `docs/mystic_auth/` (upstream's own reference documentation), and a new, empty-by-default `docs/app/` was added for a downstream project's own docs — the same "don't edit this, do edit that" boundary, just applied to documentation instead of code. A `scripts/sync-upstream.sh` script was also added, wrapping the whole fetch/review/merge dance from [Staying in sync with upstream template updates](../template-usage.md#staying-in-sync-with-upstream-template-updates) into one on-demand command.
+Another pass over the whole thing. The production Docker setup (`docker-compose.prod.yml`) got the same error-monitoring auto-wiring the dev setup already had, a frontend build bug that could load a blank page in production got fixed, a password-checking bug got closed, a few dependencies got bumped, and every doc got checked against the actual code again. Full test suite run in Docker to confirm nothing broke.
+
+`scripts/sync-upstream.sh` was switched from a plain merge to a squash merge, so template updates no longer graft mystic-auth's commit history into a derived repo — then refined further with a tracked last-synced-commit file, since squash merges alone left every sync after the first re-diffing the whole repo with no baseline. `template-usage.md`'s sync section was rewritten as a plain-language step-by-step to go with it.
 
 ---
 
 ## The tools that built it
 
-The project was worked on across several months, with gaps in between — my master's programme started during this period, and there were stretches where I wasn't actively working on it.
+The project was worked on across several months, with gaps in between — my master's programme started during this period, and there were stretches where I wasn't actively working on it. Two different workflows built it, and they looked pretty different day to day:
+
+```mermaid
+flowchart TB
+    Task(("New task")) --> B1
+    Task --> A1
+
+    subgraph Agentic["Claude Code (Jul 2026)"]
+        direction TB
+        B1[Describe the change] --> B2[Review the edits and test results]
+        B2 -->|Needs correction| B1
+        B2 -->|Looks good| B1
+    end
+
+    subgraph Manual["ChatGPT + VSCode (Aug 2025 – Apr 2026)"]
+        direction TB
+        A1[Describe the problem] --> A2[Get back an approach or a code chunk]
+        A2 --> A3[Copy-paste into VSCode]
+        A3 --> A4[Run the app]
+        A4 -->|Works| A1
+        A4 -->|Broken, or doesn't fit| A5[Work out why myself]
+        A5 --> A6[Change the code myself so it actually fits]
+        A6 -->|Works now| A1
+        A6 -->|Still broken| A7[Paste the error back to ChatGPT]
+        A7 --> A2
+    end
+```
 
 ### Aug 18, 2025 – Apr 14, 2026
 
-Most of the early foundation — everything up through the single-`users`-table refactor and the forgot-password/email work — was built with ChatGPT-assisted coding, not by hand from a blank file. The loop looked like this:
+Most of the early foundation — everything up through the single-`users`-table refactor and the forgot-password/email work — came out of the ChatGPT + VSCode loop above. "Manual" here means hand-editing and integrating ChatGPT's output, not writing everything from scratch — no tool read the codebase or applied changes directly, every change passed through me first. Slower than the Claude Code loop, but it meant every system decision was actually understood before it landed.
 
-- describe the problem to ChatGPT and get back an approach or a chunk of code,
-- copy-paste that into VSCode,
-- run the application and check whether it actually worked,
-- when it didn't — or when the generated code didn't fit how the rest of the codebase was shaped — manually edit it: fix variable names, wire it into existing files, correct what ChatGPT got wrong or didn't know about the rest of the project,
-- paste errors and results back into the conversation, and repeat.
-
-So "manual" here means hand-editing and integrating ChatGPT's output, not writing everything from scratch. No tool read the codebase or applied changes directly; every change passed through me first. This was slower than an agentic workflow, but it meant every system decision was actually understood, since nothing landed without being read and adjusted first.
-
-Working through ChatGPT's suggestions and then adjusting them to fit the real codebase is how I learned most of the underlying technologies during this period: Redis-based session management and token lifecycle design, Docker and multi-container setups, TypeScript, OAuth2/PKCE flows, background workers and Taskiq, security practices, frontend architecture decisions, and Redux-based state management.
-
-Some concepts, like PBAC, weren't part of this original architecture at all — they came later, once the authorization redesign made the limits of role-based access obvious.
+Working through ChatGPT's suggestions and adjusting them to fit the real codebase is how I learned most of the underlying technologies during this period: Redis-based session management, Docker and multi-container setups, TypeScript, OAuth2/PKCE flows, background workers, security practices, and Redux-based state management. Some concepts, like PBAC, weren't part of this original architecture at all — they came later, once role-based access started showing its limits.
 
 ---
 
-### Jul 14–25, 2026
+### Jul 14–26, 2026
 
-Two days before the first commit of this stretch, I bought a Claude Code Pro plan to try it out. This wasn't one continuous stretch of work — it landed as four separate commits across eleven days (14th, 18th, 20th, 25th) — but all of them used the same tool, replacing the ChatGPT-and-VSCode loop from every earlier phase of the project.
+Two days before this stretch started, I bought a Claude Code Pro plan to try it out — the Claude Code loop above, replacing the ChatGPT + VSCode loop for the rest of the project. The first commit with it, on the 14th, was the big one: PBAC, audit logging, security hardening, the Redux-to-Zustand/TanStack-Query migration, CI/CD pipelines, documentation, and 650+ tests, all in one sitting, because the existing feature-based architecture meant most of it could be added as new domains rather than a rewrite. I hit the 5-hour usage window 2–3 times and used roughly 65% of my weekly quota just on that one commit.
 
-The foundation and architecture already existed by this point, from the manual era. Claude Code's main advantage was cutting implementation friction: describe the desired change, review what it generated, correct decisions where needed, run tests, refine the result — much faster than copy-pasting between a chat window and an editor. The architecture decisions, trade-offs, and overall direction still came from the understanding I'd built over the earlier development; the tool changed how fast a change went from idea to working code, not what the system was supposed to do.
-
-Across the four days: the 14th was the big one — PBAC, audit logging, security hardening, the Redux-to-Zustand/TanStack-Query migration, CI/CD pipelines, documentation, and 650+ tests, all in a single commit, because the existing feature-based architecture meant most of it could be added as new domains rather than a rewrite. Over that stretch, I hit the 5-hour usage window 2–3 times and used roughly 65% of my weekly quota. The 18th cleaned up documentation and a round of audit findings. The 20th added Bugsink error monitoring, an `sdk.py`/`sdk.ts` extension pattern, and a frontend folder reorganization. The 25th did the `app`/`mystic_auth` split described above, under "How it evolved" — separating the template's own code from project-specific code for the first time.
+Everything after that kept using the same tool, in smaller passes rather than one big sprint — each one is described above, under "How it evolved". The foundation and architecture already existed by this point, so Claude Code's main advantage was cutting implementation friction, not changing direction — the decisions and trade-offs still came from the understanding built over the earlier phase.
 
 ---
 

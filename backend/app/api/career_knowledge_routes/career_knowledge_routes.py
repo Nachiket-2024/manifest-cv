@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...ai_integration.exceptions import AIIntegrationError
 from ...ai_integration.gemini_client import structure_knowledge_base
-from ...app_sdk import get_user_id_by_email
+from ...app_sdk import get_logger, get_user_id_by_email, rate_limiter_service
 from ...career_knowledge_crud.career_knowledge_repository import career_knowledge_repository
 from ...career_knowledge_table.career_knowledge_schema import (
     CareerKnowledgeBaseCreate,
@@ -17,7 +17,7 @@ from ...retrieval.knowledge_retrieval_service import (
     index_knowledge_base,
     search_knowledge_base,
 )
-from ...sdk import capture_exception, database, get_current_user, get_logger, get_or_404, rate_limiter_service
+from ...sdk import capture_exception, database, get_current_user, get_or_404
 
 # Self-service only, one knowledge base per authenticated user — no PBAC
 # permission is required (same reasoning as audit_log_routes.py's

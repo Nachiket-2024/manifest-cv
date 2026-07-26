@@ -23,7 +23,7 @@ FastAPI application (`backend/mystic_auth/`, with the entry point and extension 
 | `user_crud/` | `user_crud_collector.py` + `user_crud_modules/` — CRUD orchestration for the `users` table |
 | `user_table/` | `user_model.py` (SQLAlchemy model, `UserRole` enum), `user_schema.py` (Pydantic schemas) |
 | `main.py` | App entrypoint: middleware registration, router mounting, global exception handler, lifespan (DB pool / Redis client cleanup on shutdown) |
-| `sdk.py` | Public extension surface for your own domain code (`require_authorization`, `authorization_service`, `build_authorization_context`, `Permission`, `get_current_user`, `database`, `settings`, `get_or_404`, `UserRole`, `capture_exception`) — the intended single import point for anything you build on top of this template, rather than reaching into the internal modules above directly. See [Using This Repository as a Template: the extension surface](../template-usage.md#the-extension-surface-sdkpysdkts-and-app_sdkpyapp_sdkts) |
+| `sdk.py` | Public extension surface for your own domain code (`require_authorization`, `authorization_service`, `build_authorization_context`, `Permission`, `get_current_user`, `database`, `settings`, `get_or_404`, `UserRole`, `capture_exception`) — the intended single import point for anything you build on top of this template, rather than reaching into the internal modules above directly. See [Using This Repository as a Template: the app/ + mystic_auth split](../template-usage.md#the-app--mystic_auth-split) |
 
 ## Request pipeline
 

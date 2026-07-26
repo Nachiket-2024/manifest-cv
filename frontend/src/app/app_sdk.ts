@@ -6,5 +6,19 @@
  * its own re-exports for its own domain code, kept separate so template
  * updates never conflict with app-specific additions here.
  *
- * Empty by default — add your own imports/exports as your app grows.
+ * The generic UI primitives below live in mystic_auth/ui/ (no identity
+ * concept of their own) but ManifestCV's own pages reuse them directly, so
+ * they're re-exported here rather than reaching into mystic_auth/ui/*
+ * directly from app/ code — same rationale as everything in sdk.ts.
  */
+
+export { default as PageContainer } from "../mystic_auth/ui/PageContainer";
+export { default as Card } from "../mystic_auth/ui/Card";
+export { default as DataTable } from "../mystic_auth/ui/DataTable";
+export type { DataTableColumn } from "../mystic_auth/ui/DataTable";
+export { default as ConfirmDialog } from "../mystic_auth/ui/ConfirmDialog";
+export { default as FormAlert } from "../mystic_auth/ui/FormAlert";
+export { default as LoadingState } from "../mystic_auth/ui/LoadingState";
+export { toaster } from "../mystic_auth/ui/toasterInstance";
+
+export { useUnsavedChangesWarning } from "../mystic_auth/profile/useUnsavedChangesWarning";

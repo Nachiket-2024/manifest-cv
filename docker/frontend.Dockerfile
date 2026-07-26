@@ -1,6 +1,12 @@
 # Runs the Vite dev server with HMR — used by docker-compose.yml for local
 # development. This is the default build target so existing `docker compose
 # build`/`up` (no --target flag) keeps working unchanged.
+#
+# Intentionally stays root (unlike the `production` stage below, which runs
+# as non-root `nginx`): this stage `npm install`s into a bind-mounted
+# `frontend/`, and pinning it to a non-root UID would fight host/container
+# UID mismatches on that mount across different host OSes instead of just
+# working out of the box.
 FROM node:20.20.2-bullseye AS dev
 
 WORKDIR /app

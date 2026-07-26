@@ -33,7 +33,6 @@ Thumbs.db
 *.swp
 
 # ---------------------------- Docker ----------------------------
-*.log
 docker-compose.override.yml
 *.pid
 *.sock

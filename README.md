@@ -141,7 +141,7 @@ cp .env.example .env
 
 > Instructions below assume that you are at the root of the repository while running the commands.
 
-> To enable Google login, configure your Google Cloud project and OAuth API first (see [mystic-auth's OAuth2/PKCE docs](https://github.com/Nachiket-2024/mystic-auth/blob/main/docs/authentication/oauth2-pkce.md) for the exact `GOOGLE_REDIRECT_URI` requirement). The app runs without it — only Google login specifically won't work until it's configured.
+> To enable Google login, configure your Google Cloud project and OAuth API first (see [mystic-auth's OAuth2/PKCE docs](docs/mystic_auth/authentication/oauth2-pkce.md) for the exact `GOOGLE_REDIRECT_URI` requirement). The app runs without it — only Google login specifically won't work until it's configured.
 
 ### Path 1. Docker (Recommended)
 
@@ -253,7 +253,7 @@ Full documentation lives in [`docs/`](docs/README.md), organized by feature/doma
 - [Auth & Authorization](docs/app/auth/overview.md) — the boundary with mystic-auth
 - [Career Knowledge](docs/app/career-knowledge/overview.md), [Resumes](docs/app/resumes/overview.md), [Document Generation](docs/app/document-generation/overview.md), [Applications](docs/app/applications/overview.md)
 - [AI & Retrieval](docs/app/ai-and-retrieval/overview.md)
-- [Database Design](docs/mystic_auth/database/design.md)
+- [Database Design](docs/mystic_auth/database/design.md) (inherited schema) + [ManifestCV's Own Tables](docs/app/database/design.md)
 - [API Reference](docs/app/api/reference.md)
 - [Background Workers](docs/mystic_auth/background-workers/taskiq.md)
 - [Testing](docs/app/testing/overview.md)

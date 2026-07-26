@@ -164,7 +164,7 @@ class OAuth2Service:
 
             user = await user_crud.get_by_email(email, db)
 
-            # OAuth2 login trusts Google's verified_email alone — there is no
+            # OAuth2 login trusts Google's email_verified alone — there is no
             # password check at all — so without this guard, anyone who controls a
             # Google account matching whatever email the operator chose for the
             # system account (an arbitrary, operator-picked address; nothing stops
@@ -203,7 +203,7 @@ class OAuth2Service:
                         SELF_SERVICE_POLICY_NAME, email,
                     )
 
-            # Google's confirmed verified_email is equally valid proof of
+            # Google's confirmed email_verified is equally valid proof of
             # ownership as clicking our own verification email, so a pre-existing
             # unverified account is verified now. See the pre-hijacking note above
             # for why hashed_password is cleared in the same step.

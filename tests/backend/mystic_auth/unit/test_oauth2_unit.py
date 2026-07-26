@@ -275,7 +275,7 @@ async def test_callback_proceeds_and_clears_state_cookie_on_valid_state(mocker):
     )
     mocker.patch(
         "backend.mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
-        return_value={"email": "user@example.com", "name": "Test User", "verified_email": True},
+        return_value={"email": "user@example.com", "name": "Test User", "email_verified": True},
     )
     mocker.patch(
         "backend.mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
@@ -305,7 +305,7 @@ async def test_callback_rejects_unverified_google_email(mocker):
     )
     mocker.patch(
         "backend.mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
-        return_value={"email": "attacker@example.com", "name": "Unverified", "verified_email": False},
+        return_value={"email": "attacker@example.com", "name": "Unverified", "email_verified": False},
     )
     login_or_create_mock = mocker.patch(
         "backend.mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.login_or_create_user",
@@ -321,7 +321,7 @@ async def test_callback_rejects_unverified_google_email(mocker):
 
 
 @pytest.mark.asyncio
-async def test_callback_rejects_missing_verified_email_field(mocker):
+async def test_callback_rejects_missing_email_verified_field(mocker):
     mocker.patch(
         "backend.mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.consume_state",
         return_value="stored-code-verifier",
@@ -332,7 +332,7 @@ async def test_callback_rejects_missing_verified_email_field(mocker):
     )
     mocker.patch(
         "backend.mystic_auth.auth.oauth2.oauth2_login_handler.oauth2_service.get_user_info",
-        # No verified_email field at all — must not be assumed trustworthy
+        # No email_verified field at all — must not be assumed trustworthy
         return_value={"email": "user@example.com", "name": "Test User"},
     )
     login_or_create_mock = mocker.patch(

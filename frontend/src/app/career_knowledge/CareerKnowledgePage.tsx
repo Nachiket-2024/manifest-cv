@@ -9,7 +9,7 @@ import {
     ConfirmDialog,
     toaster,
     useUnsavedChangesWarning,
-} from "../sdk";
+} from "../app_sdk";
 import { useCareerKnowledgeBaseQuery } from "./careerKnowledgeQueries";
 import {
     useCreateCareerKnowledgeBaseMutation,

@@ -31,7 +31,8 @@ Inherited unmodified from the upstream template — mirrored locally under [`doc
 
 ## Database
 
-- [Database Design](../mystic_auth/database/design.md) — full schema: inherited tables plus ManifestCV's own four, and how the migration chains connect
+- [Database Design](../mystic_auth/database/design.md) — mystic-auth's own inherited schema (users, PBAC policies, audit logs)
+- [ManifestCV's Own Tables](database/design.md) — the four product tables (`career_knowledge_bases`, `resume_drafts`, `resume_documents`, `application_records`), ERD, and how the migration chains connect
 
 ## API
 

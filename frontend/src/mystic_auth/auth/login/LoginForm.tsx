@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Input, Button, Stack, Text } from "@chakra-ui/react";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 
 import { useLoginMutation } from "./useLoginMutation";
 import FormAlert from "../../ui/FormAlert";

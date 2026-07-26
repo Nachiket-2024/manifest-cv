@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 
 import { useLogoutAllMutation } from "./useLogoutAllMutation";
 import LogoutAllButtonComponent from "./LogoutAllButtonComponent";

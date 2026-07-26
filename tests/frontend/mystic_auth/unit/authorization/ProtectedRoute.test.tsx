@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
-import { MemoryRouter, Routes, Route } from 'react-router';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
 import { useAuthStore } from '@/store/authStore';
 import ProtectedRoute from '@/authorization/ProtectedRoute';

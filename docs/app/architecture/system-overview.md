@@ -75,4 +75,4 @@ sequenceDiagram
 
 ## Database design
 
-See [Database Design](../../mystic_auth/database/design.md) for the schema itself.
+See [Database Design](../../mystic_auth/database/design.md) for mystic-auth's inherited schema, and [ManifestCV's Own Tables](../database/design.md) for the four product tables.

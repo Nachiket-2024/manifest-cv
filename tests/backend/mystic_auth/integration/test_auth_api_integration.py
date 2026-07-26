@@ -24,6 +24,31 @@ def _unique_email() -> str:
     return f"inttest-{uuid.uuid4().hex}@example.com"
 
 
+# conftest.py's `client` fixture uses base_url="https://testserver" — a
+# dotless hostname, which CPython's http.cookiejar (what httpx's cookie jar
+# is built on) normalizes to "testserver.local" internally for matching
+# purposes. Cookies set manually here must match that (domain, path, name)
+# key exactly, or they land as a second, separate jar entry instead of
+# overwriting the real one from a prior response — see
+# _refresh_with_cookie's docstring below for why that matters.
+_TEST_COOKIE_DOMAIN = "testserver.local"
+
+
+async def _refresh_with_cookie(client, refresh_token: str):
+    """Calls /auth/refresh/ with an explicit refresh_token cookie value,
+    independent of whatever the client's shared cookie jar currently holds —
+    needed to simulate stale/reused/forged/cross-session tokens. httpx
+    deprecated per-request `cookies=` in favor of setting cookies on the
+    client itself, hence setting it here rather than passing `cookies=`.
+    Both domain and path must match the real cookie's (see
+    _TEST_COOKIE_DOMAIN above) — the jar keys cookies by (domain, path,
+    name), so an inexact match creates a second entry alongside the real one
+    instead of overwriting it, which then survives the endpoint's own
+    cookie-clearing response untouched."""
+    client.cookies.set("refresh_token", refresh_token, domain=_TEST_COOKIE_DOMAIN, path="/auth")
+    return await client.post("/auth/refresh/")
+
+
 async def _signup_verify_login(client, created_emails, email: str, password: str = PASSWORD):
     """Shared setup: create a verified user and log in, returning the
     logged-in client (cookies persist on the client's cookie jar)."""
@@ -359,12 +384,12 @@ async def test_refresh_token_rotates_and_old_token_is_rejected(client, created_e
     login_resp = await _signup_verify_login(client, created_emails, email)
     old_refresh = login_resp.cookies["refresh_token"]
 
-    refresh_resp = await client.post("/auth/refresh/", cookies={"refresh_token": old_refresh})
+    refresh_resp = await _refresh_with_cookie(client, old_refresh)
     assert refresh_resp.status_code == 200
     new_refresh = refresh_resp.cookies["refresh_token"]
     assert new_refresh != old_refresh
 
-    reuse_resp = await client.post("/auth/refresh/", cookies={"refresh_token": old_refresh})
+    reuse_resp = await _refresh_with_cookie(client, old_refresh)
     assert reuse_resp.status_code == 401
 
 
@@ -379,9 +404,10 @@ async def test_concurrent_refresh_with_the_same_token_only_one_succeeds(client, 
     login_resp = await _signup_verify_login(client, created_emails, email)
     refresh_token = login_resp.cookies["refresh_token"]
 
+    client.cookies.set("refresh_token", refresh_token, domain=_TEST_COOKIE_DOMAIN, path="/auth")
     responses = await asyncio.gather(
-        client.post("/auth/refresh/", cookies={"refresh_token": refresh_token}),
-        client.post("/auth/refresh/", cookies={"refresh_token": refresh_token}),
+        client.post("/auth/refresh/"),
+        client.post("/auth/refresh/"),
     )
 
     statuses = sorted(resp.status_code for resp in responses)
@@ -403,13 +429,13 @@ async def test_refresh_token_reuse_revokes_all_sessions(client, created_emails):
     # Rotate device A forward once (the legitimate use), then replay the
     # original, now-revoked device A token — simulating a stolen refresh
     # token being used after the real client already rotated it.
-    await client.post("/auth/refresh/", cookies={"refresh_token": device_a_refresh})
-    reuse_resp = await client.post("/auth/refresh/", cookies={"refresh_token": device_a_refresh})
+    await _refresh_with_cookie(client, device_a_refresh)
+    reuse_resp = await _refresh_with_cookie(client, device_a_refresh)
     assert reuse_resp.status_code == 401
 
     # Reuse detection must revoke every active session for the user,
     # including device B's still-otherwise-valid refresh token.
-    device_b_resp = await client.post("/auth/refresh/", cookies={"refresh_token": device_b_refresh})
+    device_b_resp = await _refresh_with_cookie(client, device_b_refresh)
     assert device_b_resp.status_code == 401
 
 
@@ -419,7 +445,7 @@ async def test_refresh_rejects_access_token_type(client, created_emails):
     login_resp = await _signup_verify_login(client, created_emails, email)
     access_token = login_resp.cookies["access_token"]
 
-    resp = await client.post("/auth/refresh/", cookies={"refresh_token": access_token})
+    resp = await _refresh_with_cookie(client, access_token)
 
     assert resp.status_code == 401
 
@@ -444,7 +470,7 @@ async def test_refresh_rejects_an_actually_expired_token(client, created_emails)
     }
     expired_token = pyjwt.encode(expired_payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-    resp = await client.post("/auth/refresh/", cookies={"refresh_token": expired_token})
+    resp = await _refresh_with_cookie(client, expired_token)
 
     assert resp.status_code == 401
 
@@ -464,7 +490,7 @@ async def test_repeated_legitimate_refreshes_do_not_trip_failed_attempt_lockout(
     refresh_token = login_resp.cookies["refresh_token"]
 
     for _ in range(settings.MAX_FAILED_LOGIN_ATTEMPTS + 2):
-        resp = await client.post("/auth/refresh/", cookies={"refresh_token": refresh_token})
+        resp = await _refresh_with_cookie(client, refresh_token)
         assert resp.status_code == 200
         refresh_token = resp.cookies["refresh_token"]
 
@@ -509,7 +535,7 @@ async def test_logout_revokes_refresh_token(client, created_emails):
     logout_resp = await client.post("/auth/logout")
     assert logout_resp.status_code == 200
 
-    reuse_resp = await client.post("/auth/refresh/", cookies={"refresh_token": refresh_token})
+    reuse_resp = await _refresh_with_cookie(client, refresh_token)
     assert reuse_resp.status_code == 401
 
 
@@ -525,8 +551,8 @@ async def test_logout_all_revokes_every_device(client, created_emails):
     logout_all_resp = await client.post("/auth/logout/all")
     assert logout_all_resp.status_code == 200
 
-    a_resp = await client.post("/auth/refresh/", cookies={"refresh_token": device_a_refresh})
-    b_resp = await client.post("/auth/refresh/", cookies={"refresh_token": device_b_refresh})
+    a_resp = await _refresh_with_cookie(client, device_a_refresh)
+    b_resp = await _refresh_with_cookie(client, device_b_refresh)
     assert a_resp.status_code == 401
     assert b_resp.status_code == 401
 
@@ -563,7 +589,7 @@ async def test_password_reset_revokes_existing_sessions(client, created_emails):
 
     # The gap finding #2 fixed: a stolen refresh token from before the reset
     # must no longer work afterwards.
-    reuse_resp = await client.post("/auth/refresh/", cookies={"refresh_token": old_refresh})
+    reuse_resp = await _refresh_with_cookie(client, old_refresh)
     assert reuse_resp.status_code == 401
 
     # New credentials work; old ones don't.

@@ -11,23 +11,21 @@ export default defineConfig({
   plugins: [
     react(),
   ],
-  build: {
-    rollupOptions: {
-      output: {
-        // Almost all of the main entry chunk's size is third-party code
-        // (react-dom, Chakra UI + its Ark UI/Zag machine dependencies,
-        // axios, react-router, react-query) that changes only on a
-        // dependency bump — actual app source is a small fraction of it.
-        // Splitting node_modules into its own chunk keeps that large,
-        // rarely-changing payload under a stable content hash, so a
-        // deploy that only touches app code doesn't force every
-        // returning visitor to re-download it.
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
-        },
-      },
-    },
-  },
+  // No custom build.rollupOptions.output.manualChunks here — a prior
+  // version forced every node_modules import into one "vendor" chunk for
+  // better long-term caching (rarely-changing third-party code under a
+  // stable hash, separate from app code that changes every deploy). That
+  // broke production: app/src files like api/axiosInstance.ts both import
+  // from and get imported by that vendor chunk, and Rollup placed shared
+  // CJS-interop helpers into axiosInstance's own chunk — creating a real
+  // circular chunk dependency. ESM's live-binding semantics for circular
+  // imports meant vendor.js called a binding from axiosInstance.js's chunk
+  // before that chunk's module body had run far enough to define it,
+  // throwing "TypeError: t is not a function" at the very top of the
+  // vendor bundle — the whole app failed to mount, a blank page with no
+  // build-time warning. Reverting to Rollup's own automatic chunking
+  // (its default module-graph analysis doesn't create this circular
+  // dependency) trades away that caching optimization for a build that
+  // actually works; re-introduce chunking later only with real production
+  // verification (not just curl on the built files) that nothing crashes.
 });

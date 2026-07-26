@@ -40,7 +40,7 @@ sequenceDiagram
     S->>G: POST token exchange (code + code_verifier)
     G-->>S: access_token (Google's own)
     S->>G: GET userinfo (with that access_token)
-    G-->>S: {email, name, verified_email}
+    G-->>S: {email, name, email_verified}
     S->>S: login_or_create_user(...)
     S-->>B: Set access_token/refresh_token cookies,<br/>302 to /dashboard
     deactivate S
@@ -60,7 +60,7 @@ A random `state = secrets.token_urlsafe(32)` is generated alongside the PKCE pai
 ## Backend implementation details
 
 - **Redirect URI is server-side fixed** (`settings.GOOGLE_REDIRECT_URI`), never influenced by the client — rules out an open-redirect-via-OAuth attack.
-- **`verified_email` is load-bearing**: a callback where Google's own `verified_email` is falsy (or missing) is rejected outright — this is the only proof of email ownership the flow trusts. See `oauth2_login_handler.py`'s callback handler.
+- **`email_verified` is load-bearing**: a callback where Google's own `email_verified` is falsy (or missing) is rejected outright — this is the only proof of email ownership the flow trusts. See `oauth2_login_handler.py`'s callback handler.
 - **First-time login** creates a user with `role=UserRole.user` (display-only), `is_verified=True`, `hashed_password=None`, and assigns the `self_service` policy — mirroring `signup_service.py`'s policy assignment exactly (role never grants access; see [PBAC Architecture](../authorization/architecture.md)).
 - **Pre-registration hijack guard**: if an email was already registered via password signup but never verified, and the real owner later authenticates via Google with that address, the existing account's `hashed_password` is cleared at that moment — closing the window where an attacker's pre-chosen password would otherwise remain valid on an account Google has now confirmed belongs to someone else. An already-verified account's password is left untouched. See `oauth2_service.py::login_or_create_user`'s docstring for the full walkthrough.
 - **System account is blocked from OAuth2 login entirely** — `role == UserRole.system` short-circuits before any user creation/update logic, forcing the reserved system account through password login only (`scripts/create_system_user.py`).

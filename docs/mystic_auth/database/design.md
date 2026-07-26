@@ -2,8 +2,6 @@
 
 PostgreSQL, accessed via async SQLAlchemy (`backend/mystic_auth/database/`). Schema managed entirely through Alembic migrations (`backend/alembic/versions/`) — no `create_all()` in application startup.
 
-The tables below are inherited unmodified from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth). ManifestCV's own tables (`career_knowledge_bases`, `resume_drafts`, `resume_documents`, `application_records`) are documented in [ManifestCV's own tables](#manifestcvs-own-tables) below, and chain directly after mystic-auth's migration history rather than branching from it — see [Migrations](#migrations).
-
 ```mermaid
 erDiagram
     users ||--o{ user_policies : "assigned via"
@@ -62,7 +60,7 @@ The single, unified identity table — password and OAuth2 (Google) accounts sha
 | `email` | string, **unique**, indexed | The DB-level unique constraint is what actually prevents a duplicate account under a signup/OAuth2-login race — see [Security Decisions](../security/decisions.md#the-signupoauth2-email-race). |
 | `hashed_password` | string, nullable | Argon2 hash. **Null for OAuth2-only accounts** — there is no password to check, and `login_service.py` handles a null hash safely (compares against a dummy hash rather than short-circuiting, for timing-attack resistance — see [Authentication Flows](../authentication/overview.md#login)). |
 | `role` | enum (`user`/`admin`/`system`), nullable | **Display/grouping metadata only — never consulted for an access decision.** See [Security Decisions](../security/decisions.md#role-is-never-used-to-decide-access). Nullable because the system must support a roleless account authorized purely through policies. |
-| `is_verified` | bool | Email ownership confirmed (via the verification flow, or implicitly via Google's `verified_email`). |
+| `is_verified` | bool | Email ownership confirmed (via the verification flow, or implicitly via Google's `email_verified`). |
 | `is_active` | bool | **The single flag every auth check point gates on** (`login_service.py`, `oauth2_service.py`, `current_user_handler.py`). Also what soft delete reuses — see Account Lifecycle below. |
 | `deleted_at` | timestamp, nullable | Soft-delete marker. `NULL` = never deleted. Set by soft delete, cleared by reactivation. |
 | `created_at` / `updated_at` | timestamp | Server-side, automatic. |
@@ -111,53 +109,4 @@ The system account (`role=UserRole.system`) is excluded from all three operation
 
 ## Migrations
 
-Every schema change is an Alembic migration under `backend/alembic/versions/`, applied via the dedicated one-shot `alembic` service (`alembic upgrade head`). In `docker-compose.prod.yml`, `backend`/`taskiq_worker` wait for it to complete before starting (`depends_on: ... condition: service_completed_successfully`); the dev `docker-compose.yml` runs the `alembic` service alongside the others without gating startup on it. Data-only migrations (e.g. granting a new permission to a seeded policy, backfilling a default role) follow the same process as schema migrations — see [../authorization/adding-permissions.md](../authorization/adding-permissions.md) for the exact pattern. ManifestCV's own four migrations (`c1d2e3f4a5b6` through `f5a6b7c8d9e0`) chain directly after mystic-auth's own migration history rather than branching from it, so a fresh `alembic upgrade head` applies both in one pass.
-
-## ManifestCV's own tables
-
-```mermaid
-erDiagram
-    users ||--o| career_knowledge_bases : "one per user"
-    users ||--o{ resume_drafts : "many per user"
-    resume_drafts ||--o| resume_documents : "one finalized document"
-    users ||--o{ application_records : "many per user"
-
-    career_knowledge_bases {
-        int id PK
-        int user_id FK "unique — one row per user"
-        text raw_input
-        text content "structured Markdown"
-    }
-    resume_drafts {
-        int id PK
-        int user_id FK
-        text job_description
-        text resume_content "nullable until first generation"
-        string status "draft or approved"
-    }
-    resume_documents {
-        int id PK
-        int resume_draft_id FK "unique — overwritten on re-finalize"
-        string template_id
-        text tex_source
-        bytes pdf_bytes
-    }
-    application_records {
-        int id PK
-        int user_id FK
-        string resume_content_snapshot "copied, not FK"
-        string template_id_snapshot "copied, not FK"
-        bytes pdf_snapshot "copied, not FK"
-    }
-```
-
-| Table | Purpose | Doc |
-|---|---|---|
-| `career_knowledge_bases` | One row per user — their structured career knowledge base | [Career Knowledge](../../app/career-knowledge/overview.md) |
-| `resume_drafts` | Many per user — one per tailored resume in progress | [Resumes](../../app/resumes/overview.md) |
-| `resume_documents` | One per approved draft — the compiled PDF | [Document Generation](../../app/document-generation/overview.md) |
-| `application_records` | Many per user — a self-contained snapshot of each application sent | [Applications](../../app/applications/overview.md) |
-
-`application_records` deliberately has no foreign key back to `resume_drafts`/`resume_documents` — `resume_content_snapshot`/`template_id_snapshot`/`pdf_snapshot` are copied at save time, so a tracked application survives the source draft/document being later edited or deleted. See [Applications](../../app/applications/overview.md) for why.
-
-All four cascade-delete on account deletion (`user_id`/`resume_draft_id` foreign keys, `ondelete="CASCADE"`) — unlike the audit tables above, none of ManifestCV's product data is designed to outlive its owning account (the one deliberate exception, `application_records`, still cascades on account deletion — it only survives its *resume draft* being edited or deleted, not the user being deleted).
+Every schema change is an Alembic migration under `backend/alembic/versions/`, applied via the dedicated one-shot `alembic` service (`alembic upgrade head`). In `docker-compose.prod.yml`, `backend`/`taskiq_worker` wait for it to complete before starting (`depends_on: ... condition: service_completed_successfully`); the dev `docker-compose.yml` runs the `alembic` service alongside the others without gating startup on it. Data-only migrations (e.g. granting a new permission to a seeded policy, backfilling a default role) follow the same process as schema migrations — see [../authorization/adding-permissions.md](../authorization/adding-permissions.md) for the exact pattern.

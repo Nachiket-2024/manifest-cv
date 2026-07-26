@@ -22,7 +22,7 @@ def _unique_email() -> str:
     return f"inttest-oauth-{uuid.uuid4().hex}@example.com"
 
 
-def _mock_google(mocker, email: str, verified_email: bool = True):
+def _mock_google(mocker, email: str, email_verified: bool = True):
     mocker.patch(
         f"{HANDLER_MODULE}.oauth2_service.exchange_code_for_tokens",
         new_callable=AsyncMock,
@@ -31,7 +31,7 @@ def _mock_google(mocker, email: str, verified_email: bool = True):
     return mocker.patch(
         f"{HANDLER_MODULE}.oauth2_service.get_user_info",
         new_callable=AsyncMock,
-        return_value={"email": email, "verified_email": verified_email, "name": "Google User"},
+        return_value={"email": email, "email_verified": email_verified, "name": "Google User"},
     )
 
 
@@ -44,7 +44,7 @@ async def _get_user_row(email: str):
 @pytest.mark.asyncio
 async def test_oauth2_new_user_is_created_verified_with_no_password(client, created_emails, mocker):
     email = _unique_email()
-    _mock_google(mocker, email, verified_email=True)
+    _mock_google(mocker, email, email_verified=True)
 
     initiate_resp = await client.get("/auth/oauth2/login/google")
     state = initiate_resp.headers["location"].split("state=")[-1]
@@ -77,7 +77,7 @@ async def test_oauth2_login_links_existing_unverified_password_account(client, c
     row_before = await _get_user_row(email)
     assert row_before.is_verified is False
 
-    _mock_google(mocker, email, verified_email=True)
+    _mock_google(mocker, email, email_verified=True)
     initiate_resp = await client.get("/auth/oauth2/login/google")
     state = initiate_resp.headers["location"].split("state=")[-1]
     callback_resp = await client.get("/auth/oauth2/callback/google", params={"code": "fake-code", "state": state})
@@ -104,7 +104,7 @@ async def test_oauth2_login_clears_password_on_pre_hijacked_unverified_account(c
     # Pre-hijacking scenario end-to-end: an "attacker" signs up using the
     # victim's email with a password of their own choosing and never
     # verifies it. The real victim later signs in with Google (which
-    # verified_email=True proves they own that address). The attacker's
+    # email_verified=True proves they own that address). The attacker's
     # password must stop working the instant the account is claimed —
     # otherwise the attacker could log in as the victim indefinitely.
     email = _unique_email()
@@ -119,7 +119,7 @@ async def test_oauth2_login_clears_password_on_pre_hijacked_unverified_account(c
     assert row_before.is_verified is False
     assert row_before.hashed_password is not None
 
-    _mock_google(mocker, email, verified_email=True)
+    _mock_google(mocker, email, email_verified=True)
     initiate_resp = await client.get("/auth/oauth2/login/google")
     state = initiate_resp.headers["location"].split("state=")[-1]
     callback_resp = await client.get("/auth/oauth2/callback/google", params={"code": "fake-code", "state": state})
@@ -152,7 +152,7 @@ async def test_oauth2_login_does_not_touch_password_of_already_verified_account(
     verify_resp = await client.post("/auth/verify-account", json={"token": token})
     assert verify_resp.status_code == 200
 
-    _mock_google(mocker, email, verified_email=True)
+    _mock_google(mocker, email, email_verified=True)
     initiate_resp = await client.get("/auth/oauth2/login/google")
     state = initiate_resp.headers["location"].split("state=")[-1]
     callback_resp = await client.get("/auth/oauth2/callback/google", params={"code": "fake-code", "state": state})
@@ -170,7 +170,7 @@ async def test_oauth2_login_does_not_touch_password_of_already_verified_account(
 @pytest.mark.asyncio
 async def test_oauth2_rejects_unverified_google_email(client, created_emails, mocker):
     email = _unique_email()
-    _mock_google(mocker, email, verified_email=False)
+    _mock_google(mocker, email, email_verified=False)
 
     initiate_resp = await client.get("/auth/oauth2/login/google")
     state = initiate_resp.headers["location"].split("state=")[-1]
@@ -187,7 +187,7 @@ async def test_oauth2_rejects_unverified_google_email(client, created_emails, mo
 @pytest.mark.asyncio
 async def test_oauth2_callback_rejects_state_cookie_mismatch(client, created_emails, mocker):
     email = _unique_email()
-    exchange_mock = _mock_google(mocker, email, verified_email=True)
+    exchange_mock = _mock_google(mocker, email, email_verified=True)
 
     await client.get("/auth/oauth2/login/google")  # sets a real oauth_state cookie
 
@@ -205,7 +205,7 @@ async def test_oauth2_callback_rejects_state_cookie_mismatch(client, created_ema
 @pytest.mark.asyncio
 async def test_oauth2_state_token_is_single_use(client, created_emails, mocker):
     email = _unique_email()
-    _mock_google(mocker, email, verified_email=True)
+    _mock_google(mocker, email, email_verified=True)
 
     initiate_resp = await client.get("/auth/oauth2/login/google")
     state = initiate_resp.headers["location"].split("state=")[-1]
