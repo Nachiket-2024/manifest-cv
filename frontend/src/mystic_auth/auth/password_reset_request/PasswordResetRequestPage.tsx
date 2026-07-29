@@ -1,10 +1,10 @@
 import React from "react";
 import { Stack, Heading, Text, StackSeparator } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import PasswordResetRequestForm from "./PasswordResetRequestForm";
 
-// Shared surface styling (theme surface/border tokens) — replaces this
+// Shared surface styling (theme surface/border tokens), replacing this
 // page's own hand-rolled bg="white"/boxShadow="lg" card.
 import Card from "../../ui/Card";
 

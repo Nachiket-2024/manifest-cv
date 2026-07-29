@@ -13,7 +13,7 @@ import httpx
 from ...authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
 
 # PBAC: new users get their access via an explicit default policy assignment,
-# never via their (metadata-only) role — see claude.md's "Roles" section: "New
+# never via their (metadata-only) role, see claude.md's "Roles" section: "New
 # users must receive access through default policy assignment, not default
 # roles." Mirrors signup_service.py.
 from ...authorization.repositories.policy_repository import policy_repository
@@ -45,7 +45,7 @@ class OAuth2Service:
         it is persisted in Redis keyed by state, with a short expiry, so the
         callback can retrieve it and the pair can only be redeemed once.
 
-        OAuth 2.1 requires PKCE for every client, confidential or not — it defends
+        OAuth 2.1 requires PKCE for every client, confidential or not: it defends
         against authorization-code interception independently of (and in addition
         to) the client_secret and the state check, which only cover CSRF/session
         fixation, not code theft in transit/at the redirect endpoint.
@@ -128,14 +128,14 @@ class OAuth2Service:
 
         Session/multi-device tracking is handled entirely inside
         jwt_service.create_refresh_token (the jti-based registry used by
-        logout-all and reuse detection) — nothing further needs to be persisted
+        logout-all and reuse detection); nothing further needs to be persisted
         here. An earlier version additionally wrote each token pair into a
         separate `user_tokens:{email}` Redis list, but nothing ever read that
         list; it was pure dead weight that grew forever (no TTL) and needlessly
         held raw, cleartext bearer tokens in Redis on top of the canonical registry.
 
         Pre-hijacking note: an unverified account is not proof that whoever
-        created it owns the email address — anyone can sign up with any email and
+        created it owns the email address: anyone can sign up with any email and
         just never click the verification link. If marking a pre-existing account
         verified here didn't also clear hashed_password, an attacker could
         pre-register the victim's email with a password of their choosing, leave
@@ -146,14 +146,14 @@ class OAuth2Service:
         Google proves the real owner's identity, so only the legitimate owner (via
         Google, or by setting a fresh password afterwards) can authenticate into
         the account from this point on. A previously *verified* account's password
-        is never touched — that password was already proven to belong to this
+        is never touched: that password was already proven to belong to this
         email's owner, so Google login there is a pure additional login method,
         not a takeover.
         """
         try:
             # Normalized here since this path never touches a Pydantic schema
             # (user_info is Google's raw JSON response, not a validated model)
-            # — every other entry point normalizes at its schema boundary.
+            # every other entry point normalizes at its schema boundary.
             raw_email = user_info.get("email")
             if not raw_email:
                 logger.error("OAuth2 login rejected: Google user info had no email")
@@ -164,8 +164,8 @@ class OAuth2Service:
 
             user = await user_crud.get_by_email(email, db)
 
-            # OAuth2 login trusts Google's email_verified alone — there is no
-            # password check at all — so without this guard, anyone who controls a
+            # OAuth2 login trusts Google's email_verified alone: there is no
+            # password check at all, so without this guard, anyone who controls a
             # Google account matching whatever email the operator chose for the
             # system account (an arbitrary, operator-picked address; nothing stops
             # it from being a real, Google-verifiable one) could sign in as the
@@ -178,14 +178,14 @@ class OAuth2Service:
                 user_data = {
                     "name": name,
                     "email": email,
-                    "role": UserRole.user,        # Metadata/display only — grants nothing
+                    "role": UserRole.user,        # Metadata/display only, grants nothing
                     "is_verified": True,           # Google has already confirmed this email
                     "is_active": True,
                     "hashed_password": None,       # No password for OAuth2-only users
                 }
                 user = await user_crud.create(user_data, db)
 
-                # Assign the baseline self-service policy — the actual source of
+                # Assign the baseline self-service policy: the actual source of
                 # this account's access, per PBAC (mirrors signup_service.py's
                 # password-signup path).
                 self_service_policy = await policy_repository.get_by_name(SELF_SERVICE_POLICY_NAME, db)
@@ -194,12 +194,12 @@ class OAuth2Service:
                         user_id=user.id, policy_id=self_service_policy.id, db=db, assigned_by="system"
                     )
                 else:
-                    # Should never happen once the seeding migration has run —
+                    # Should never happen once the seeding migration has run;
                     # logged loudly rather than failing OAuth2 login outright,
                     # since a missing baseline policy is an operational/migration
                     # issue, not something this particular login request caused.
                     logger.error(
-                        "Default policy '%s' not found — new OAuth2 user %s created with no assigned policies",
+                        "Default policy '%s' not found: new OAuth2 user %s created with no assigned policies",
                         SELF_SERVICE_POLICY_NAME, email,
                     )
 
@@ -212,7 +212,7 @@ class OAuth2Service:
                     email, {"is_verified": True, "hashed_password": None}, db
                 )
                 # Keep the already-fetched user object if the update raced with a
-                # deletion — role/email are unaffected either way.
+                # deletion; role/email are unaffected either way.
                 if updated_user:
                     user = updated_user
 

@@ -15,7 +15,7 @@ class UserBaseCRUD:
         return result.scalar_one_or_none()
 
     async def get_all(self, db: AsyncSession, limit: int = 1000, offset: int = 0):
-        # Capped — every other list endpoint in the app (audit log, policy
+        # Capped : every other list endpoint in the app (audit log, policy
         # history) bounds its query the same way; this one previously read
         # the whole table unconditionally.
         stmt = select(self.model).order_by(self.model.id).limit(limit).offset(offset)
@@ -25,7 +25,7 @@ class UserBaseCRUD:
     async def create(self, obj_data: dict, db: AsyncSession):
         # Normalized here (rather than trusted from the caller) so every
         # stored row is canonical lowercase regardless of which path created
-        # it (signup, OAuth2) — this is the write-side counterpart to
+        # it (signup, OAuth2) : this is the write-side counterpart to
         # UserEmailCRUD.get_by_email's read-side normalization.
         if "email" in obj_data:
             obj_data = {**obj_data, "email": normalize_email(obj_data["email"])}

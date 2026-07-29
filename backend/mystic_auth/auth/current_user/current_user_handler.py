@@ -4,10 +4,10 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 
 # PBAC: resolve the caller's actual *assigned policies* into the set of actions they
-# grant, so GET /auth/me exposes real, current permissions — letting clients (the
+# grant, so GET /auth/me exposes real, current permissions, letting clients (the
 # frontend, or any future consumer) make authorization-adjacent UI/behavior
 # decisions without hardcoding role-name comparisons themselves. Deliberately
-# sourced from the user's policies (repository), not their role — two users with
+# sourced from the user's policies (repository), not their role: two users with
 # the identical role can hold different policies and therefore see different
 # permissions here.
 from ...authorization.repositories.policy_repository import policy_repository
@@ -63,9 +63,9 @@ class CurrentUserHandler:
             policies = await policy_repository.get_active_policies_for_user(user.email, db)
             permissions = {action for policy in policies for action in (policy.actions or [])}
 
-            # permissions is sorted for a stable, deterministic response — set
+            # permissions is sorted for a stable, deterministic response; set
             # iteration order is not guaranteed. has_password lets the frontend
-            # tell an OAuth-only account (hashed_password is None — see
+            # tell an OAuth-only account (hashed_password is None, see
             # oauth2_service.py's login_or_create_user) apart from one with a
             # usable password credential, without exposing the hash itself.
             return {

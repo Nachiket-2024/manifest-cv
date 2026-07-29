@@ -7,8 +7,8 @@ from .condition_handler import ConditionHandler
 
 class TimeCondition(ConditionHandler):
     """
-    "time": {"start": "09:00", "end": "17:00", "timezone": "Australia/Sydney"}
-    — the current wall-clock time, evaluated in the given timezone
+    "time": {"start": "09:00", "end": "17:00", "timezone": "Australia/Sydney"}:
+    the current wall-clock time, evaluated in the given timezone
     (default UTC if omitted), must fall within [start, end].
 
     Supports overnight ranges where start > end (e.g. "22:00"-"06:00"):
@@ -17,7 +17,7 @@ class TimeCondition(ConditionHandler):
     range.
 
     Fails safe (denies) if start/end are missing, either isn't a valid
-    "HH:MM" time, or the timezone name is invalid — per claude.md's
+    "HH:MM" time, or the timezone name is invalid, per claude.md's
     "invalid context fails safely".
     """
 

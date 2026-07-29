@@ -3,21 +3,32 @@ import { Box, Flex } from "@chakra-ui/react";
 
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
+import type { NavItem } from "./navItems";
 
 interface AppLayoutProps {
     children: React.ReactNode;
+    /**
+     * Sidebar links for your own feature routes, appended after the
+     * built-in ones (see navItems.ts's NAV_ITEMS). This is the supported way
+     * to extend the sidebar: never hand-edit navItems.ts itself, that file
+     * is upstream-owned. Pass the same array on every route (e.g. define it
+     * once in App.tsx and reuse it) so the sidebar doesn't change shape as
+     * the user navigates. See
+     * docs/mystic_auth/template-usage/overview.md#shared-chrome-extension-points.
+     */
+    extraNavItems?: NavItem[];
 }
 
 /**
  * Shared shell (sidebar + top bar) for every authenticated page. Wraps a
- * page's content the same way ProtectedRoute wraps its access check — a
+ * page's content the same way ProtectedRoute wraps its access check: a
  * page component itself stays focused on its own content, not layout
  * chrome.
  */
-const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, extraNavItems }) => {
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-    // Escape closes the off-canvas nav, same as clicking the backdrop —
+    // Escape closes the off-canvas nav, same as clicking the backdrop:
     // keyboard users shouldn't need a pointer to dismiss it.
     useEffect(() => {
         if (!mobileNavOpen) return;
@@ -30,7 +41,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
     return (
         <Flex minH="100vh" bg="bg.canvas">
-            <Sidebar isOpen={mobileNavOpen} onNavigate={() => setMobileNavOpen(false)} />
+            <Sidebar isOpen={mobileNavOpen} onNavigate={() => setMobileNavOpen(false)} extraItems={extraNavItems} />
 
             {/* Backdrop for the off-canvas sidebar on small screens */}
             {mobileNavOpen && (

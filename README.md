@@ -145,6 +145,27 @@ cp .env.example .env
 
 ### Path 1. Docker (Recommended)
 
+Use the helper script for your shell:
+
+```bash
+# Git Bash, WSL, Linux, macOS
+./scripts/dev-up.sh
+```
+
+```powershell
+# PowerShell
+.\scripts\dev-up.ps1
+```
+
+```bat
+rem Command Prompt
+scripts\dev-up.cmd
+```
+
+Starts every service, waits for each to actually report healthy, then prints a one-line-per-service status table and settles into tailing fresh logs from just `backend`/`frontend`/`taskiq_worker` — their startup lines, API calls, the frontend dev server, and async email-task execution. Postgres/Redis/Bugsink/Alembic startup noise stays out of the way; they've already done their job by the time the tail starts. Backend exceptions still go to Bugsink ([http://localhost:8010](http://localhost:8010)), not this terminal. See [Docker Overview](docs/mystic_auth/docker/overview.md#day-to-day-dev-up-helpers) for the full rationale and what to do if a service fails to start.
+
+Want every service's full logs interleaved in one stream instead (e.g. debugging Postgres/Bugsink/Taskiq startup itself)? Plain `docker compose up` still does exactly that:
+
 ```bash
 docker compose up
 ```
@@ -159,7 +180,7 @@ Once the services are running:
 - **Taskiq worker:** Automatically listens for async tasks (email sending)
 - **Alembic migrations:** Run automatically on stack startup via the dedicated `alembic` service (`alembic upgrade head`) — applies mystic-auth's inherited schema and ManifestCV's own tables in one pass
 
-> **`docker compose up` also starts self-hosted error monitoring (Bugsink)** at `localhost:8010`, matching mystic-auth's own template default — a one-shot seeding container creates a default project and wires its DSN into `backend`/`frontend` automatically, no setup needed. See [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md) for how it works and how to point at Sentry's hosted tier instead if you'd rather not run it locally.
+> **Self-hosted error monitoring (Bugsink) is part of both paths above** — `dev-up.sh`/`dev-up.ps1`/`dev-up.cmd` and plain `docker compose up` all start it by default at `localhost:8010`, matching mystic-auth's own template default. A one-shot seeding container creates a default project and wires its DSN into `backend`/`frontend` automatically, no setup needed. See [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md) for how it works and how to point at Sentry's hosted tier instead if you'd rather not run it locally.
 
 See [Docker Overview](docs/app/docker/overview.md) for the full service breakdown and [Deployment Guide](docs/app/deployment/guide.md) for production Compose usage and free/low-cost hosting options.
 

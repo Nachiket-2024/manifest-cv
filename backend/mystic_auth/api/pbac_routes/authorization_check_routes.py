@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # The one place ip_address/current_time/security_context are derived from
-# the real request — batch-check builds this once, shared by every check
+# the real request : batch-check builds this once, shared by every check
 # in the batch (they're all the same incoming request)
 from ...authorization.context.request_context_builder import build_authorization_context
 from ...authorization.dependencies.authorization_dependency import require_authorization
@@ -38,10 +38,10 @@ async def check_user_authorization(
 
     Runs the exact same decision logic the app itself would use for this
     user/action/resource/context (via AuthorizationService.authorize_detailed
-    — no separate/duplicated evaluation logic), returning both the outcome
+    : no separate/duplicated evaluation logic), returning both the outcome
     and which policies were candidates vs. which actually granted it.
 
-    This endpoint deliberately accepts check.context as caller-supplied —
+    This endpoint deliberately accepts check.context as caller-supplied :
     unlike every real protected route (which builds context itself via
     context/request_context_builder.py and never trusts a client-supplied
     value), this is a hypothetical "what would happen if" simulation tool
@@ -80,7 +80,7 @@ async def batch_check_authorization(
     """
     Runs 1-50 authorization checks for the caller's own effective
     authorization in one request (see schemas/batch_authorization_schema.py
-    for the exact bounds and per-field validation — malformed/oversized/
+    for the exact bounds and per-field validation : malformed/oversized/
     empty batches are rejected by the schema itself, before this function
     runs). Requires only users:read_own, the baseline every real account
     holds via self_service: unlike the /users/{email}/authorization-check
@@ -91,16 +91,16 @@ async def batch_check_authorization(
 
     Builds the real request context once and delegates the whole batch to
     AuthorizationService.authorize_batch, which fetches the caller's
-    policies exactly once and reuses them for every check — avoiding
-    repeated policy database queries within the batch — while calling the
+    policies exactly once and reuses them for every check : avoiding
+    repeated policy database queries within the batch : while calling the
     exact same PolicyEvaluationEngine used by every single authorize()
     call, so a batch-of-one check always agrees with calling authorize()
     directly for that same input. Each check is logged individually,
-    exactly like a real authorize() call — this is a real decision, not a
+    exactly like a real authorize() call : this is a real decision, not a
     hypothetical "what if" simulation.
 
     The response exposes only `allowed` and a coarse `denial_reason` per
-    check, deliberately never policy names or failed condition keys — those
+    check, deliberately never policy names or failed condition keys : those
     stay reserved for the admin inspection endpoint above.
     """
     context = build_authorization_context(request)

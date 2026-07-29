@@ -11,8 +11,8 @@ flowchart TD
 ```
 
 1. **Decide the action(s) and resource type.** Use an existing `Permission` value if this is about users/policies themselves ([Adding New Permissions](adding-permissions.md)); otherwise any action string works for a downstream application's own resources.
-2. **Decide conditions, if any.** See the [Condition Schema Reference](condition-schema-reference.md) — omit `conditions` entirely for an unconditional grant.
-3. **Create it** via `POST /authorization/policies` (requires `policies:create`, and you must already hold every action you're granting — see [Architecture](architecture.md#authorization-service)):
+2. **Decide conditions, if any.** See the [Condition Schema Reference](condition-schema-reference.md): omit `conditions` entirely for an unconditional grant.
+3. **Create it** via `POST /authorization/policies` (requires `policies:create`, and you must already hold every action you're granting: see [Architecture](architecture.md#authorization-service)):
 
    ```bash
    curl -X POST https://your-app/authorization/policies \
@@ -34,7 +34,7 @@ flowchart TD
      -d '{"policy_name": "report_viewers"}'
    ```
 
-5. **Verify** with the inspection endpoint (`POST /authorization/users/{email}/authorization-check`, requires `policies:read`) — runs the exact same decision logic a real request would, but returns the full breakdown (candidate/granting policies) instead of just a bool:
+5. **Verify** with the inspection endpoint (`POST /authorization/users/{email}/authorization-check`, requires `policies:read`): runs the exact same decision logic a real request would, but returns the full breakdown (candidate/granting policies) instead of just a bool:
 
    ```bash
    curl -X POST https://your-app/authorization/users/someone@example.com/authorization-check \
@@ -45,23 +45,23 @@ flowchart TD
 
 ### Editing a policy
 
-`PUT /authorization/policies/{name}` (requires `policies:update`) — only the fields you send are changed. Every edit is versioned: see [Policy history and rollback](#policy-history-and-rollback) below. If you change `actions`, you must already hold every action in the *new* list, not just the ones being added.
+`PUT /authorization/policies/{name}` (requires `policies:update`): only the fields you send are changed. Every edit is versioned: see [Policy history and rollback](#policy-history-and-rollback) below. If you change `actions`, you must already hold every action in the *new* list, not just the ones being added.
 
 ### Protected baseline policies
 
-`self_service`, `user_administration`, and `system_superuser` can never be deleted or renamed via the management API, regardless of who's calling — every default account assignment (signup, OAuth2, `create_system_user.py`) looks them up by these exact names. Their other fields (description, actions, conditions) can still be edited.
+`self_service`, `user_administration`, and `system_superuser` can never be deleted or renamed via the management API, regardless of who's calling: every default account assignment (signup, OAuth2, `create_system_user.py`) looks them up by these exact names. Their other fields (description, actions, conditions) can still be edited.
 
 ### Policy history and rollback
 
 Every create/update/delete stages an immutable row in `policy_history` in the same transaction as the mutation:
 
-- `GET /authorization/policies/{name}/history` — every recorded change to this policy, newest first. Works even after the policy itself has been deleted (history is keyed by name, not a live foreign key).
-- `GET /authorization/policies/{name}/history/compare?from_id=X&to_id=Y` — field-by-field diff between two versions.
-- `POST /authorization/policies/{name}/history/{history_id}/rollback` (requires `policies:update`) — restores that version's definition. This creates a **new** `"rolled_back"`-labeled history entry; it never overwrites or deletes the entry being rolled back to. Goes through the exact same guards as a direct `PUT`: a malformed `conditions` block in the restored definition is rejected, a baseline policy can't be rolled back into a renamed/deactivated state, and — since a historical revision can hold actions the policy no longer grants today — the caller must already hold every action the *restored* definition would grant, not just the policy's current ones.
+- `GET /authorization/policies/{name}/history`: every recorded change to this policy, newest first. Works even after the policy itself has been deleted (history is keyed by name, not a live foreign key).
+- `GET /authorization/policies/{name}/history/compare?from_id=X&to_id=Y`: field-by-field diff between two versions.
+- `POST /authorization/policies/{name}/history/{history_id}/rollback` (requires `policies:update`): restores that version's definition. This creates a **new** `"rolled_back"`-labeled history entry; it never overwrites or deletes the entry being rolled back to. Goes through the exact same guards as a direct `PUT`: a malformed `conditions` block in the restored definition is rejected, a baseline policy can't be rolled back into a renamed/deactivated state, and: since a historical revision can hold actions the policy no longer grants today: the caller must already hold every action the *restored* definition would grant, not just the policy's current ones.
 
 ## Local testing approach
 
-**Fastest feedback: unit tests with mocked policies** (no DB needed) — see `tests/backend/mystic_auth/unit/test_policy_evaluator_unit.py` and `test_authorization_decision_unit.py`. Build a `Policy(...)` instance directly (it's a plain SQLAlchemy model, freely instantiable without a session) and call `PolicyEvaluationEngine.evaluate_detailed` directly:
+**Fastest feedback: unit tests with mocked policies** (no DB needed): see `tests/backend/mystic_auth/unit/authorization/test_policy_evaluator_unit.py` and `authorization/test_authorization_decision_unit.py`. Build a `Policy(...)` instance directly (it's a plain SQLAlchemy model, freely instantiable without a session) and call `PolicyEvaluationEngine.evaluate_detailed` directly:
 
 ```python
 from backend.mystic_auth.authorization.models.policy_model import Policy
@@ -78,7 +78,7 @@ def test_my_new_policy_shape_grants_the_right_action():
     assert decision.allowed is True
 ```
 
-**Against a real database** (via `docker compose exec -w /repo backend pytest tests/backend/mystic_auth/integration/`, or from the host once `docker compose up -d postgres redis` — see [Troubleshooting](troubleshooting.md)) — create a real user, assign the real policy, log in, and hit a real protected route:
+**Against a real database** (via `docker compose exec --user root -w /repo backend pytest tests/backend/mystic_auth/integration/`: `--user root` needed on native Linux, see [Troubleshooting](troubleshooting.md): or from the host once `docker compose up -d postgres redis`): create a real user, assign the real policy, log in, and hit a real protected route:
 
 ```python
 @pytest.mark.asyncio
@@ -114,7 +114,7 @@ def test_self_only_denies_a_different_owner():
     assert allowed is False
 ```
 
-**Multiple policies, one grants and one fails** (the exact scenario `AuthorizationDecision` exists to explain — see `test_authorization_decision_unit.py`):
+**Multiple policies, one grants and one fails** (the exact scenario `AuthorizationDecision` exists to explain: see `authorization/test_authorization_decision_unit.py`):
 
 ```python
 def test_one_matching_policy_is_enough_even_if_another_rejects():

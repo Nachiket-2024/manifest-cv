@@ -3,7 +3,7 @@
 # Real-DB smoke-level performance coverage (claude.md's "many users, many
 # policies, large authorization batches"). These are regression alarms
 # against gross performance regressions (e.g. an accidental N+1, or a
-# missing index), not a precise load-testing/benchmarking framework —
+# missing index), not a precise load-testing/benchmarking framework, so
 # thresholds are deliberately generous.
 import time
 import uuid
@@ -35,7 +35,7 @@ _MANY_POLICIES = 200
 @pytest.mark.asyncio
 async def test_authorization_check_stays_fast_with_many_background_users(client, created_emails):
     """A real user's own authorization check must not slow down as the
-    total users table grows — proves get_active_policies_for_user's join
+    total users table grows: proves get_active_policies_for_user's join
     stays index-based rather than degrading toward a table scan."""
     tag = unique_tag()
     await bulk_seed_users(_MANY_USERS, tag)
@@ -85,7 +85,7 @@ async def test_listing_policies_stays_reasonable_with_many_policies(client, crea
 @pytest.mark.asyncio
 async def test_authorization_check_stays_fast_for_a_user_holding_many_policies(client, created_emails):
     """The 'many policies' scaling axis from the user's own side: holding
-    dozens of assigned policies must not make evaluating one action slow —
+    dozens of assigned policies must not make evaluating one action slow:
     proves the evaluator's linear scan over a user's own (small) policy
     list is cheap, and fetching it is still one indexed query regardless
     of how many *other* policies exist system-wide."""
@@ -110,7 +110,7 @@ async def test_authorization_check_stays_fast_for_a_user_holding_many_policies(c
 
 @pytest.mark.asyncio
 async def test_large_authorization_batch_completes_quickly(client, created_emails):
-    """MAX_BATCH_SIZE checks in one request — proves authorize_batch's
+    """MAX_BATCH_SIZE checks in one request: proves authorize_batch's
     single policy-fetch-then-loop design scales linearly in pure in-memory
     work, not in database round trips."""
     email = f"batchperf_{uuid.uuid4().hex}@example.com"

@@ -14,7 +14,7 @@ router = APIRouter(prefix="/auth/refresh", tags=["Refresh Token"])
 @router.post("/", response_model=TokenPairResponseSchema)
 async def refresh_tokens(request: Request, db: AsyncSession = Depends(database.get_session)):
     """
-    Reads the refresh token from the httponly cookie — it's issued httponly
+    Reads the refresh token from the httponly cookie : it's issued httponly
     (token_cookie_handler.py) specifically so client-side JS can never read it,
     meaning it can only reach this endpoint via the cookie the browser attaches
     automatically. Mirrors logout_handler.py's identical extraction pattern.

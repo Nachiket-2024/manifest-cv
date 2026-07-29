@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # On-demand: pulls in updates from the original mystic-auth template repo.
 # Nothing here runs automatically -- this only does anything when you run it.
-# See docs/mystic_auth/template-usage.md#staying-in-sync-with-upstream-template-updates
-# for the full explanation of what conflicts and what almost never will.
+# See docs/mystic_auth/template-usage/syncing-upstream.md for the full
+# explanation of what conflicts and what almost never will.
 #
 # Two sync strategies, chosen automatically:
 #
@@ -145,6 +145,11 @@ Before trusting this, rebuild and rerun the test suite -- a sync can change
 behavior underneath you even when every file merged automatically:
 
   docker compose up -d --build
-  docker compose exec -w /repo backend python -m pytest tests/backend/mystic_auth/unit tests/backend/mystic_auth/integration tests/backend/mystic_auth/security
+  docker compose exec --user root -w /repo backend python -m pytest tests/backend/mystic_auth/unit tests/backend/mystic_auth/integration tests/backend/mystic_auth/security
   # frontend: see docs/mystic_auth/testing/overview.md for the equivalent commands
+  # --user root is needed on native Linux, or pytest-cov's coverage output
+  # crashes with a permission error. On Windows with Git Bash, the command
+  # above can separately fail with "Cwd must be an absolute path" instead --
+  # see docs/mystic_auth/docker/overview.md#running-a-one-off-command-inside-a-container
+  # for both.
 EOF

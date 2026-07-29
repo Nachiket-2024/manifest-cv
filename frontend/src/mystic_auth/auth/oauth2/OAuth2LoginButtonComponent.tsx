@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Button, Flex } from "@chakra-ui/react";
 
-// Shared error/success feedback component — replaces the ad hoc
+// Shared error/success feedback component: replaces the ad hoc
 // <p style={{ color: "red"/"green" }}> pattern, which also carried no
 // role="alert"/aria-live so screen readers never announced login failures.
 import FormAlert from "../../ui/FormAlert";
@@ -27,9 +27,9 @@ const OAuth2LoginButtonComponent: React.FC<OAuth2LoginButtonComponentProps> = ({
                 w="full"
                 bg="white"
                 color="gray.800"
-                border="1px solid"
+                border="gray.800"
                 borderColor="border.default"
-                _hover={{ bg: "gray.100" }}
+                _hover={{ bg: "gray.200" }}
                 size="lg"
                 onClick={onLogin}
             >

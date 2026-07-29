@@ -24,7 +24,7 @@ argon2_cffi==25.1.0
 httpx==0.28.1
 
 # starlette.testclient (used by tests/backend/mystic_auth/unit/test_correlation_id_middleware_unit.py)
-# now prefers httpx2 over httpx and warns on every import if it's absent —
+# now prefers httpx2 over httpx and warns on every import if it's absent :
 # not a runtime dependency, only pulled in so that one test file stays quiet.
 httpx2==2.9.1
 
@@ -38,7 +38,7 @@ aiosmtplib==5.1.2
 python-json-logger==4.1.0
 
 # Speaks the same wire protocol against Sentry itself or any self-hosted
-# Sentry-SDK-compatible server (e.g. Bugsink — see docs/mystic_auth/error-monitoring/overview.md).
+# Sentry-SDK-compatible server (e.g. Bugsink : see docs/mystic_auth/error-monitoring/overview.md).
 # The [fastapi] extra pulls in the FastAPI/Starlette integration; a no-op
 # import-time cost when SENTRY_DSN is unset (see error_monitoring/sentry_service.py).
 sentry-sdk[fastapi]==2.66.1

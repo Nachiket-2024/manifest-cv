@@ -54,7 +54,7 @@ describe('setupAuthInterceptor', () => {
     expect(res.data).toEqual({ email: 'test@example.com' });
     expect(refreshCalls).toBe(1);
     expect(getCalls).toBe(2);
-    // The session was salvaged — never flagged unauthenticated at any point.
+    // The session was salvaged : never flagged unauthenticated at any point.
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
 
@@ -91,7 +91,7 @@ describe('setupAuthInterceptor', () => {
     expect(refreshCalls).toBe(1);
   });
 
-  it('does NOT touch auth state on a 403 — the session is still valid, just missing a permission', async () => {
+  it('does NOT touch auth state on a 403 : the session is still valid, just missing a permission', async () => {
     mock.onGet('/some/admin/resource').reply(403, { detail: 'Forbidden' });
 
     await expect(api.get('/some/admin/resource')).rejects.toMatchObject({ response: { status: 403 } });
@@ -118,7 +118,7 @@ describe('setupAuthInterceptor', () => {
     expect(res.data).toEqual({ ok: true });
   });
 
-  it('regression: an unauthenticated GET /auth/me does not loop — invalidateQueries on the ' +
+  it('regression: an unauthenticated GET /auth/me does not loop : invalidateQueries on the ' +
     'still-mounted currentUser query would trigger an automatic refetch, 401 again, and repeat ' +
     'forever; setQueryData(null) must not provoke a refetch', async () => {
     useAuthStore.getState().reset();
@@ -140,7 +140,7 @@ describe('setupAuthInterceptor', () => {
     // Give any runaway invalidate-refetch loop a chance to fire before asserting.
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    // Exactly one GET /auth/me (plus its one refresh-and-retry attempt) —
+    // Exactly one GET /auth/me (plus its one refresh-and-retry attempt) :
     // never more, regardless of how long we wait.
     expect(getMeCalls).toBe(1);
   });

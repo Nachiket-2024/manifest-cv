@@ -23,7 +23,7 @@ class RateLimiterService:
     async def record_request(key: str) -> bool:
         try:
             # INCR creates the key at 0 before incrementing if it doesn't
-            # already exist, and is atomic — unlike a separate GET-then-SET,
+            # already exist, and is atomic: unlike a separate GET-then-SET,
             # this can't let two concurrent requests both read the same
             # pre-increment count and both be admitted past the limit.
             new_count = await redis_client.incr(key)
@@ -48,13 +48,13 @@ class RateLimiterService:
     def rate_limited(self, endpoint_name: str, account_key_func: Callable[[dict], str | None] | None = None):
         """
         account_key_func, if given, extracts an account identifier (e.g. email)
-        from the endpoint's resolved keyword arguments — FastAPI always calls the
+        from the endpoint's resolved keyword arguments, since FastAPI always calls the
         wrapped endpoint with its dependencies as kwargs, so this can pull
         straight from the parsed request body/params (e.g.
         `lambda kwargs: kwargs["payload"].email`). Pass None for endpoints where
         no account identifier is available before the handler runs (e.g.
         token-only routes). When supplied, it adds a per-account limit, keyed
-        independently of IP — this closes the gap where an attacker spreads
+        independently of IP: this closes the gap where an attacker spreads
         requests targeting one account across many source IPs specifically to
         stay under the per-IP threshold, which a per-IP-only limiter would never
         flag as abuse.
@@ -89,7 +89,7 @@ class RateLimiterService:
                         account_value = account_key_func(kwargs)
                     except Exception:
                         # Extraction failing (missing/malformed field) shouldn't
-                        # break the request — just skip the account-level check.
+                        # break the request, just skip the account-level check.
                         # Logged because a silent skip here means per-account
                         # brute-force protection quietly stops applying.
                         logger.warning(

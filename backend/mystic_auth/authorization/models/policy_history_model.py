@@ -10,14 +10,14 @@ from ...database.base import Base
 
 class PolicyHistory(Base):
     """
-    One immutable row per policy mutation (create/update/delete/rollback) —
+    One immutable row per policy mutation (create/update/delete/rollback),
     per claude.md's "Policy Versioning and Change History": policy changes
     must be fully traceable and reversible, and rollback must create a new
     version, never overwrite history. Written by PolicyRepository's
     create/update/delete (the only places policies are ever mutated), so no
     route needs to log anything itself.
 
-    Deliberately no foreign key to `policies` — mirrors
+    Deliberately no foreign key to `policies`, mirrors
     AuthorizationAuditLog's own rationale (see audit_log_model.py): a policy
     referenced by an old history entry may since have been edited, deleted,
     or (in principle) have its id reused, and the history must keep
@@ -30,7 +30,7 @@ class PolicyHistory(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
 
-    # Informational only, no FK constraint (see class docstring) — the
+    # Informational only, no FK constraint (see class docstring): the
     # policy's id at the time of this change.
     policy_id: Mapped[int | None] = mapped_column(index=True)
 
@@ -50,7 +50,7 @@ class PolicyHistory(Base):
     # is no resulting state).
     new_definition: Mapped[dict | None] = mapped_column(JSONB)
 
-    # Which definition fields actually differed (e.g. ["actions"]) — null
+    # Which definition fields actually differed (e.g. ["actions"]); null
     # for "created"/"deleted", where the entire definition is the change.
     changed_fields: Mapped[list[str] | None] = mapped_column(ARRAY(String))
 
@@ -59,7 +59,7 @@ class PolicyHistory(Base):
     changed_by: Mapped[str | None]
 
     # Optional caller-supplied explanation for this change (e.g. "revoking
-    # over-broad grant per security review") — for audit/inspection only.
+    # over-broad grant per security review"), for audit/inspection only.
     change_reason: Mapped[str | None]
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)

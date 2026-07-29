@@ -65,8 +65,8 @@ async def _create_system_user(client, created_emails, email):
 @pytest_asyncio.fixture(autouse=True)
 async def _cleanup_security_audit_log(created_emails):
     """Security audit rows are append-only and not cascade-deleted with a
-    test user — clean up rows for this test's emails so repeated runs don't
-    accumulate unbounded log rows in the shared test database."""
+    test user, so clean up rows for this test's emails so repeated runs
+    don't accumulate unbounded log rows in the shared test database."""
     yield
     if not created_emails:
         return

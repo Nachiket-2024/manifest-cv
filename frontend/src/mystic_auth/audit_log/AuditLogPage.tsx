@@ -33,9 +33,9 @@ const authorizationColumns: DataTableColumn<AuthorizationAuditLogEntryRead>[] = 
 
 const securityColumns: DataTableColumn<SecurityAuditLogEntryRead>[] = [
     { key: "created_at", header: "When", render: (e) => formatTimestamp(e.created_at) },
-    { key: "user_email", header: "User", render: (e) => e.user_email ?? "—" },
+    { key: "user_email", header: "User", render: (e) => e.user_email ?? ":" },
     { key: "event_type", header: "Event", render: (e) => e.event_type },
-    { key: "ip_address", header: "IP", render: (e) => e.ip_address ?? "—" },
+    { key: "ip_address", header: "IP", render: (e) => e.ip_address ?? ":" },
     {
         key: "success",
         header: "Result",
@@ -104,10 +104,10 @@ const AllSecurityLog: React.FC = () => {
  * ----------------------------
  * Every authenticated user can see their own authorization-decision and
  * security-event history (backend: GET /authorization/audit-log/me,
- * GET /audit/security-log/me — auth-only, no extra permission). A caller
+ * GET /audit/security-log/me, auth-only, no extra permission). A caller
  * who additionally holds policies:read / security_audit:read also sees an
  * "All users" tab for that log, backed by the corresponding admin endpoint.
- * The route itself carries no permission requirement — access to each tab
+ * The route itself carries no permission requirement: access to each tab
  * is decided per-tab via IfCan, mirroring exactly how the backend splits
  * self vs. admin visibility across these four endpoints.
  */

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router';
 
 import { useAuthStore } from '@/store/authStore';
 import ProtectedRoute from '@/authorization/ProtectedRoute';
@@ -76,7 +76,7 @@ describe('ProtectedRoute', () => {
 
     expect(screen.getByText('Not Authorized Page')).toBeInTheDocument();
     expect(screen.queryByText('Protected Content')).toBeNull();
-    // never /login — the user IS authenticated, just missing a permission
+    // never /login : the user IS authenticated, just missing a permission
     expect(screen.queryByText('Login Page')).toBeNull();
   });
 

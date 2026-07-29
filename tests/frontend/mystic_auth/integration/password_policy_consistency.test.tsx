@@ -1,7 +1,7 @@
 // Regression: SignupForm/PasswordResetConfirmForm required a special
 // character but never checked for lowercase, while the backend
 // (password_service.validate_password_strength) requires upper+lower+digit
-// and has no special-character requirement — so "PASSWORD1!" passed client
+// and has no special-character requirement : so "PASSWORD1!" passed client
 // validation but was rejected server-side. These tests pin the two layers
 // back in sync.
 import type { ReactElement } from 'react';
@@ -10,7 +10,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import MockAdapter from 'axios-mock-adapter';
 
 import api from '@/api/axiosInstance';

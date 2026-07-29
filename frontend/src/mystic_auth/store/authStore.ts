@@ -3,8 +3,8 @@ import { create } from "zustand";
 import type { CurrentUserProfile } from "../auth/current_user/current_user_types";
 
 /**
- * The single client-side source of truth for "who is logged in right now and what can they do"
- * — populated from GET /auth/me and kept in sync by every mutation that changes the session
+ * The single client-side source of truth for "who is logged in right now and what can they do".
+ * Populated from GET /auth/me and kept in sync by every mutation that changes the session
  * (login/logout/logout-all) and by the axios 401 interceptor (see auth/setupAuthInterceptor.ts).
  */
 interface AuthState {
@@ -12,12 +12,12 @@ interface AuthState {
     isAuthenticated: boolean | null;
     name: string | null;
     email: string | null;
-    // Metadata only — see backend/mystic_auth/authorization/permissions.py's own docstring for why role
+    // Metadata only, see backend/mystic_auth/authorization/permissions.py's own docstring for why role
     // is never used to decide access.
     role: string | null;
     /** Flat list of every action string the caller currently holds via their active policies. */
     permissions: string[];
-    /** Whether the account currently has a usable password credential —
+    /** Whether the account currently has a usable password credential:
      *  false for an OAuth-only account. See CurrentUserProfile. */
     hasPassword: boolean;
     /** Directly set auth status (used after login/logout/a 401). Setting

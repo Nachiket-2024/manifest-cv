@@ -7,7 +7,7 @@ import { useAuthStore } from "../store/authStore";
 import { queryClient } from "../core/queryClient";
 import { CURRENT_USER_QUERY_KEY } from "./current_user/useCurrentUserQuery";
 
-// Marks a request as already retried once (post-refresh) so it can't be retried again — without
+// Marks a request as already retried once (post-refresh) so it can't be retried again. Without
 // this, a request that still 401s right after a successful refresh (e.g. the refresh rotated the
 // session for a *different*, stale reason) would loop forever between "refresh" and "retry".
 interface RetryableRequestConfig extends AxiosRequestConfig {
@@ -31,7 +31,7 @@ const AUTH_ENDPOINTS_EXCLUDED_FROM_REFRESH = [
 
 // Single-flight refresh coordination: if several requests 401 at once (e.g. a page fires
 // multiple API calls in parallel right as the access token expires), they must all await the
-// SAME in-flight refresh call rather than each independently POSTing /auth/refresh/ — the
+// SAME in-flight refresh call rather than each independently POSTing /auth/refresh/, since the
 // backend already treats refresh tokens as single-use-then-rotated, so a second concurrent
 // refresh call would find the first one's token already rotated out from under it and fail as
 // if it were a replay.
@@ -53,12 +53,12 @@ function refreshSession(): Promise<void> {
  * eligible for silent refresh, attempts to rotate the session via /auth/refresh/ and retry the
  * original request exactly once. If refresh fails, the endpoint isn't eligible, or this is
  * already a post-refresh retry that 401'd again, marks the Zustand auth store as unauthenticated
- * and invalidates the cached currentUser query — every ProtectedRoute-wrapped page already
+ * and invalidates the cached currentUser query: every ProtectedRoute-wrapped page already
  * re-renders reactively off that store and redirects to /login, so no hard `window.location`
  * redirect is needed here.
  *
  * Deliberately 401-only, not 401-or-403: a 403 means the caller IS authenticated but lacks a
- * specific permission — forcing a logout/redirect-to-login on that would be confusing (the
+ * specific permission, so forcing a logout/redirect-to-login on that would be confusing (the
  * session is fine) and would fight with the conditional-rendering/route-guard components
  * (Authorized/IfCan/ProtectedRoute) that are meant to handle "you don't have this permission"
  * without ending the session. Only a 401 means the session itself is no longer valid (or, per
@@ -89,17 +89,17 @@ export function setupAuthInterceptor(): void {
                     originalRequest._retriedAfterRefresh = true;
                     return api(originalRequest);
                 } catch {
-                    // Refresh itself failed — fall through to marking the session unauthenticated.
+                    // Refresh itself failed. Fall through to marking the session unauthenticated.
                 }
             }
 
-            // Not eligible, or refresh/retry failed — the session is genuinely over. Use
+            // Not eligible, or refresh/retry failed: the session is genuinely over. Use
             // setQueryData(null), NOT invalidateQueries: invalidating a still-mounted/active
             // query (useAuthSession keeps this one mounted for the app's whole lifetime)
-            // triggers TanStack Query's automatic refetch of that query — which would
+            // triggers TanStack Query's automatic refetch of that query, which would
             // immediately re-request GET /auth/me, 401 again, land back in this exact branch,
             // invalidate again, and so on forever. setQueryData writes the "logged out" result
-            // directly into the cache without provoking another fetch — the same pattern
+            // directly into the cache without provoking another fetch, the same pattern
             // useLogoutMutation's onSuccess already uses.
             useAuthStore.getState().setAuthenticated(false);
             queryClient.setQueryData(CURRENT_USER_QUERY_KEY, null);

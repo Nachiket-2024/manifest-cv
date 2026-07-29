@@ -19,7 +19,7 @@ interface DataTableProps<T> {
     isError?: boolean;
     errorMessage?: string;
     emptyMessage?: string;
-    /** Rows of skeleton placeholders shown while isLoading — mirrors the
+    /** Rows of skeleton placeholders shown while isLoading, mirrors the
      * shape of the real table rather than swapping to a spinner, so the
      * layout doesn't jump once data arrives. */
     skeletonRowCount?: number;

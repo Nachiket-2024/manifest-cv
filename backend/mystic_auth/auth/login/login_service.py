@@ -22,13 +22,13 @@ class LoginService:
             user = await user_crud.get_by_email(email, db)
 
             # Compare against the user's real hash if one exists, otherwise a fixed
-            # dummy hash — unconditionally and before any not-found/unverified checks.
+            # dummy hash, unconditionally and before any not-found/unverified checks.
             # A previous version only reached this comparison for an existing,
             # verified account with the wrong password, and returned immediately (no
             # hashing) for "not found" and "unverified". Since Argon2 hashing is
             # measurably slow, that let an attacker distinguish "no such verified
             # account" from "wrong password on a real one" purely by response
-            # latency — enabling account enumeration despite every branch already
+            # latency, enabling account enumeration despite every branch already
             # returning the same generic failure. Comparing against the dummy hash
             # keeps the "no real hash" branches' timing indistinguishable from a
             # genuine comparison.

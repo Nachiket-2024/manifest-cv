@@ -12,14 +12,6 @@ venv/
 .Python
 *.sqlite3
 
-# ---------------------------- Conda ----------------------------
-# Ignore Conda environment directories
-env/
-envs/
-.conda/
-.condarc
-*.conda
-
 # ---------------------------- IDEs / Editors ----------------------------
 .vscode/
 .idea/
@@ -55,7 +47,6 @@ frontend/coverage/
 # ---------------------------- Testing / Coverage ----------------------------
 .coverage
 htmlcov/
-pytest_cache/
 .tox/
 nosetests.xml
 coverage.xml
@@ -71,10 +62,6 @@ __pypackages__/
 .dmypy.json
 dmypy.json
 
-# ---------------------------- Celery ----------------------------
-celerybeat-schedule
-celerybeat.pid
-
 # ---------------------------- Redis ----------------------------
 redis-data/
 dump.rdb
@@ -89,7 +76,10 @@ backups/
 
 # ---------------------------- AI Assistant / Development Tools ----------------------------
 .claude/
+# Both cases: git match is case-sensitive on Linux (CI), unlike Windows/macOS.
 claude.md
+CLAUDE.md
+AGENTS.md
 
 # ---------------------------- Qdrant (local dev storage) ----------------------------
 /qdrant_storage/

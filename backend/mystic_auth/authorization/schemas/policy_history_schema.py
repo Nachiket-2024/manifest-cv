@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class PolicyHistoryEntryRead(BaseModel):
-    """Schema returned by the policy history query API — mirrors
+    """Schema returned by the policy history query API : mirrors
     PolicyHistory (see models/policy_history_model.py)."""
 
     id: int
@@ -27,7 +27,7 @@ class PolicyHistoryCompareResponse(BaseModel):
     policy_name: str
     from_history_id: int
     to_history_id: int
-    # Full definition snapshot at each entry — a "deleted" entry has no
+    # Full definition snapshot at each entry : a "deleted" entry has no
     # new_definition, so it still needs to resolve to a comparable snapshot
     # (see policy_history_routes.py's _definition_for_entry).
     from_definition: dict | None

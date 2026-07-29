@@ -1,7 +1,7 @@
 # tests/backend/mystic_auth/security/conftest.py
 #
 # Shares the same real-dependency fixtures (client, created_emails, Redis
-# isolation) as tests/backend/integration/ — security tests run against
+# isolation) as tests/backend/integration/ : security tests run against
 # the exact same real Postgres/Redis, they just group a different concern
 # (attack scenarios) rather than lifecycle coverage. Reusing the parent
 # conftest.py's fixtures (pytest auto-discovers the nearest conftest.py up
@@ -27,7 +27,7 @@ PASSWORD = "StrongPass123!"
 @pytest_asyncio.fixture(autouse=True)
 async def _cleanup_sectest_policies():
     """Every policy this suite creates (directly, or via a test hitting
-    POST /authorization/policies) is prefixed 'sectest_policy_' — delete
+    POST /authorization/policies) is prefixed 'sectest_policy_' : delete
     them on teardown so repeated runs don't accumulate rows."""
     yield
     async with database.async_session() as session:
@@ -78,7 +78,7 @@ async def create_system_user(client, created_emails, email):
 
 async def create_user_with_custom_policy(client, created_emails, email, actions, resource_type="policies"):
     """A user holding exactly self_service + one freshly created policy
-    granting `actions` on `resource_type` — used to prove a caller with
+    granting `actions` on `resource_type` : used to prove a caller with
     only a narrow slice of policies:* actions can't escalate beyond it."""
     policy_name = unique_policy_name()
     async with database.async_session() as session:

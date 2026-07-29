@@ -4,7 +4,7 @@ import { Flex, Spinner, Text } from "@chakra-ui/react";
 interface LoadingStateProps {
     message: string;
     // When true, fills the viewport (h="100vh") for whole-page loading gates. When false, sizes
-    // to its container — for loading states nested inside a page (e.g. a card body).
+    // to its container, for loading states nested inside a page (e.g. a card body).
     fullScreen?: boolean;
 }
 

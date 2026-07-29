@@ -7,5 +7,5 @@ export function useCan(action: string, resourceType?: string): boolean {
 }
 
 // Alias for call sites that read more naturally as "is the caller
-// authorized for X" than "can the caller do X" — same hook either way.
+// authorized for X" than "can the caller do X"; same hook either way.
 export const useAuthorized = useCan;

@@ -73,7 +73,7 @@ async def test_policies_update_only_cannot_rollback_to_a_revision_holding_an_unh
     client, created_emails
 ):
     """Rollback restores a full historical policy definition, so it must be
-    guarded by the same assert_authorized_to_grant check as a direct PUT —
+    guarded by the same assert_authorized_to_grant check as a direct PUT,
     otherwise a caller with only policies:update could roll a policy back to
     an old revision that once held a sensitive action (e.g.
     users:purge), silently re-granting it without ever holding it
@@ -88,7 +88,7 @@ async def test_policies_update_only_cannot_rollback_to_a_revision_holding_an_unh
     )
     assert create_resp.status_code == 201
 
-    # Downgrade away from the sensitive action — this is the revision an
+    # Downgrade away from the sensitive action: this is the revision an
     # attacker will try to roll back past.
     downgrade_resp = await client.put(
         f"/authorization/policies/{policy_name}", json={"actions": ["users:read_own"]}
@@ -99,7 +99,7 @@ async def test_policies_update_only_cannot_rollback_to_a_revision_holding_an_unh
     assert history_resp.status_code == 200
     history = history_resp.json()
     # The entry whose *restorable* definition (new_definition, since this is
-    # not a "deleted" entry) still holds the sensitive action — i.e. the
+    # not a "deleted" entry) still holds the sensitive action, i.e. the
     # original "create" entry, not the later "downgrade" entry (whose own
     # new_definition is the already-safe post-downgrade state).
     target_entry = next(
@@ -121,7 +121,7 @@ async def test_policies_update_only_cannot_rollback_to_a_revision_holding_an_unh
 @pytest.mark.asyncio
 async def test_system_superuser_can_still_perform_all_of_the_above(client, created_emails):
     """Negative-control: a genuine system_superuser holder is NOT blocked
-    by the same guard — proves this is a privilege check, not a broken
+    by the same guard; this proves it's a privilege check, not a broken
     endpoint."""
     system_email = unique_email("system")
     await create_system_user(client, created_emails, system_email)

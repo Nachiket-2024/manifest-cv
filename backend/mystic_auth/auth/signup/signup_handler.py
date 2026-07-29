@@ -24,7 +24,7 @@ class SignupHandler:
         Always returns the same generic response regardless of whether the
         account already existed. Returning a different status code or message
         for "email already registered" would let an attacker enumerate which
-        emails have accounts on this site — the same reason
+        emails have accounts on this site, the same reason
         password_reset_request_handler always returns a generic message too.
         """
         try:
@@ -35,7 +35,7 @@ class SignupHandler:
                 )
 
             # Runs regardless of whether the email is already registered, so it
-            # carries no enumeration signal — unlike the "email already
+            # carries no enumeration signal: unlike the "email already
             # registered" case, telling a user their own chosen password is weak
             # doesn't reveal anything about other accounts.
             if not await password_service.validate_password_strength(password):
@@ -44,7 +44,7 @@ class SignupHandler:
                     status_code=400
                 )
 
-            # Role is hardcoded to UserRole.user inside signup_service — not passed here.
+            # Role is hardcoded to UserRole.user inside signup_service, not passed here.
             user_created = await signup_service.signup(
                 name=name,
                 email=email,
@@ -52,7 +52,7 @@ class SignupHandler:
                 db=db
             )
 
-            # Only send a verification email for a genuinely new account — never
+            # Only send a verification email for a genuinely new account, never
             # for an email that's already registered, so repeated signup
             # attempts can't be used to spam an existing user's inbox.
             if user_created:

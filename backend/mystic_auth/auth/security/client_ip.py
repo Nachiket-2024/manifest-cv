@@ -2,7 +2,7 @@ from fastapi import Request
 
 from ...core.settings import settings
 
-# Empty by default (TRUSTED_PROXY_IPS unset) — every caller falls back to the
+# Empty by default (TRUSTED_PROXY_IPS unset), so every caller falls back to the
 # literal TCP peer address exactly as before. Only becomes non-empty in a
 # deployment that explicitly configures its reverse proxy's own address(es),
 # opting in to trusting X-Forwarded-For.
@@ -16,11 +16,11 @@ def get_client_ip(request: Request) -> str | None:
     Resolves the real client IP for audit logging, rate limiting, and
     authorization context.
 
-    request.client.host is the literal TCP peer — in a direct deployment (no
+    request.client.host is the literal TCP peer: in a direct deployment (no
     reverse proxy) this is already the real client; behind a reverse proxy
     it's the proxy's own address instead. The X-Forwarded-For header is only
     trusted if that TCP peer is itself one of this deployment's configured
-    reverse proxies (TRUSTED_PROXY_IPS) — otherwise any internet client could
+    reverse proxies (TRUSTED_PROXY_IPS), otherwise any internet client could
     set X-Forwarded-For to whatever it likes and impersonate any IP. When
     trusted, the left-most entry is used: nginx's proxy_pass appends the real
     client to any X-Forwarded-For it received, so the first entry is the

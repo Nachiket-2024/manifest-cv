@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Test files live at ../tests/frontend — outside this project's root, per
+// Test files live at ../tests/frontend, outside this project's root, per
 // the repository's top-level tests/backend + tests/frontend layout. Node's
 // (and Vite's) module resolution for bare specifiers walks *up* from the
 // importing file's own directory looking for a node_modules folder; since
@@ -13,7 +13,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 // never reaches frontend/node_modules and bare imports (axios-mock-adapter,
 // @testing-library/*, etc.) fail to resolve. The dependencies must stay
 // owned by the frontend project (no root node_modules, no duplicated
-// installs) — see the resolveExternalTestImports plugin below, which
+// installs), see the resolveExternalTestImports plugin below, which
 // fixes resolution instead of relocating dependencies.
 const externalTestsDir = path.resolve(dirname, '../tests/frontend').replace(/\\/g, '/');
 
@@ -23,7 +23,7 @@ const externalTestsDir = path.resolve(dirname, '../tests/frontend').replace(/\\/
  * imported from inside frontend/src instead. Uses Vite's own resolver
  * (`this.resolve`) rather than a raw `require.resolve` fallback, so
  * resolution behaves identically to a normal in-project import (respects
- * package.json "exports"/"browser" fields, conditions, etc.) — the only
+ * package.json "exports"/"browser" fields, conditions, etc.): the only
  * difference is which directory the upward node_modules search starts
  * from. Imports from files inside frontend/ are left untouched; they
  * already resolve correctly through Vite's default pipeline.
@@ -84,7 +84,7 @@ export default defineConfig({
       // relative chains like "../../../../../frontend/src/mystic_auth/api/auth_api".
       '@': path.resolve(dirname, 'src/mystic_auth'),
       // Separate alias for the thin app shell (App.tsx/main.tsx/sdk.ts/
-      // app_sdk.ts) living outside mystic_auth/ — only needed by the rare
+      // app_sdk.ts) living outside mystic_auth/, only needed by the rare
       // test that exercises the app root directly (e.g. app_routing.test.tsx).
       '@app': path.resolve(dirname, 'src/app'),
     },
@@ -92,7 +92,7 @@ export default defineConfig({
 
   server: {
     // Vite's dev server restricts filesystem access to the project root by
-    // default — without this, the test runner can't even read files under
+    // default; without this, the test runner can't even read files under
     // ../tests.
     fs: {
       allow: ['..'],
@@ -119,11 +119,11 @@ export default defineConfig({
         'html',
       ],
       // Current coverage is ~89%/82%/84%/90% (statements/branches/functions/
-      // lines — see docs/mystic_auth/testing/overview.md); thresholds sit a few points
+      // lines, see docs/mystic_auth/testing/overview.md); thresholds sit a few points
       // below that as a regression alarm, not a strict target, so
       // incidental coverage drift doesn't flap CI red. Only enforced when
       // coverage is actually collected (`vitest run --coverage`, i.e. the
-      // `test:coverage` script CI runs) — plain `test` never evaluates
+      // `test:coverage` script CI runs); plain `test` never evaluates
       // these.
       thresholds: {
         statements: 85,

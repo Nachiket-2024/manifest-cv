@@ -1,7 +1,7 @@
 # tests/backend/mystic_auth/security/test_context_spoofing_security.py
 #
 # Real-DB proof that request_context_builder.build_authorization_context
-# is actually used for real decisions, and a client cannot influence it —
+# is actually used for real decisions, and a client cannot influence it:
 # claude.md's "context spoofing attempts". Uses POST /authorization/batch-
 # check as the enforcement vehicle: unlike the admin inspection endpoint
 # (which deliberately accepts caller-supplied context for "what if"
@@ -9,7 +9,7 @@
 # request, never the body/headers.
 #
 # httpx's ASGITransport (see conftest.py's `client` fixture) reports the
-# connection as ("127.0.0.1", 123) by default — i.e. every request in this
+# connection as ("127.0.0.1", 123) by default, so every request in this
 # suite has a real client IP of 127.0.0.1, regardless of any header a test
 # sends.
 import pytest
@@ -61,7 +61,7 @@ async def test_forged_x_forwarded_for_header_does_not_grant_access(client, creat
 async def test_forged_x_forwarded_for_header_does_not_bypass_a_denial(client, created_emails):
     """The inverse proof: a policy that allows some OTHER IP (matching
     what a forged header claims) must still deny, because the real
-    connection IP (127.0.0.1) doesn't match — the forged header is never
+    connection IP (127.0.0.1) doesn't match; the forged header is never
     consulted at all."""
     email = unique_email("spoof-deny")
     policy_name = await _create_network_gated_policy(allowed_ip="203.0.113.99")
@@ -82,7 +82,7 @@ async def test_forged_x_forwarded_for_header_does_not_bypass_a_denial(client, cr
 @pytest.mark.asyncio
 async def test_forged_current_time_in_request_body_is_never_used(client, created_emails):
     """A time-gated policy denied at the real current moment must not be
-    unlocked by a client-supplied 'current_time' anywhere in the request —
+    unlocked by a client-supplied 'current_time' anywhere in the request:
     batch-check's request schema doesn't even accept a context field, but
     this proves there's no back door via `resource`."""
     email = unique_email("spoof-time")
@@ -116,5 +116,5 @@ async def test_forged_current_time_in_request_body_is_never_used(client, created
 
     assert resp.status_code == 200
     # allowed is False unless the current real UTC time genuinely happens
-    # to fall in 00:00-00:01 — overwhelmingly False given the tiny window
+    # to fall in 00:00-00:01, overwhelmingly False given the tiny window
     assert resp.json()["results"][0]["allowed"] is False

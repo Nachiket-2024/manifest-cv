@@ -12,11 +12,11 @@ export type PasswordStrength = "Weak" | "Medium" | "Strong" | "";
 
 /**
  * These must mirror password_service.validate_password_strength on the
- * backend exactly (length >= 8, upper, lower, digit — no special-char
+ * backend exactly (length >= 8, upper, lower, digit; no special-char
  * requirement). A previous version checked for a special character
  * instead of a lowercase letter, so a password like "PASSWORD1!" showed
  * "Strong" and passed every client-side check here, then got rejected
- * by the backend for missing a lowercase letter — confusing UX from two
+ * by the backend for missing a lowercase letter, confusing UX from two
  * validation layers enforcing different rules. Shared here so
  * SignupForm and PasswordResetConfirmForm can't drift apart again.
  */

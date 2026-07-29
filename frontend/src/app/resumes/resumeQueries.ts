@@ -68,6 +68,13 @@ export function useResumeTemplatePreviewQuery(draftId: number, templateId: strin
         // current content.
         staleTime: 0,
         gcTime: 0,
+        // staleTime: 0 means TanStack Query's default refetchOnWindowFocus
+        // would otherwise re-trigger a full server-side tectonic recompile
+        // (and flash the "Compiling preview..." loader) every time the tab
+        // regains focus, even though the already-shown preview is still
+        // correct — recompiling here buys nothing over the already-rendered
+        // blob, since nothing about the resume changed just by tabbing away.
+        refetchOnWindowFocus: false,
     });
 }
 

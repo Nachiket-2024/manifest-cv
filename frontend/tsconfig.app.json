@@ -15,7 +15,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Path aliases — must match the "@" alias in vitest.config.ts so
+    /* Path aliases: must match the "@" alias in vitest.config.ts so
        type-checking and the Vite/Vitest runtime agree on resolution */
     "paths": {
       "@/*": ["./src/mystic_auth/*"],

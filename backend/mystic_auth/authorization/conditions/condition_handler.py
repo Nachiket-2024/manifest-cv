@@ -6,7 +6,7 @@ class ConditionHandler(ABC):
     One condition type's evaluation logic (e.g. "self_only", "time",
     "network"). The ConditionEvaluationService dispatches to whichever
     handler is registered for a given condition key via
-    ConditionRegistry — the evaluator (PolicyEvaluationEngine) never
+    ConditionRegistry: the evaluator (PolicyEvaluationEngine) never
     contains condition-specific logic itself, so adding a new condition
     type never requires touching the evaluator or the service, only
     registering a new handler (see conditions/condition_registry.py).
@@ -29,7 +29,7 @@ class ConditionHandler(ABC):
         `condition_value` is this condition key's value from the policy's
         `conditions` dict (e.g. {"start": "09:00", ...} for a "time"
         condition, or a plain bool for "self_only"). Returns True if this
-        condition is satisfied, False otherwise (including on any error —
+        condition is satisfied, False otherwise (including on any error,
         see class docstring).
         """
         raise NotImplementedError

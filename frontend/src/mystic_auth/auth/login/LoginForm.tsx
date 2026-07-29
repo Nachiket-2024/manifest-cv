@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Input, Button, Stack, Text } from "@chakra-ui/react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { useLoginMutation } from "./useLoginMutation";
 import FormAlert from "../../ui/FormAlert";
@@ -22,7 +22,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onAttempt }) => {
         }
     }, [loginMutation.isSuccess, onSuccess]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.SubmitEvent<HTMLDivElement>) => {
         e.preventDefault();
         onAttempt?.();
         loginMutation.mutate({ email, password });
@@ -78,7 +78,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onAttempt }) => {
                 outline variant, which in dark mode rendered a border nearly
                 indistinguishable from the card background (border.default's
                 dark value is a deliberately visible step up from
-                bg.surface's dark value — see theme/system.ts). */}
+                bg.surface's dark value, see theme/system.ts). */}
             <Button
                 type="button"
                 variant="outline"

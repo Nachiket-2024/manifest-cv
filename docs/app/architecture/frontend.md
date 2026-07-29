@@ -19,21 +19,21 @@ React 19 + TypeScript SPA (`frontend/src/`), built with Vite, styled with Chakra
 | `users/` | Admin user management (list, mutate, assign policies) |
 | `store/` | Zustand: `authStore.ts` (session/profile/permissions), `themeStore.ts` (light/dark) — client state only, no Redux |
 | `core/` | `queryClient.ts` (the shared TanStack Query client, also used by ManifestCV's own query hooks), `settings.ts` (`APP_NAME`, `VITE_API_BASE_URL`, etc. — read through `import.meta.env`), and `errorMonitoring.ts` (optional, disabled unless `VITE_SENTRY_DSN` is set — see [Error Monitoring](../../mystic_auth/error-monitoring/overview.md)). ManifestCV reads all of these through `app/sdk.ts` rather than its own copy — see below. |
-| `layout/` | App shell: `AppLayout`, `Navbar`, `Sidebar`, `ThemeToggle`, `navItems.ts` (customized — see below) |
+| `layout/` | App shell: `AppLayout`, `Navbar`, `Sidebar`, `ThemeToggle`, `navItems.ts` (unmodified — see below) |
 | `api/` | `axiosInstance.ts`, `apiError.ts`, plus mystic-auth's own per-domain typed call functions (`auth_api`, `users_api`, `profile_api`, `policies_api`, `audit_api`) |
 | `ui/` | Generic reusable UI kit, no feature ownership: `DataTable`, `ConfirmDialog`, `FormAlert`, `PageContainer`, `Card`, `LoadingState`, `toaster`/`toasterInstance`, `ErrorBoundary` — ManifestCV's own pages reuse these directly, through `app/sdk.ts` |
 | `theme/` | `system.ts` — Chakra UI v3 design tokens |
 
 `frontend/src/mystic_auth/` has no `sdk.ts` of its own in this repo — unlike a fresh, standalone clone of the template (where `sdk.ts`/`app_sdk.ts` live inside `mystic_auth/` itself), the extension-surface files live in `frontend/src/app/` instead, described next.
 
-`layout/navItems.ts` (single source of truth for the sidebar's link list) carries one ManifestCV-specific addition on top of the vendored file: entries for `/career-knowledge`, `/resumes`, and `/applications`, alongside the inherited Dashboard/Users/Policies/Audit Log/Profile links.
+`layout/navItems.ts` (single source of truth for the sidebar's *built-in* link list) stays byte-identical to the vendored file. ManifestCV's own sidebar links (`/career-knowledge`, `/resumes`, `/applications`) are added via `AppLayout`'s `extraNavItems` prop instead — passed from `App.tsx`, `order`ed to land right after Dashboard — rather than by hand-editing this file, per [Shared-chrome extension points](../../mystic_auth/template-usage/overview.md#shared-chrome-extension-points).
 
 ### `frontend/src/app/` — the app shell and ManifestCV's own domains
 
 | Module | Purpose |
 |---|---|
-| `sdk.ts` | The public extension surface for `frontend/src/app/`'s own code — re-exports mystic-auth's pieces (`PERMISSIONS`, `useAuthorization`, `useCan`, `Authorized`, `IfCan`, `ProtectedRoute`, `authorizationService`, `api`, `extractApiErrorMessage`, `useAuthStore`, `queryClient`, `settings`/`APP_NAME`, `reportError`, plus the shared UI primitives `PageContainer`/`Card`/`DataTable`/`ConfirmDialog`/`FormAlert`/`LoadingState`/`toaster`/`useUnsavedChangesWarning`) so ManifestCV's own domain code never reaches into `mystic_auth/`'s internal paths directly — see [Auth & Authorization](../auth/overview.md) |
-| `app_sdk.ts` | ManifestCV's own extension surface, empty for now — the counterpart to `sdk.ts`, kept in its own file so a template update to `sdk.ts` never conflicts with anything ManifestCV adds here |
+| `sdk.ts` | Upstream-owned, never hand-edited. The public extension surface for `frontend/src/app/`'s own code — re-exports mystic-auth's pieces (`PERMISSIONS`, `useAuthorization`, `useCan`, `Authorized`, `IfCan`, `ProtectedRoute`, `authorizationService`, `AppLayout`/`NavItem`, `Toaster`/`toaster`, `LoadingState`/`Card`/`PageContainer`/`DataTable`/`ConfirmDialog`/`FormAlert`/`ErrorBoundary`, `api`, `extractApiErrorMessage`, `useAuthStore`, `queryClient`, `settings`/`APP_NAME`, `reportError`) so ManifestCV's own domain code never reaches into `mystic_auth/`'s internal paths directly — see [Auth & Authorization](../auth/overview.md) |
+| `app_sdk.ts` | ManifestCV's own extension surface — the counterpart to `sdk.ts`, kept in its own file so a template update to `sdk.ts` never conflicts with anything ManifestCV adds here. Re-exports `useUnsavedChangesWarning` plus the same shared UI primitives above (imported directly from `mystic_auth/ui/`, not through `sdk.ts`) |
 | `App.tsx`, `main.tsx` | Routing (below) and the app's React entry point |
 | `career_knowledge/` | `CareerKnowledgePage.tsx` + query/mutation hooks — the caller's own knowledge base — see [Career Knowledge](../career-knowledge/overview.md) |
 | `resumes/` | `ResumeDraftsPage.tsx`, `ResumeEditorPage.tsx` + query/mutation hooks — resume drafts and template finalization — see [Resumes](../resumes/overview.md) and [Document Generation](../document-generation/overview.md) |
@@ -57,7 +57,7 @@ This layout deliberately mirrors the backend's own domain split (`backend/mystic
 
 ## Routing
 
-`react-router-dom` v7, `BrowserRouter`, defined in `App.tsx`. Only `LoginPage` is eager-loaded (the most common unauthenticated entry point); every other route is `React.lazy`-split. `react-router-dom@7.18.1` carries [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2) with no patched release yet — see [`docs/mystic_auth/concerns/README.md`](../../mystic_auth/concerns/README.md) for why CI treats `npm audit` as non-blocking rather than this app switching packages to dodge it (an earlier revision briefly moved to `react-router@8.3.0` to sidestep the advisory, which required hand-editing vendored `mystic_auth/` files that import routing hooks — reverted since it broke the "never hand-edit `mystic_auth/`" boundary the sync workflow depends on).
+`react-router` v8, `BrowserRouter`, defined in `App.tsx` — not `react-router-dom`: upstream folded `react-router-dom`'s exports into `react-router` for v8 (see [mystic-auth's own routing doc](../../mystic_auth/architecture/frontend.md#why-react-router-not-react-router-dom) for why: `react-router-dom@7.18.1` carried an unpatched high-severity advisory, [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2), with the fix only ever shipped as `react-router@8.3.0`). ManifestCV's own route modules (`ResumeDraftsPage.tsx`, `ResumeEditorPage.tsx`) and integration tests import from `react-router` accordingly. Only `LoginPage` is eager-loaded (the most common unauthenticated entry point); every other route is `React.lazy`-split.
 
 | Route | Access | Notes |
 |---|---|---|

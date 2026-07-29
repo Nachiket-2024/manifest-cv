@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Authentication-only dependency (no permission required) — used by
+# Authentication-only dependency (no permission required) : used by
 # /users/me/policies, where a user inspects their own assignments regardless
 # of whether they hold policies:read.
 from ...auth.current_user.current_user_dependency import get_current_user
@@ -25,8 +25,8 @@ async def assign_policy_to_user(
     db: AsyncSession = Depends(database.get_session),
 ):
     """
-    Assigns a policy to a user (idempotent — already holding it is a
-    no-op). The caller must already hold every action this policy grants —
+    Assigns a policy to a user (idempotent : already holding it is a
+    no-op). The caller must already hold every action this policy grants :
     otherwise policies:assign alone (without system_superuser itself) would
     let a caller hand out (to themselves or anyone else) a pre-existing
     policy more powerful than what they hold. policies:assign is the one
@@ -35,7 +35,7 @@ async def assign_policy_to_user(
     exceed the caller's own permissions.
 
     This is the actual mechanism by which an account gains capability under
-    PBAC — never a role change. Role may be used for display/grouping, but
+    PBAC : never a role change. Role may be used for display/grouping, but
     must never select policies automatically.
     """
     user = await get_or_404(user_crud.get_by_email(user_email, db), "User not found")
@@ -86,7 +86,7 @@ async def remove_policy_from_user(
     return {"detail": f"Policy '{policy_name}' removed from {user_email}"}
 
 
-# Registered BEFORE /users/{user_email}/policies below — FastAPI/Starlette
+# Registered BEFORE /users/{user_email}/policies below : FastAPI/Starlette
 # matches routes in registration order, and a parameterized path segment
 # happily matches the literal string "me" too; this specific route must
 # come first or /users/{user_email}/policies (which requires policies:read)
@@ -98,8 +98,8 @@ async def list_my_policies(
 ):
     """
     Self-service: every policy currently assigned to the caller (active or
-    not — for inspection, not an authorization decision). No policies:read
-    required — a user inspecting their own assignments is not privileged
+    not : for inspection, not an authorization decision). No policies:read
+    required : a user inspecting their own assignments is not privileged
     information, mirroring GET /audit-log/me's own self-service rationale.
     Same response shape as the admin GET /users/{email}/policies below,
     scoped to the caller.
@@ -114,7 +114,7 @@ async def list_user_policies(
     current_user: dict = READ_DEPENDENCY,
     db: AsyncSession = Depends(database.get_session),
 ):
-    """Every policy assigned to this user (active or not — for inspection,
+    """Every policy assigned to this user (active or not : for inspection,
     not an authorization decision)."""
     await get_or_404(user_crud.get_by_email(user_email, db), "User not found")
 

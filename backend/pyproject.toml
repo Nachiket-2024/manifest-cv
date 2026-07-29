@@ -20,9 +20,10 @@ known-first-party = ["app", "mystic_auth"]
 
 [tool.ruff.lint.per-file-ignores]
 # Interactive CLI entrypoint (invoked directly via `python -m`, never inside
-# a running event loop doing concurrent work) — input()/getpass() blocking
+# a running event loop doing concurrent work) : input()/getpass() blocking
 # is the correct, intended behavior here, not a footgun.
 "mystic_auth/scripts/create_system_user.py" = ["ASYNC250"]
+"mystic_auth/scripts/create_rbac_policies.py" = ["ASYNC250"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -37,7 +38,7 @@ check_untyped_defs = true
 
 [tool.bandit]
 # B105 (hardcoded_password_string) fires on any string literal assigned to a
-# name/dict-key containing "password" — here that's only ever event-name
+# name/dict-key containing "password" : here that's only ever event-name
 # constants (e.g. PASSWORD_RESET_REQUESTED), a Redis key template, a URL, and
 # `hashed_password: None` for OAuth-only accounts. No actual secret is
 # hardcoded anywhere in this codebase; this rule is disabled project-wide

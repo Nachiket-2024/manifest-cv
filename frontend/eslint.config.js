@@ -10,7 +10,7 @@ export default tseslint.config([
   {
     // Test files live at ../tests/frontend, outside this project's own
     // root (per the repository's top-level tests/backend + tests/frontend
-    // layout) — ESLint's flat config otherwise silently ignores anything
+    // layout), ESLint's flat config otherwise silently ignores anything
     // outside its own directory, so without this pattern `npm run lint`
     // gives zero signal on test code.
     files: ['**/*.{ts,tsx}', '../tests/frontend/**/*.{ts,tsx}'],

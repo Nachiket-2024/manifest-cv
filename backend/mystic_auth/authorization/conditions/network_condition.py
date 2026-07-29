@@ -5,13 +5,13 @@ from .condition_handler import ConditionHandler
 
 class NetworkCondition(ConditionHandler):
     """
-    "network": {"allowed_ips": ["10.0.0.0/8", "203.0.113.7"]} — the
+    "network": {"allowed_ips": ["10.0.0.0/8", "203.0.113.7"]}: the
     caller's IP (read from context["ip_address"], the only place this app
     surfaces the request's source IP into the condition-evaluation
     context) must match one of the listed single IPs or CIDR ranges.
 
     Fails safe (denies) if allowed_ips is empty, the context carries no
-    ip_address at all, or either address string fails to parse — per
+    ip_address at all, or either address string fails to parse, per
     claude.md's explicit "missing IP context denial" / "invalid IP
     rejection" requirements.
     """

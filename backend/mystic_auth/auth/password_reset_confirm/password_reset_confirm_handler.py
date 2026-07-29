@@ -29,7 +29,7 @@ class PasswordResetConfirmHandler:
 
             email = payload["email"]
 
-            # Distinct namespace from login's "login_lock:email:" key — sharing it
+            # Distinct namespace from login's "login_lock:email:" key: sharing it
             # would mean failures unrelated to a real login attempt (a weak new
             # password, reusing the old password, a stale token) count towards,
             # and can trip, the unrelated login lockout for the same email. Same

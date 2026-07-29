@@ -3,7 +3,7 @@
 # End-to-end coverage for the PBAC policy management API
 # (backend/mystic_auth/api/pbac_routes/) against the real ASGI app, real
 # PostgreSQL, and real Redis. Per claude.md: "All management actions must
-# themselves use PBAC authorization" — these tests prove that gate, and
+# themselves use PBAC authorization": these tests prove that gate, and
 # that assigning/removing a policy via this API actually changes what an
 # account can do (the real end-to-end point of the whole system).
 import uuid
@@ -66,7 +66,7 @@ async def _create_system_user(client, created_emails, email):
 
 async def _create_user_with_custom_policy_actions(client, created_emails, email, actions):
     """Creates a user holding a single, freshly-created policy granting
-    exactly `actions` on resource_type="policies" — used to prove the
+    exactly `actions` on resource_type="policies", used to prove the
     fine-grained policies:read/create/update/delete/assign/revoke actions
     are each independently enforced, rather than all-or-nothing like the
     old coarse policies:manage."""
@@ -81,7 +81,7 @@ async def _create_user_with_custom_policy_actions(client, created_emails, email,
 
 @pytest_asyncio.fixture(autouse=True)
 async def _cleanup_test_policies():
-    """Every policy created by these tests is prefixed 'test_policy_' —
+    """Every policy created by these tests is prefixed 'test_policy_';
     delete them on teardown so repeated runs don't accumulate rows."""
     yield
     async with database.async_session() as session:
@@ -111,7 +111,7 @@ async def test_regular_user_cannot_manage_policies(client, created_emails):
 @pytest.mark.asyncio
 async def test_admin_without_policies_read_cannot_manage_policies(client, created_emails):
     # user_administration does not include policies:read (or any of the
-    # other fine-grained policies:* actions) — only system_superuser does.
+    # other fine-grained policies:* actions); only system_superuser does.
     # An ordinary admin must be denied here.
     email = _unique_email("admin")
     await _create_verified_user(client, created_emails, email, [SELF_SERVICE_POLICY_NAME, USER_ADMINISTRATION_POLICY_NAME])
@@ -155,7 +155,7 @@ async def _attempt_policy_routes(client, target_email):
     statuses = {"create": create_resp.status_code}
 
     # The remaining checks need a real policy row to target regardless of
-    # whether "create" itself was authorized — create it directly via the
+    # whether "create" itself was authorized: create it directly via the
     # repository, bypassing the API, if the API call was denied.
     if create_resp.status_code != 201:
         async with database.async_session() as session:
@@ -373,7 +373,7 @@ async def test_assigning_user_administration_via_the_api_actually_grants_list_al
     )
     assert assign_resp.status_code == 200
 
-    # After assignment: target can list users — no new login/token needed,
+    # After assignment: target can list users, no new login/token needed,
     # since authorization is evaluated fresh from the DB on every request.
     await client.post("/auth/login", json={"email": target_email, "password": PASSWORD})
     allowed = await client.get("/users/")
@@ -438,7 +438,7 @@ async def test_list_user_policies_reports_currently_assigned_policies(client, cr
 async def test_users_me_policies_returns_the_callers_own_policies_without_policies_read(
     client, created_emails
 ):
-    """The frontend's getUserPolicies() calls this self-service endpoint —
+    """The frontend's getUserPolicies() calls this self-service endpoint:
     a plain self_service-only user (no policies:read) must be able to see
     their own assignments, unlike the admin GET /users/{email}/policies."""
     email = _unique_email()
@@ -513,7 +513,7 @@ async def test_authorization_check_distinguishes_candidate_from_granting_when_co
 ):
     # A policy can be a "candidate" (matches action + resource_type) while
     # still failing the actual grant because its conditions reject this
-    # specific resource — the inspection endpoint's whole point is
+    # specific resource; the inspection endpoint's whole point is
     # surfacing that distinction (see evaluate_detailed's docstring).
     system_email = _unique_email("system")
     target_email = _unique_email("target")

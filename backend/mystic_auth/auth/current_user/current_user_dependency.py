@@ -15,7 +15,7 @@ async def get_current_user(
     role, permissions, has_password), or raises 401/403 via
     current_user_handler.
 
-    Centralized here — rather than redefined per router — so every router
+    Centralized here, rather than redefined per router, so every router
     authenticates through the exact same path, and so the authorization
     layer (authorization.permission_checker.require_permission) has a
     single canonical dependency to build permission checks on top of.

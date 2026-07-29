@@ -31,7 +31,10 @@ export const passwordResetRequestApi = (payload: { email: string }) =>
 export const passwordResetConfirmApi = (payload: { token: string; new_password: string }) =>
     api.post("/auth/password-reset/confirm", payload);
 
-// email is accepted for callers' convenience but not sent — the backend only needs the token.
+export const verificationEmailRequestApi = (payload: { email: string }) =>
+    api.post("/auth/verify-account/request", payload);
+
+// email is accepted for callers' convenience but not sent: the backend only needs the token.
 // Sent as a POST body rather than a GET query param to avoid exposing the token in browser
 // history, server access logs, and Referer headers.
 export const verifyAccountApi = (token: string, _email: string) =>

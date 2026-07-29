@@ -17,7 +17,7 @@ import FormAlert from "../ui/FormAlert";
  * shared useCurrentUserQuery cache instead of fetching independently, so it
  * stays in sync with the rest of the app. Session controls (logout, logout
  * all devices) live in the app shell (Navbar) and ProfilePage now, not
- * here — having them on both the dashboard card and the always-visible top
+ * here, having them on both the dashboard card and the always-visible top
  * bar was a duplicated affordance for the same action.
  */
 const DashboardPage: React.FC = () => {
@@ -63,7 +63,7 @@ const DashboardPage: React.FC = () => {
                                 🏷️
                             </Box>
                             <Text fontSize="17px" color="fg.muted" fontWeight="medium" textTransform="capitalize">
-                                {user.role ?? "—"}
+                                {user.role ?? ":"}
                             </Text>
                         </Flex>
                     </Stack>

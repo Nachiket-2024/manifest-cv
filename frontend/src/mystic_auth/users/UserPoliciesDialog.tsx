@@ -21,7 +21,7 @@ interface UserPoliciesDialogProps {
  * ----------------------------
  * Shows the policies currently assigned to one user, with controls to
  * assign an additional policy or revoke an existing one. This is the
- * frontend surface for /authorization/users/{email}/policies — the actual
+ * frontend surface for /authorization/users/{email}/policies: the actual
  * grant/revoke decision is enforced server-side either way, this is purely
  * the admin UI for it.
  */
@@ -29,7 +29,7 @@ const UserPoliciesDialog: React.FC<UserPoliciesDialogProps> = ({ isOpen, userEma
     const [selectedPolicy, setSelectedPolicy] = useState("");
     const currentUserEmail = useAuthStore((s) => s.email);
     // Revoking your OWN policy here has no confirmation and no
-    // /auth/me refetch of its own — the Zustand permissions cache (source
+    // /auth/me refetch of its own: the Zustand permissions cache (source
     // for every IfCan/ProtectedRoute check) would stay stale until the
     // next reload, so a self-revoke could silently strand you in a UI that
     // still shows controls you no longer have access to. Simplest safe
@@ -84,7 +84,7 @@ const UserPoliciesDialog: React.FC<UserPoliciesDialogProps> = ({ isOpen, userEma
                             <Stack gap={4}>
                                 {isSelf && (
                                     <Text fontSize="sm" color="fg.muted">
-                                        You cannot revoke your own policies from here — ask another admin,
+                                        You cannot revoke your own policies from here : ask another admin,
                                         or use a different account.
                                     </Text>
                                 )}

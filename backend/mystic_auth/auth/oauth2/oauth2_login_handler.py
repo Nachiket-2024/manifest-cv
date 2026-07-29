@@ -38,7 +38,7 @@ class OAuth2LoginHandler:
 
             state, code_challenge = await self.oauth2_service.generate_and_store_state()
 
-            # No access_type=offline/prompt=consent — this app never stores or uses
+            # No access_type=offline/prompt=consent: this app never stores or uses
             # Google's own refresh_token (see oauth2_service.py's session note), so
             # forcing a persistent offline-access grant and a full consent
             # re-prompt on every login would only widen this app's footprint on
@@ -90,7 +90,7 @@ class OAuth2LoginHandler:
         """
         try:
             # Reject immediately on a provider-reported error (e.g. cancelled
-            # consent) or a missing authorization code — before touching
+            # consent) or a missing authorization code, before touching
             # state/Redis at all, since neither exists meaningfully in this case.
             if error or not code:
                 logger.info("OAuth2 callback did not complete: error=%s, code_present=%s", error, bool(code))
@@ -144,7 +144,7 @@ class OAuth2LoginHandler:
 
             # login_or_create_user returns None for every rejection case (the
             # reserved system account, a deactivated account, an unexpected
-            # error) — the audit entry must reflect that outcome instead of
+            # error): the audit entry must reflect that outcome instead of
             # unconditionally claiming success, or a blocked takeover attempt
             # against the system account would read as a normal login in the
             # security audit trail.

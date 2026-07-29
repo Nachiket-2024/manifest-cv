@@ -9,7 +9,7 @@ Per claude.md's Remaining Backend PBAC Production Hardening item #1
 (create/update/delete/rollback) must produce an immutable history entry so
 policy changes are fully traceable and reversible.
 
-Deliberately no foreign key to `policies` — mirrors
+Deliberately no foreign key to `policies`: mirrors
 authorization_audit_log's own rationale (see that migration): a policy
 referenced by an old history entry may since have been edited or deleted,
 and the history must keep reflecting exactly what existed *at the time*.

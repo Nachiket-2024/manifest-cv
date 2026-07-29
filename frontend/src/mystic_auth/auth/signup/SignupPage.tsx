@@ -3,7 +3,7 @@ import { Stack, Heading, Text } from "@chakra-ui/react";
 
 import SignupForm from "./SignupForm";
 
-// Shared surface styling (theme surface/border tokens) — replaces this
+// Shared surface styling (theme surface/border tokens), replacing this
 // page's own hand-rolled bg="white"/boxShadow="lg" card.
 import Card from "../../ui/Card";
 

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Badge, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 import Pager from "../ui/Pager";
 import {

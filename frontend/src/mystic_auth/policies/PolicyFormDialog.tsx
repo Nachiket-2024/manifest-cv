@@ -36,7 +36,7 @@ function textToActions(text: string): string[] {
 /**
  * PolicyFormDialog
  * ----------------------------
- * Shared create/edit form for a Policy — one component instead of separate
+ * Shared create/edit form for a Policy: one component instead of separate
  * "create" and "edit" modals, since the fields and validation are identical
  * (see PolicyBase on the backend). `policy` presence alone distinguishes
  * the two modes.
@@ -57,7 +57,7 @@ const PolicyFormDialog: React.FC<PolicyFormDialogProps> = ({
     const [conditionsError, setConditionsError] = useState<string | null>(null);
 
     // Snapshot of every field's value right after the form was last reset
-    // (dialog opened) — compared against current values to detect unsaved
+    // (dialog opened), compared against current values to detect unsaved
     // edits before a close attempt discards them.
     const [initialSnapshot, setInitialSnapshot] = useState("");
 
@@ -97,7 +97,7 @@ const PolicyFormDialog: React.FC<PolicyFormDialogProps> = ({
         onClose();
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.SubmitEvent<HTMLDivElement>) => {
         e.preventDefault();
 
         let conditions: Record<string, unknown> | undefined;

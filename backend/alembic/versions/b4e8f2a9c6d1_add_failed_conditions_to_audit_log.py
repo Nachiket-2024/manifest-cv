@@ -7,11 +7,11 @@ Create Date: 2026-07-13 00:00:00.000000
 Per claude.md's Authorization Decision Explainability: audit logs must be
 able to explain *why* access was denied, not just that it was. This adds
 one nullable JSONB column capturing {policy_name: [failed_condition_key,
-...]} for every candidate policy whose conditions did not pass — see
+...]} for every candidate policy whose conditions did not pass, see
 evaluators/authorization_decision.py's `failed_conditions` field, which
 this column persists.
 
-Purely additive (nullable, no default required for existing rows) — no
+Purely additive (nullable, no default required for existing rows). No
 backfill needed, since older rows simply never had this information
 computed.
 """

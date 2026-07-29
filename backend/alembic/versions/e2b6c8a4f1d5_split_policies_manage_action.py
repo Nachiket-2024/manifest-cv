@@ -14,7 +14,7 @@ This is a pure data migration: it updates the existing seeded
 `system_superuser` policy row's `actions` array in place (no schema
 change). Every route that previously required "policies:manage" now
 requires one of the fine-grained actions instead (see
-authorization/routes/policy_routes.py) — updating this one policy row is
+authorization/routes/policy_routes.py); updating this one policy row is
 what keeps the system superuser able to do all of them, exactly as before.
 """
 from collections.abc import Sequence

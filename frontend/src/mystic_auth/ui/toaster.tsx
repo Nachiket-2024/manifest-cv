@@ -9,7 +9,7 @@ import {
 import { toaster } from "./toasterInstance";
 
 /**
- * Renders the shared toast queue — mount exactly once near the app root. Rendering it more than
+ * Renders the shared toast queue. Mount exactly once near the app root: rendering it more than
  * once would duplicate every toast.
  */
 export const Toaster = () => {

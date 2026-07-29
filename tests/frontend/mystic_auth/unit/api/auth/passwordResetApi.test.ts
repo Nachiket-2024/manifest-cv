@@ -61,7 +61,7 @@ describe('passwordResetConfirmApi', () => {
     });
   });
 
-  it('should not send an email field — the backend derives it from the token', async () => {
+  it('should not send an email field : the backend derives it from the token', async () => {
     mock.onPost('/auth/password-reset/confirm').reply((config) => {
       const body = JSON.parse(config.data);
       expect(body).toEqual({ token: 'reset-token-abc', new_password: 'NewStrongPass123!' });

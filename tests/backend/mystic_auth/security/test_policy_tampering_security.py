@@ -3,7 +3,7 @@
 # Real-DB proof of the two "System policy protection" guarantees
 # (claude.md): baseline policies can never be deleted/renamed via the
 # management API, and the last remaining system_superuser assignment can
-# never be revoked — even by a genuine system_superuser holder. Unit
+# never be revoked : even by a genuine system_superuser holder. Unit
 # tests already cover this with mocks; these hit the real API + real DB.
 import pytest
 from backend.mystic_auth.authorization.policies.default_policies import (

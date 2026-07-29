@@ -24,12 +24,12 @@ class PasswordResetService:
                 logger.warning("Password reset requested for non-existent email: %s", email)
                 return False
 
-            # Token carries only email — role is no longer needed for reset flow.
+            # Token carries only email; role is no longer needed for reset flow.
             reset_token = await password_service.create_reset_token(email)
 
             expires_minutes = settings.RESET_TOKEN_EXPIRE_MINUTES
 
-            # Persisted in Redis so reset_password() can enforce single-use —
+            # Persisted in Redis so reset_password() can enforce single-use:
             # without this, a JWT's signature alone stays valid (and replayable)
             # for the whole expiry window even after being redeemed once.
             await redis_client.set(f"password_reset:{reset_token}", "1", ex=expires_minutes * 60)
@@ -45,7 +45,7 @@ class PasswordResetService:
                 cta_label="Reset Your Password",
                 cta_url=reset_url,
                 expiry_note=f"This password reset link will expire in {expires_minutes} minutes for security reasons.",
-                ignore_note="If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.",
+                ignore_note="If you didn't request a password reset, you can safely ignore this email; your password will remain unchanged.",
             )
 
             await send_email_task.kiq(
@@ -66,7 +66,7 @@ class PasswordResetService:
     async def reset_password(token: str, new_password: str, db) -> bool:
         """
         The single-use check used to be a plain GET, with the matching DELETE
-        only issued after a successful password update — leaving a window where
+        only issued after a successful password update, leaving a window where
         two concurrent requests carrying the same valid token could both pass
         the GET before either deleted the key. If they submitted different new
         passwords, both DB writes would execute and the later one would
@@ -75,15 +75,15 @@ class PasswordResetService:
         concurrent request can ever win it, so at most one password update can
         happen per token. A request that wins the GETDEL but then fails a
         recoverable validation step (weak password, same-as-old password, a
-        transient DB failure) restores the entry — with a TTL capped by the
-        token's own remaining JWT lifetime — so a legitimate retry with the
+        transient DB failure) restores the entry, with a TTL capped by the
+        token's own remaining JWT lifetime, so a legitimate retry with the
         same link still works, without reopening the concurrency window this fixes.
         """
         redis_key = f"password_reset:{token}"
 
         async def _restore_token(payload: dict) -> None:
             # Cap the restored TTL at the token's own remaining JWT lifetime so
-            # retries never extend the reset window past the original expiry —
+            # retries never extend the reset window past the original expiry;
             # verify_reset_token would reject the JWT by then anyway.
             exp = payload.get("exp")
             if not exp:
@@ -103,7 +103,7 @@ class PasswordResetService:
                 logger.warning("Password reset token not found or already used")
                 return False
 
-            # Role is no longer stored in reset tokens — single table makes it unnecessary.
+            # Role is no longer stored in reset tokens: single table makes it unnecessary.
             email = payload.get("email")
             if not email:
                 logger.warning("Email missing from reset token payload")

@@ -2,7 +2,7 @@
 #
 # End-to-end auth flows against the real ASGI app, real PostgreSQL, and real
 # Redis (see conftest.py). Unlike the mocked unit suite, these exercise the
-# actual Redis type/atomicity behavior and actual DB commits — the class of
+# actual Redis type/atomicity behavior and actual DB commits, the class of
 # bug (e.g. a Set/Hash key-type collision, or a missing session-revocation
 # call) that mocks cannot surface.
 import asyncio
@@ -24,24 +24,24 @@ def _unique_email() -> str:
     return f"inttest-{uuid.uuid4().hex}@example.com"
 
 
-# conftest.py's `client` fixture uses base_url="https://testserver" — a
+# conftest.py's `client` fixture uses base_url="https://testserver", a
 # dotless hostname, which CPython's http.cookiejar (what httpx's cookie jar
 # is built on) normalizes to "testserver.local" internally for matching
 # purposes. Cookies set manually here must match that (domain, path, name)
 # key exactly, or they land as a second, separate jar entry instead of
-# overwriting the real one from a prior response — see
+# overwriting the real one from a prior response: see
 # _refresh_with_cookie's docstring below for why that matters.
 _TEST_COOKIE_DOMAIN = "testserver.local"
 
 
 async def _refresh_with_cookie(client, refresh_token: str):
     """Calls /auth/refresh/ with an explicit refresh_token cookie value,
-    independent of whatever the client's shared cookie jar currently holds —
+    independent of whatever the client's shared cookie jar currently holds,
     needed to simulate stale/reused/forged/cross-session tokens. httpx
     deprecated per-request `cookies=` in favor of setting cookies on the
     client itself, hence setting it here rather than passing `cookies=`.
     Both domain and path must match the real cookie's (see
-    _TEST_COOKIE_DOMAIN above) — the jar keys cookies by (domain, path,
+    _TEST_COOKIE_DOMAIN above): the jar keys cookies by (domain, path,
     name), so an inexact match creates a second entry alongside the real one
     instead of overwriting it, which then survives the endpoint's own
     cookie-clearing response untouched."""
@@ -92,7 +92,7 @@ async def test_auth_me_exposes_permissions_matching_the_users_role(client, creat
     # caller's resolved permission set (not just their role string), so
     # clients can make authorization-adjacent decisions by checking
     # permissions instead of hardcoding role-name comparisons. Exercised
-    # against the real app/DB/JWT — a plain "user" account should get only
+    # against the real app/DB/JWT, a plain "user" account should get only
     # the self-service baseline, with no admin-only permission granted.
     email = _unique_email()
     login_resp = await _signup_verify_login(client, created_emails, email)
@@ -139,7 +139,7 @@ async def test_verification_token_is_single_use(client, created_emails):
 @pytest.mark.asyncio
 async def test_verify_account_no_longer_accepts_get_with_token_in_query_string(client, created_emails):
     # Regression guard: the verification token must never travel as a URL
-    # query parameter — it ends up in browser history, server access logs,
+    # query parameter: it ends up in browser history, server access logs,
     # and Referer headers. GET on this route must no longer work at all.
     email = _unique_email()
     await client.post("/auth/signup", json={"name": "Test User", "email": email, "password": PASSWORD})
@@ -151,8 +151,8 @@ async def test_verify_account_no_longer_accepts_get_with_token_in_query_string(c
     get_resp = await client.get("/auth/verify-account", params={"token": token})
     assert get_resp.status_code == 405
 
-    # The token must still be unconsumed — a rejected GET must not have
-    # accidentally redeemed it — and a proper POST still works.
+    # The token must still be unconsumed: a rejected GET must not have
+    # accidentally redeemed it, and a proper POST still works.
     post_resp = await client.post("/auth/verify-account", json={"token": token})
     assert post_resp.status_code == 200
 
@@ -160,7 +160,7 @@ async def test_verify_account_no_longer_accepts_get_with_token_in_query_string(c
 @pytest.mark.asyncio
 async def test_signup_rejects_oversized_password_with_422(client, created_emails):
     # Real end-to-end check that FastAPI's request-parsing layer enforces
-    # the schema's max_length — not just the Pydantic model in isolation.
+    # the schema's max_length, not just the Pydantic model in isolation.
     resp = await client.post(
         "/auth/signup",
         json={"name": "Test User", "email": _unique_email(), "password": "a" * 129},
@@ -188,7 +188,7 @@ async def test_signup_duplicate_email_does_not_create_second_user(client, create
 
 @pytest.mark.asyncio
 async def test_signup_duplicate_email_rejected_with_different_casing(client, created_emails):
-    # User@Example.com and user@example.com must be the same account —
+    # User@Example.com and user@example.com must be the same account,
     # confirmed against the real DB unique constraint + normalization, not
     # mocks, since this is exactly the kind of boundary a mock could hide.
     email = _unique_email()
@@ -200,7 +200,7 @@ async def test_signup_duplicate_email_rejected_with_different_casing(client, cre
         "/auth/signup", json={"name": "Second", "email": mixed_case_email, "password": PASSWORD}
     )
 
-    # Same generic 200 (enumeration-resistant), but no second account exists —
+    # Same generic 200 (enumeration-resistant), but no second account exists:
     # verified below by logging in with the mixed-case address and the
     # *original* account's password.
     assert dup_resp.status_code == 200
@@ -232,7 +232,7 @@ async def test_login_succeeds_with_different_casing_than_used_at_signup(client, 
 async def _median_login_latency(client, email: str, password: str, samples: int = 9) -> float:
     durations = []
     for _ in range(samples):
-        # Reset the lockout counter before every sample — otherwise repeated
+        # Reset the lockout counter before every sample, otherwise repeated
         # wrong-password attempts against the same email trip
         # MAX_FAILED_LOGIN_ATTEMPTS partway through, and the locked-out
         # responses (which return instantly, before any hash comparison)
@@ -248,7 +248,7 @@ async def _median_login_latency(client, email: str, password: str, samples: int 
 @pytest.mark.asyncio
 async def test_login_timing_does_not_distinguish_nonexistent_from_wrong_password(client, created_emails):
     # Regression guard for the login timing side-channel (real Argon2, real
-    # DB — a mocked test can't observe this since it doesn't perform real
+    # DB, a mocked test can't observe this since it doesn't perform real
     # hashing). Before the fix, "no such account" returned in a fraction of
     # the time "wrong password on a real, verified account" took, because
     # only the latter paid for an Argon2 comparison. Both must now cost
@@ -260,7 +260,7 @@ async def test_login_timing_does_not_distinguish_nonexistent_from_wrong_password
     nonexistent_latency = await _median_login_latency(client, _unique_email(), "wrong-password")
     wrong_password_latency = await _median_login_latency(client, email, "wrong-password")
 
-    # Generous tolerance to absorb normal jitter — the bug this guards
+    # Generous tolerance to absorb normal jitter: the bug this guards
     # against produces an orders-of-magnitude gap (no hashing vs. real
     # Argon2), not a marginal one, so 3x is still a tight bound against it.
     assert nonexistent_latency < wrong_password_latency * 3
@@ -319,7 +319,7 @@ async def test_successful_login_resets_failed_attempt_counter(client, created_em
     success_resp = await client.post("/auth/login", json={"email": email, "password": PASSWORD})
     assert success_resp.status_code == 200
 
-    # Counter was reset by the success — a further failure shouldn't lock immediately.
+    # Counter was reset by the success, so a further failure shouldn't lock immediately.
     client.cookies.clear()
     next_fail_resp = await client.post("/auth/login", json={"email": email, "password": "wrong-password"})
     assert next_fail_resp.status_code == 401
@@ -330,8 +330,8 @@ async def test_successful_login_resets_failed_attempt_counter(client, created_em
 # Regression coverage for a bug where password_reset_confirm_handler and
 # account_verification_handler shared login_handler's exact "login_lock:
 # email:{email}" Redis key. That meant failures with no bearing on a real
-# login attempt — a weak new password during reset, or an already-verified
-# account being re-submitted for verification — counted towards, and could
+# login attempt, such as a weak new password during reset, or an already-verified
+# account being re-submitted for verification, counted towards, and could
 # trip, the unrelated login lockout for the same email. Each flow now uses
 # its own key namespace (password_reset_confirm_lock / verify_account_lock).
 
@@ -345,7 +345,7 @@ async def test_repeated_weak_password_reset_confirm_failures_do_not_lock_out_log
     for _ in range(settings.MAX_FAILED_LOGIN_ATTEMPTS):
         # Too-short new password fails validate_password_strength, which
         # restores the single-use Redis entry so the same token can be
-        # retried — letting this loop drive enough failures to have tripped
+        # retried, letting this loop drive enough failures to have tripped
         # the old shared lockout key.
         resp = await client.post(
             "/auth/password-reset/confirm", json={"token": reset_token, "new_password": "weak"}
@@ -366,7 +366,7 @@ async def test_repeated_already_verified_failures_do_not_lock_out_login(client, 
         # A fresh, valid, single-use-registered token for an account that's
         # already verified: verify_token succeeds (real token, real Redis
         # single-use entry) but mark_user_verified fails because is_verified
-        # is already True — the "already verified" failure branch.
+        # is already True: the "already verified" failure branch.
         token = await account_verification_service.create_verification_token(email)
         await redis_client.set(f"verify:{token}", "1", ex=600)
         resp = await client.post("/auth/verify-account", json={"token": token})
@@ -397,7 +397,7 @@ async def test_refresh_token_rotates_and_old_token_is_rejected(client, created_e
 async def test_concurrent_refresh_with_the_same_token_only_one_succeeds(client, created_emails):
     # Regression guard for the refresh-token double-spend race: two requests
     # firing concurrently with the identical still-valid refresh token must
-    # not both be able to rotate it into a new pair — claim_jti_for_rotation's
+    # not both be able to rotate it into a new pair: claim_jti_for_rotation's
     # atomic Redis SET...NX means only one can ever win, regardless of how
     # the two requests interleave.
     email = _unique_email()
@@ -427,7 +427,7 @@ async def test_refresh_token_reuse_revokes_all_sessions(client, created_emails):
     device_b_refresh = second_login.cookies["refresh_token"]
 
     # Rotate device A forward once (the legitimate use), then replay the
-    # original, now-revoked device A token — simulating a stolen refresh
+    # original, now-revoked device A token, simulating a stolen refresh
     # token being used after the real client already rotated it.
     await _refresh_with_cookie(client, device_a_refresh)
     reuse_resp = await _refresh_with_cookie(client, device_a_refresh)
@@ -455,9 +455,9 @@ async def test_refresh_rejects_an_actually_expired_token(client, created_emails)
     # Regression guard: existing refresh-token tests only ever mock
     # decode_payload directly, never exercising PyJWT's own exp check. A
     # genuinely expired (but otherwise validly-signed) refresh token must
-    # be rejected the same generic way as a tampered one — deliberately
+    # be rejected the same generic way as a tampered one, deliberately
     # indistinguishable, per refresh_token_handler.py's anti-enumeration
-    # comment — but this at least confirms the expiry path is reached at
+    # comment, but this at least confirms the expiry path is reached at
     # all and doesn't crash or behave differently.
     email = _unique_email()
     await _signup_verify_login(client, created_emails, email)
@@ -480,7 +480,7 @@ async def test_repeated_legitimate_refreshes_do_not_trip_failed_attempt_lockout(
     # Regression guard (real Redis): rate_key and lock_key previously
     # collided ("refresh:ip:{ip}" for both), so rate_limiter_service's
     # per-request counter (incremented on every call, success or failure)
-    # and login_protection_service's failure counter shared one key —
+    # and login_protection_service's failure counter shared one key:
     # a handful of legitimate token rotations alone could trip the
     # 5-failed-attempt lockout with zero real failures. Chain more than
     # MAX_FAILED_LOGIN_ATTEMPTS consecutive legitimate rotations and confirm
@@ -500,7 +500,7 @@ async def test_repeated_legitimate_refreshes_do_not_trip_failed_attempt_lockout(
 @pytest.mark.asyncio
 async def test_refresh_token_cookie_is_scoped_to_auth_path(client, created_emails):
     # Real end-to-end check (real cookie jar, real Set-Cookie parsing) that
-    # refresh_token is scoped to /auth — unlike access_token, which stays
+    # refresh_token is scoped to /auth, unlike access_token, which stays
     # site-wide since /users/* routes need it too.
     email = _unique_email()
     await _signup_verify_login(client, created_emails, email)
@@ -514,7 +514,7 @@ async def test_refresh_token_cookie_is_scoped_to_auth_path(client, created_email
 async def test_logout_actually_clears_the_scoped_refresh_token_cookie(client, created_emails):
     # Regression guard: logout's delete_cookie call must use the same
     # path="/auth" the cookie was set with, or the browser (real cookie jar
-    # here) never actually removes it — it just leaves the real one behind
+    # here) never actually removes it, it just leaves the real one behind
     # and layers an ignored, differently-scoped tombstone next to it.
     email = _unique_email()
     await _signup_verify_login(client, created_emails, email)
@@ -623,7 +623,7 @@ async def test_password_reset_token_is_single_use(client, created_emails):
 async def test_password_reset_survives_retry_after_weak_password(client, created_emails):
     # Regression guard for the TOCTOU fix: a recoverable validation failure
     # (weak password) must restore the token rather than permanently
-    # consuming it — otherwise a user who mistypes a weak password on their
+    # consuming it, otherwise a user who mistypes a weak password on their
     # first attempt would be locked out of their own valid reset link.
     email = _unique_email()
     await _signup_verify_login(client, created_emails, email)
@@ -650,7 +650,7 @@ async def test_password_reset_survives_retry_after_weak_password(client, created
 async def test_password_reset_concurrent_requests_only_one_succeeds(client, created_emails):
     # The core TOCTOU race (real Redis, real Postgres): two requests firing
     # concurrently with the same valid token and *different* new passwords
-    # must not both succeed — GETDEL's atomicity means only one can ever
+    # must not both succeed: GETDEL's atomicity means only one can ever
     # win the single-use check, regardless of how the DB writes interleave.
     email = _unique_email()
     await _signup_verify_login(client, created_emails, email)

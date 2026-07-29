@@ -9,7 +9,7 @@ interface OAuth2ButtonProps {
     onAttempt?: () => void;
 }
 
-// This button never makes an API call of its own — it's a full-page
+// This button never makes an API call of its own, it's a full-page
 // redirect to the backend's OAuth2 endpoint, which handles the Google
 // callback server-side and redirects back with the session cookie already
 // set. `error`/`isAuthenticated`/`user` below are static empty values

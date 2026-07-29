@@ -3,7 +3,7 @@ from starlette.types import ASGIApp
 
 from ...core.settings import settings
 
-# FastAPI's own auto-generated /docs (Swagger UI) and /redoc pages — the only
+# FastAPI's own auto-generated /docs (Swagger UI) and /redoc pages: the only
 # HTML this otherwise-JSON-only API serves, and the one place the blanket
 # `default-src 'none'` CSP below can't apply as-is: both pages load their
 # JS/CSS from a CDN (Swagger UI's inline init script too), and ReDoc pulls a
@@ -34,7 +34,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
 
-        # X-Content-Type-Options: nosniff — stops browsers from MIME-sniffing a
+        # X-Content-Type-Options: nosniff, stops browsers from MIME-sniffing a
         # response into executing as a different content type than declared
         # (e.g. treating a JSON error body as HTML/script).
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -50,7 +50,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
 
         # Forces browsers to only reach this origin over HTTPS for a year,
-        # including subdomains — protects against protocol-downgrade and
+        # including subdomains: protects against protocol-downgrade and
         # cookie-sidejacking attacks on the access/refresh token cookies
         # (already secure=True, but HSTS closes the gap before the first
         # secure connection is established). Gated on ENVIRONMENT (checked

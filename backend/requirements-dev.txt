@@ -1,4 +1,4 @@
-# Static analysis tools only — never installed in the runtime image (see
+# Static analysis tools only : never installed in the runtime image (see
 # docker/backend.Dockerfile, which installs only requirements.txt). Config
 # for all three lives in backend/pyproject.toml.
 ruff==0.16.0

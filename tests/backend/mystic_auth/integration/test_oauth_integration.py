@@ -2,11 +2,12 @@
 #
 # OAuth2 account-linking / CSRF flows against the real ASGI app, real
 # PostgreSQL, and real Redis (see conftest.py). The only mocked pieces are
-# the two outbound calls to Google itself (token exchange, userinfo) — an
+# the two outbound calls to Google itself (token exchange, userinfo), an
 # external third party CLAUDE.md permits mocking ("mock external
-# dependencies only when required"). Everything else — state generation and
-# single-use consumption in Redis, account lookup/creation/linking in
-# Postgres, JWT issuance, cookie handling — is real.
+# dependencies only when required"). Everything else, including state
+# generation and single-use consumption in Redis, account
+# lookup/creation/linking in Postgres, and JWT issuance and cookie
+# handling, is real.
 import uuid
 from unittest.mock import AsyncMock
 
@@ -84,7 +85,7 @@ async def test_oauth2_login_links_existing_unverified_password_account(client, c
 
     assert "dashboard" in callback_resp.headers["location"]
 
-    # Existing password account is linked (verified), not duplicated — but
+    # Existing password account is linked (verified), not duplicated, but
     # its password is cleared rather than preserved. See
     # test_oauth2_login_clears_password_on_pre_hijacked_unverified_account
     # for why: an *unverified* account's password was never proven to
@@ -105,7 +106,7 @@ async def test_oauth2_login_clears_password_on_pre_hijacked_unverified_account(c
     # victim's email with a password of their own choosing and never
     # verifies it. The real victim later signs in with Google (which
     # email_verified=True proves they own that address). The attacker's
-    # password must stop working the instant the account is claimed —
+    # password must stop working the instant the account is claimed,
     # otherwise the attacker could log in as the victim indefinitely.
     email = _unique_email()
     attacker_password = "AttackerChosenPass123!"
@@ -158,7 +159,7 @@ async def test_oauth2_login_does_not_touch_password_of_already_verified_account(
     callback_resp = await client.get("/auth/oauth2/callback/google", params={"code": "fake-code", "state": state})
     assert "dashboard" in callback_resp.headers["location"]
 
-    # Password login still works — Google was added as a second method, not
+    # Password login still works: Google was added as a second method, not
     # a replacement.
     login_resp = await client.post("/auth/login", json={"email": email, "password": PASSWORD})
     assert login_resp.status_code == 200
@@ -198,7 +199,7 @@ async def test_oauth2_callback_rejects_state_cookie_mismatch(client, created_ema
 
     assert "login" in callback_resp.headers["location"]
     assert "access_token" not in callback_resp.cookies
-    # Rejected before ever reaching Google — proves the CSRF check short-circuits.
+    # Rejected before ever reaching Google: proves the CSRF check short-circuits.
     exchange_mock.assert_not_called()
 
 
@@ -229,7 +230,7 @@ async def test_oauth2_pkce_mismatch_rejected_end_to_end_no_user_created(client, 
     # match the code_challenge sent at authorization time gets the token
     # exchange rejected (400 invalid_grant), which exchange_code_for_tokens
     # surfaces as None (see the unit-level fail-closed test). This is the
-    # real behavioral proof of the PKCE security property — a stolen
+    # real behavioral proof of the PKCE security property: a stolen
     # authorization code alone must never be enough to complete login.
     email = _unique_email()
     mocker.patch(

@@ -59,7 +59,7 @@ async def test_unauthenticated_batch_check_is_rejected(client):
 async def test_denied_batch_result_never_leaks_policy_names(client, created_emails):
     """A caller probing many actions at once must never learn which
     (if any) policy was a candidate/rejected, or which condition key
-    failed — only allowed + a coarse denial_reason."""
+    failed : only allowed + a coarse denial_reason."""
     email = unique_email("batch-leak")
     secret_policy_name = unique_policy_name()
     async with database.async_session() as session:

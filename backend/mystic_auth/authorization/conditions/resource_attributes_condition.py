@@ -4,7 +4,7 @@ from .resource_field import get_field
 
 class ResourceAttributesCondition(ConditionHandler):
     """
-    "resource_attributes": {field: expected_value, ...} — every listed
+    "resource_attributes": {field: expected_value, ...}: every listed
     field must equal its expected value on the actual resource (e.g.
     {"status": "published"} for a resource-state-scoped grant). An empty/
     missing map imposes no restriction. Unsatisfiable if no resource was

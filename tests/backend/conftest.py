@@ -1,10 +1,10 @@
 # tests/backend/conftest.py
 #
 # Real-dependency fixtures shared by every real-DB test suite under
-# tests/backend/ (integration/, security/, performance/) — an actual
+# tests/backend/ (integration/, security/, performance/): an actual
 # PostgreSQL and actual Redis (via `docker compose up -d postgres redis`,
 # migrated with `docker compose run --rm alembic`), not mocks. See
-# claude.md's Testing sections — security-critical flows must be verified
+# claude.md's Testing sections: security-critical flows must be verified
 # against real DB/Redis state, since mocking either one hides exactly the
 # kind of bug (e.g. a Redis type mismatch, or a missing session-revocation
 # call) these tests exist to catch.
@@ -14,7 +14,7 @@
 # nearest conftest.py up the directory tree regardless of which
 # subdirectory is actually invoked (e.g. `pytest tests/backend/security`
 # alone never touches tests/backend/integration/), so this fix must live
-# somewhere every real-DB suite is guaranteed to import — this file.
+# somewhere every real-DB suite is guaranteed to import: this file.
 import os
 import re
 from pathlib import Path
@@ -29,7 +29,7 @@ from pathlib import Path
 # If DATABASE_URL / REDIS_URL are already set in the environment (e.g. this
 # suite is run inside the docker-compose network, where those variables are
 # injected as real container env vars pointing at the "postgres"/"redis"
-# service hostnames), leave them alone. Otherwise — running from the host —
+# service hostnames), leave them alone. Otherwise, when running from the host,
 # derive a localhost equivalent from the same values already committed in
 # .env, so the DB name/credentials never need to be duplicated here.
 _ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -72,7 +72,7 @@ from sqlalchemy.pool import NullPool  # noqa: E402
 
 # pytest-asyncio hands each test function its own event loop, but
 # `database.engine`'s connection pool is a module-level singleton shared
-# across the whole run — a pooled asyncpg connection opened in one test's
+# across the whole run: a pooled asyncpg connection opened in one test's
 # loop is not safe to reuse from a different test's loop and corrupts
 # ("another operation is in progress" / "Future attached to a different
 # loop"). NullPool opens a fresh connection per checkout and closes it on
@@ -104,7 +104,7 @@ async def client():
     socket), so requests exercise the actual routing/middleware/dependency
     stack. base_url uses https:// so the client's cookie jar honors the
     Secure attribute on the access_token/refresh_token/oauth_state cookies
-    the app sets — otherwise httpx silently drops them."""
+    the app sets, otherwise httpx silently drops them."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="https://testserver", follow_redirects=False) as ac:
         yield ac

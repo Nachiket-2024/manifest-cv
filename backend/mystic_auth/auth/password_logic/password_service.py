@@ -17,7 +17,7 @@ class PasswordService:
     # to perform a password comparison but have no real hash to check against
     # (e.g. login for a nonexistent account, or an OAuth2-only account with
     # hashed_password=None) compare against this instead of skipping the check
-    # outright — skipping it would return in a fraction of the time a genuine
+    # outright: skipping it would return in a fraction of the time a genuine
     # hash comparison takes, letting a timing attack distinguish "no such
     # account" from "wrong password on a real one". Computed once at import time
     # so it always matches this process's actual Argon2 parameters.
@@ -32,11 +32,11 @@ class PasswordService:
 
     @staticmethod
     async def verify_password(plain_password: str, hashed_password: str) -> bool:
-        # Off the event loop — same rationale as hash_password: this runs on
+        # Off the event loop, same rationale as hash_password: this runs on
         # every login attempt (including the DUMMY_HASH timing-mitigation path).
         # argon2-cffi raises on a mismatch (VerifyMismatchError) or a
         # malformed/foreign hash (InvalidHashError) rather than returning
-        # False, unlike passlib's `.verify` — normalized to a bool here so
+        # False, unlike passlib's `.verify`; normalized to a bool here so
         # callers don't need to know that.
         try:
             return await asyncio.to_thread(_hasher.verify, hashed_password, plain_password)
@@ -48,7 +48,7 @@ class PasswordService:
         if len(password) < 8:
             return False
 
-        # Require a mix of character classes — a length-only check accepts
+        # Require a mix of character classes: a length-only check accepts
         # passwords like "aaaaaaaa" that are trivially guessable, defeating the
         # point of enforcing a minimum length at all.
         has_upper = any(char.isupper() for char in password)
@@ -67,7 +67,7 @@ class PasswordService:
         # The "reset" type claim lets verify_reset_token reject any other
         # validly-signed JWT (e.g. an access or refresh token, which carries the
         # same SECRET_KEY signature) that happens to also carry an "email" claim.
-        # Role is intentionally excluded — the single users table makes it
+        # Role is intentionally excluded: the single users table makes it
         # unnecessary.
         payload: dict[str, str | float] = {
             "email": email,
@@ -75,15 +75,16 @@ class PasswordService:
             "exp": expire.timestamp()
         }
 
-        return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+        # Off the event loop, same as jwt_service.py's own encode/decode calls,
+        # since PyJWT's encode/decode are sync, so calling them directly here would
+        # block every other concurrent request on this worker.
+        return await asyncio.to_thread(jwt.encode, payload, settings.SECRET_KEY, settings.JWT_ALGORITHM)
 
     @staticmethod
     async def verify_reset_token(token: str) -> dict | None:
         try:
-            payload = jwt.decode(
-                token,
-                settings.SECRET_KEY,
-                algorithms=[settings.JWT_ALGORITHM]
+            payload = await asyncio.to_thread(
+                jwt.decode, token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
             )
 
             if not payload.get("email"):

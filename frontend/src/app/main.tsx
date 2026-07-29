@@ -27,7 +27,7 @@ import '../mystic_auth/store/themeStore.ts';
 // during the initial session check is already covered.
 import { setupAuthInterceptor } from "../mystic_auth/auth/setupAuthInterceptor.ts";
 
-// A no-op unless VITE_SENTRY_DSN is set — see core/errorMonitoring.ts and
+// A no-op unless VITE_SENTRY_DSN is set, see core/errorMonitoring.ts and
 // docs/mystic_auth/error-monitoring/overview.md. Called before render so a crash during the
 // app's very first render is still reportable.
 import { initErrorMonitoring } from "../mystic_auth/core/errorMonitoring.ts";

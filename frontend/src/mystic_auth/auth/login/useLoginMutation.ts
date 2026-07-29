@@ -9,7 +9,7 @@ import type { CurrentUserProfile } from "../current_user/current_user_types";
 import type { LoginRequest } from "./login_types";
 
 // mutationFn logs in, then fetches the fresh profile, so the mutation only
-// resolves once the session is fully confirmed — a plain "invalidate and
+// resolves once the session is fully confirmed. A plain "invalidate and
 // hope the query refetches in time" would risk a caller reading
 // isAuthenticated before the refetch lands. onSuccess writes straight into
 // the Zustand store and the shared query cache so every consumer

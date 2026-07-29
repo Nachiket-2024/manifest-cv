@@ -1,6 +1,6 @@
 import traceback
 
-# Server clock for a fail-closed batch-item decision's timestamp — never
+# Server clock for a fail-closed batch-item decision's timestamp, never
 # anything caller-supplied (see context/request_context_builder.py)
 from datetime import UTC, datetime
 
@@ -11,7 +11,7 @@ from ...logging.logging_config import get_logger
 from ..evaluators.authorization_decision import AuthorizationDecision
 from ..evaluators.policy_evaluator import policy_evaluation_engine
 
-# The app's own fixed, known-sensitive action vocabulary — see
+# The app's own fixed, known-sensitive action vocabulary: see
 # assert_authorized_to_grant for why only these are escalation-guarded.
 from ..permissions import Permission
 from ..repositories.audit_log_repository import audit_log_repository
@@ -20,7 +20,7 @@ from ..repositories.policy_repository import policy_repository
 logger = get_logger(__name__)
 
 # Actions this app itself defines and knows to be sensitive (identity and
-# authorization-management actions — see permissions.py). Only these are
+# authorization-management actions, see permissions.py). Only these are
 # subject to the privilege-escalation guard below; see that method's
 # docstring for why arbitrary other action strings are deliberately exempt.
 _KNOWN_SENSITIVE_ACTIONS = frozenset(permission.value for permission in Permission)
@@ -54,14 +54,14 @@ class AuthorizationService:
         """
         True if `user_email` is authorized for `action` on `resource_type`
         (optionally scoped to a specific `resource`/`context`), False
-        otherwise. `user_email` is the acting user's identity — never their
+        otherwise. `user_email` is the acting user's identity, never their
         role; role must never drive an authorization decision here.
 
         Delegates entirely to authorize_with_decision (computes the
-        decision and logs it) and returns just `.allowed` — a thin bool
+        decision and logs it) and returns just `.allowed`, a thin bool
         wrapper, mirroring PolicyEvaluationEngine.evaluate being a thin
         wrapper over evaluate_detailed. One compute-and-log code path, not
-        two — the batch endpoint's authorize_batch reuses this same path
+        two: the batch endpoint's authorize_batch reuses this same path
         per check (see below), so a single check and a batch-of-one check
         always produce and log an identical decision.
         """
@@ -81,17 +81,17 @@ class AuthorizationService:
     ) -> AuthorizationDecision:
         """
         Same inputs as authorize(), but returns the full
-        AuthorizationDecision instead of a bare bool — used wherever a real
+        AuthorizationDecision instead of a bare bool, used wherever a real
         (not hypothetical) authorization decision needs its explanation
         too, e.g. the batch-check endpoint reporting a per-item
         denial_reason. Unlike authorize_detailed (below), this always logs
-        an audit entry — it represents a real decision something is about
+        an audit entry: it represents a real decision something is about
         to act on, exactly like authorize() does, because authorize() is
         now just `.allowed` off of this same call.
 
         The decision is computed via authorize_detailed (fetches the user's
         active, assigned policies and asks the evaluation engine), then
-        logged here rather than inside authorize_detailed itself — so the
+        logged here rather than inside authorize_detailed itself, so the
         authorization-check inspection endpoint (which calls
         authorize_detailed directly for a hypothetical "what would happen
         if" query) never pollutes the audit trail with decisions nothing
@@ -119,7 +119,7 @@ class AuthorizationService:
         """
         Same inputs as authorize(), but returns the full
         AuthorizationDecision from PolicyEvaluationEngine.evaluate_detailed
-        rather than just a bool — used by the authorization-check
+        rather than just a bool, used by the authorization-check
         inspection endpoint (api/pbac_routes/authorization_check_routes.py)
         and by _log_decision's audit trail. See evaluators/authorization_decision.py
         for the decision shape.
@@ -145,8 +145,8 @@ class AuthorizationService:
         """
         Evaluates many `{"action", "resource_type", "resource"}` checks for
         one caller's own effective authorization (there is no per-item
-        target user), sharing `context` — the one real request context, see
-        context/request_context_builder.py — across every check, since they
+        target user), sharing `context` (the one real request context, see
+        context/request_context_builder.py) across every check, since they
         all describe the same single incoming request.
 
         Fetches the user's active, assigned policies exactly once and
@@ -165,7 +165,7 @@ class AuthorizationService:
         denial_reason "evaluation_error" rather than crashing the rest of
         the batch or defaulting to allowed.
 
-        Returns one decision per input check, in the same order — the
+        Returns one decision per input check, in the same order; the
         route layer decides how much of each to expose (see
         api/pbac_routes/authorization_check_routes.py, which deliberately surfaces only
         allowed/denial_reason, never matched/rejected/failed_conditions,
@@ -220,7 +220,7 @@ class AuthorizationService:
         db: AsyncSession,
     ) -> None:
         """
-        Persists an audit log row for a real decision — `decision` is the
+        Persists an audit log row for a real decision: `decision` is the
         full explanation to record, capturing not just the bare allow/deny
         but which policies matched vs. were rejected and exactly which
         condition(s) failed on the rejected ones, so "why was this denied"
@@ -228,7 +228,7 @@ class AuthorizationService:
         evaluation.
 
         A logging failure must never break the actual authorization
-        decision it's describing — caught and logged as a warning here,
+        decision it's describing, caught and logged as a warning here,
         never re-raised. The route/caller that asked for this decision has
         already gotten (or will get) its answer regardless of whether the
         audit write succeeded.
@@ -272,7 +272,7 @@ class AuthorizationService:
     ) -> None:
         """
         Same inputs as authorize(), but raises HTTP 403 instead of
-        returning False — the form routes actually call (directly, or via
+        returning False; the form routes actually call (directly, or via
         dependencies.authorization_dependency.require_authorization).
         """
         allowed = await AuthorizationService.authorize(
@@ -297,18 +297,18 @@ class AuthorizationService:
         (possibly themselves), and `actions` is the full set of actions
         that would end up granted as a result. For every action in
         `actions` that is one of this app's own known-sensitive actions
-        (Permission's fixed vocabulary — identity and authorization-
+        (Permission's fixed vocabulary, identity and authorization-
         management actions), confirms the caller is already authorized for
         it, raising HTTP 403 on the first one the caller doesn't already
-        hold. Any action outside that vocabulary — an arbitrary business-
+        hold. Any action outside that vocabulary, an arbitrary business-
         domain action a downstream application built on this template
-        defines for its own resources (e.g. "projects:read") — is skipped
+        defines for its own resources (e.g. "projects:read"), is skipped
         entirely.
 
         Creating a policy, editing a policy's actions, or assigning a
         policy to a user must never be able to hand out (to anyone,
         including the caller themselves) one of *this app's own* sensitive
-        actions that the caller doesn't already have — otherwise holding
+        actions that the caller doesn't already have, otherwise holding
         only policies:create+policies:assign (without system_superuser
         itself) would let a caller mint an all-powerful policy and assign
         it to themselves.
@@ -316,12 +316,12 @@ class AuthorizationService:
         Deliberately scoped to Permission's fixed vocabulary rather than
         every action string: PBAC policies in this template are meant to
         freely grant whatever actions a downstream application defines for
-        its own business resources — policies:create/assign is a
+        its own business resources; policies:create/assign is a
         general-purpose policy-authoring capability, not itself the
         resource being protected. Only this app's built-in identity/
         authorization actions are sensitive enough to guard here. Called
         from api/pbac_routes/policy_crud_routes.py's create/update
-        endpoints and policy_assignment_routes.py's assign endpoint —
+        endpoints and policy_assignment_routes.py's assign endpoint,
         never bypassed by going straight to the repository from a route.
         """
         for action in actions:
@@ -331,7 +331,7 @@ class AuthorizationService:
             if not allowed:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Cannot grant action '{action}' — you do not hold it yourself",
+                    detail=f"Cannot grant action '{action}': you do not hold it yourself",
                 )
 
 

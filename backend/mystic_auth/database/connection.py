@@ -12,7 +12,7 @@ class Database:
         self.engine = create_async_engine(
             self.database_url,
             echo=False,
-            # Checks a pooled connection is still alive before handing it out —
+            # Checks a pooled connection is still alive before handing it out;
             # without this, a connection that went stale (DB restart, network
             # blip, idle firewall timeout) surfaces as a request-time
             # OperationalError instead of being silently replaced, which

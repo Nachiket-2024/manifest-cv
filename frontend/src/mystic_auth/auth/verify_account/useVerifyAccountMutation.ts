@@ -4,7 +4,7 @@ import { verifyAccountApi } from "../../api/auth_api";
 import { extractApiErrorMessage } from "../../api/apiError";
 import type { VerifyAccountPayload, VerifyAccountResponse } from "./verify_account_types";
 
-// No auth-state side effects — a freshly verified account isn't
+// No auth-state side effects, since a freshly verified account isn't
 // automatically logged in.
 export function useVerifyAccountMutation() {
     return useMutation<VerifyAccountResponse, Error, VerifyAccountPayload>({

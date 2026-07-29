@@ -2,7 +2,7 @@
 # Run with: docker compose -f docker-compose.prod.yml up -d --build
 #
 # Differences from docker-compose.yml (dev):
-#   - No bind mounts — images are self-contained, code isn't shared from host
+#   - No bind mounts : images are self-contained, code isn't shared from host
 #   - No --reload on backend/taskiq_worker
 #   - frontend builds docker/frontend.Dockerfile's `production` target
 #     (nginx serving the static Vite build) instead of the Vite dev server
@@ -11,10 +11,10 @@
 #   - deploy.resources.limits on every service, so a leak/runaway process in
 #     one container can't starve the host or its siblings. `docker compose`
 #     (Compose V2, not Swarm) enforces these directly via the container
-#     runtime — no orchestrator required. Values are conservative starting
+#     runtime : no orchestrator required. Values are conservative starting
 #     points, not load-tested; tune them against real traffic.
 #
-# Out of scope (by design — see CLAUDE.md "no unnecessary cloud-specific
+# Out of scope (by design : see CLAUDE.md "no unnecessary cloud-specific
 # tooling"): this file assumes a reverse proxy / TLS terminator sits in
 # front of it in a real deployment (e.g. nginx/Caddy/Traefik on the host,
 # or a cloud load balancer) — it does not attempt to provision one.
@@ -46,7 +46,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # See docker-compose.yml's identical mount — creates the separate
+      # See docker-compose.yml's identical mount : creates the separate
       # "bugsink" database the Bugsink service below uses, once against a
       # fresh volume.
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
@@ -118,7 +118,7 @@ services:
     # volume, only when Bugsink is configured (BUGSINK_SUPERUSER_EMAIL set).
     # Bounded at ~10s so a slow/broken seed doesn't delay a normal boot. This
     # is safe to share with dev unchanged because SENTRY_DSN is a
-    # container-to-container address (bugsink:8000) in both environments —
+    # container-to-container address (bugsink:8000) in both environments :
     # unlike VITE_SENTRY_DSN below, it never depends on how Bugsink is
     # reverse-proxied for public/browser access.
     command: |
@@ -149,8 +149,10 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
       interval: 10s
       timeout: 3s
-      retries: 5
-      start_period: 10s
+      # See docker-compose.yml's identical healthcheck for why this budget
+      # is 10 retries / 30s start_period rather than a tighter 5/10s.
+      retries: 10
+      start_period: 30s
     logging: *default-logging
     deploy:
       resources:
@@ -159,6 +161,14 @@ services:
           memory: 512M
 
   frontend:
+    # Explicit, prod-specific tag : see docker-compose.yml's frontend
+    # service for why (avoids clobbering the dev image).
+    image: manifest-cv-frontend:prod
+    # Same reasoning as docker-compose.yml's frontend service: this tag is
+    # never published anywhere, so without this, Compose attempts (and
+    # always fails) a pull of it before falling back to building, on every
+    # single run.
+    pull_policy: build
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
@@ -173,7 +183,7 @@ services:
       # VITE_SENTRY_DSN specifically can't be auto-wired from bugsink-seed
       # the way backend's SENTRY_DSN is above: it needs whatever *publicly*
       # reaches Bugsink in production (a reverse-proxy route you set up
-      # deliberately, per Bugsink's no-exposed-port-by-default posture —
+      # deliberately, per Bugsink's no-exposed-port-by-default posture :
       # see docs/mystic_auth/error-monitoring/overview.md#security-notes),
       # which bugsink-seed has no way to know, and it's baked in at this
       # build step rather than read at container startup regardless. Set it
@@ -220,11 +230,11 @@ services:
       alembic:
         condition: service_completed_successfully
     # Override backend.Dockerfile's inherited HEALTHCHECK, which curls
-    # localhost:8000/health/ready — taskiq_worker shares that image but
+    # localhost:8000/health/ready : taskiq_worker shares that image but
     # serves no HTTP at all, so the inherited check always fails and
     # reports this container as permanently "unhealthy" even when the
     # worker itself is running fine. This checks the actual worker process
-    # via /proc directly — this slim image has neither `pgrep` nor `ps`.
+    # via /proc directly : this slim image has neither `pgrep` nor `ps`.
     healthcheck:
       test: ["CMD-SHELL", "for p in /proc/[0-9]*/cmdline; do grep -aq taskiq \"$$p\" 2>/dev/null && exit 0; done; exit 1"]
       interval: 30s
@@ -238,7 +248,7 @@ services:
           cpus: "1"
           memory: 512M
 
-  # One-shot: runs migrations then exits. No restart policy — restarting it
+  # One-shot: runs migrations then exits. No restart policy : restarting it
   # would just re-apply an already-applied migration in a loop.
   alembic:
     build:
@@ -254,7 +264,7 @@ services:
         condition: service_healthy
     logging: *default-logging
 
-  # Self-hosted error monitoring — see docker-compose.yml's identical
+  # Self-hosted error monitoring : see docker-compose.yml's identical
   # service for the full explanation. Starts by default in production too:
   #   docker compose -f docker-compose.prod.yml up -d --build
   bugsink:
@@ -274,6 +284,44 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Same override as docker-compose.yml's identical service, for the same
+    # reason : see there for the full explanation (why it must be a YAML
+    # list, why `$$PORT`, why `--timeout 60`). Matters even more here: this
+    # service is capped at 1 CPU below, making a worker actually starving
+    # past Gunicorn's default 30s timeout under real load more likely, not
+    # less, than in dev.
+    command:
+      - monofy
+      - bugsink-show-version
+      - "&&"
+      - bugsink-manage
+      - check
+      - --deploy
+      - --fail-level
+      - WARNING
+      - "&&"
+      - bugsink-manage
+      - migrate
+      - snappea
+      - --database=snappea
+      - "&&"
+      - bugsink-manage
+      - migrate
+      - "&&"
+      - bugsink-manage
+      - prestart
+      - "&&"
+      - gunicorn
+      - --config
+      - gunicorn.docker.conf.py
+      - --timeout
+      - "60"
+      - --bind=0.0.0.0:$$PORT
+      - --access-logfile
+      - "-"
+      - bugsink.wsgi
+      - "|||"
+      - bugsink-runsnappea
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:8000/health/ready').raise_for_status()\""]
       interval: 10s
@@ -287,7 +335,7 @@ services:
           cpus: "1"
           memory: 512M
 
-  # Runs once against a healthy bugsink, then exits — see docker-compose.yml's
+  # Runs once against a healthy bugsink, then exits : see docker-compose.yml's
   # identical service for the full explanation. No restart policy, same as
   # alembic above: it's one-shot and idempotent (get_or_create), not a
   # long-running process to keep alive.

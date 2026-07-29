@@ -14,7 +14,7 @@ class SignupSchema(BaseModel):
     @classmethod
     def _normalize_email(cls, value: str) -> str:
         # Lowercased at the input boundary so casing is already canonical
-        # before it reaches signup_service — the CRUD layer normalizes too,
+        # before it reaches signup_service: the CRUD layer normalizes too,
         # but doing it here means logs/tokens/audit see the canonical form
         # from the earliest point, not just at the DB.
         return normalize_email(value)

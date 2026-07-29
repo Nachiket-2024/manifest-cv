@@ -6,6 +6,7 @@ from ...emails.email_template_service import render_transactional_email
 from ...logging.logging_config import get_logger
 from ...redis.client import redis_client
 from ...taskiq_tasks.email_tasks import send_email_task
+from ...user_crud.user_crud_collector import user_crud
 
 logger = get_logger(__name__)
 
@@ -59,11 +60,30 @@ class AccountVerificationService:
             return False
 
     @staticmethod
+    async def send_verification_email_if_needed(email: str, db) -> bool:
+        try:
+            user = await user_crud.get_by_email(email, db)
+
+            if not user:
+                logger.info("Verification link requested for non-existing email: %s", email)
+                return False
+
+            if user.is_verified:
+                logger.info("Verification link requested for already verified email: %s", email)
+                return False
+
+            return await AccountVerificationService.send_verification_email(email)
+
+        except Exception:
+            logger.error("Error during verification email request:\n%s", traceback.format_exc())
+            return False
+
+    @staticmethod
     async def create_verification_token(
         email: str,
         expires_minutes: int = settings.RESET_TOKEN_EXPIRE_MINUTES
     ) -> str:
-        # type="verify" — this token is only valid for email confirmation,
+        # type="verify": this token is only valid for email confirmation,
         # not for accessing any protected routes. expires_minutes must be
         # forwarded so the JWT's own exp claim matches the Redis single-use
         # key's TTL and the expiry stated in the verification email above.

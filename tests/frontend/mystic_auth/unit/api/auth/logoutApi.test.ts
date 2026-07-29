@@ -13,7 +13,7 @@ describe('logoutApi', () => {
   it('should send POST request to /auth/logout with no body (refresh_token comes from cookies)', async () => {
     const mockResponse = { message: 'Logged out successfully' };
     mock.onPost('/auth/logout').reply((config) => {
-      // No JSON body should be sent — the backend reads refresh_token
+      // No JSON body should be sent : the backend reads refresh_token
       // straight from the request's cookies, never from the payload.
       expect(config.data).toBeUndefined();
       return [200, mockResponse];
@@ -56,7 +56,7 @@ describe('logoutAllApi', () => {
   });
 
   it('should hit a distinct endpoint from single-device logout', async () => {
-    // Regression guard: these must never collapse onto the same route —
+    // Regression guard: these must never collapse onto the same route :
     // logoutApi only ends one session, logoutAllApi ends every session.
     mock.onPost('/auth/logout').reply(200, { message: 'Logged out successfully' });
     mock.onPost('/auth/logout/all').reply(200, { message: 'Logged out from 1 devices' });

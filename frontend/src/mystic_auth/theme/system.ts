@@ -32,7 +32,7 @@ const config: SystemConfig = {
                     contrast: { value: "white" },
                     fg: { value: "{colors.brand.600}" },
                     muted: { value: "{colors.brand.100}" },
-                    // Soft, low-emphasis brand surface — for large areas
+                    // Soft, low-emphasis brand surface, for large areas
                     // (header/footer bands) that need to read as "branded"
                     // without brand.solid's high-contrast weight. Dark-mode
                     // aware unlike `muted` above: a light teal-50 tint would

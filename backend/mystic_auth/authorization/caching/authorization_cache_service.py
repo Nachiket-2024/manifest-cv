@@ -9,7 +9,7 @@ logger = get_logger(__name__)
 
 # authz:user_policies:{email} -> a user's active, assigned policy list
 # (JSON array of serialized policies). This is the ONE cache target this
-# module currently implements — see the class docstring for why
+# module currently implements. See the class docstring for why
 # "policy lookup by name" and "evaluation results" (both also mentioned in
 # claude.md's Authorization Performance Layer) are deliberately NOT cached.
 _USER_POLICIES_KEY_PREFIX = "authz:user_policies:"
@@ -21,8 +21,8 @@ def _user_policies_key(user_email: str) -> str:
 
 
 # TTL bounds how long a cached policy list can outlive an invalidation this
-# module failed to receive for any reason — claude.md: "Never serve
-# indefinitely stale permissions" — this is the backstop, not the primary
+# module failed to receive for any reason. claude.md: "Never serve
+# indefinitely stale permissions". This is the backstop, not the primary
 # invalidation mechanism (which is the explicit invalidate_* calls below).
 _USER_POLICIES_TTL_SECONDS = 60
 
@@ -40,7 +40,7 @@ def _serialize_policy(policy: Policy) -> dict:
 
 def _deserialize_policy(data: dict) -> Policy:
     """
-    Reconstructs a plain, session-detached Policy — safe here because
+    Reconstructs a plain, session-detached Policy: safe here because
     get_active_policies_for_user's result is read-only-consumed (the
     evaluator only ever reads .name/.actions/.resource_type/.conditions),
     never passed into session.add()/session.delete() the way a
@@ -59,16 +59,16 @@ def _deserialize_policy(data: dict) -> Policy:
 
 class AuthorizationCacheService:
     """
-    The single, centralized Redis abstraction for authorization data — per
+    The single, centralized Redis abstraction for authorization data, per
     claude.md's Authorization Performance Layer: "Create centralized Redis
     abstraction layer (single module)" / "Do not scatter Redis calls
     throughout authorization code". Only policy_repository.py calls this;
     nothing else in the authorization module (the service, the evaluator,
     routes) talks to Redis directly for authorization purposes.
 
-    Cache target — deliberately scoped to one:
+    Cache target, deliberately scoped to one:
         get_active_policies_for_user's result (a user's active, assigned
-        policy list) — the one authorization-hot-path DB query that runs
+        policy list): the one authorization-hot-path DB query that runs
         on literally every authorize() call, is expensive (a two-table
         join), rarely changes, and is only ever read-consumed downstream
         (never fed back into a database mutation).
@@ -85,13 +85,13 @@ class AuthorizationCacheService:
           flush instead of performing the intended UPDATE. Caching this
           safely would need either a `session.merge()` step wherever a
           cached policy might be mutated, or a hard split between "cached,
-          read-only" and "always-fresh, mutable" call sites — real, but
+          read-only" and "always-fresh, mutable" call sites: real, but
           separate, work: left as a documented follow-up rather than
           shipped half-correct.
         - "Evaluation results" (the final allow/deny for a specific
           action+resource+context): several condition types (time,
           date_range, network, security_context) are legitimately
-          request-context-dependent — the same (user, action,
+          request-context-dependent: the same (user, action,
           resource_type) can correctly evaluate differently a minute later,
           or from a different IP. Caching the *decision* risks serving a
           stale answer for exactly the conditions designed to be
@@ -108,11 +108,11 @@ class AuthorizationCacheService:
     logged, and the method returns a cache-miss sentinel (None) rather than
     raising or returning something possibly wrong. The caller
     (policy_repository.get_active_policies_for_user) then falls through to
-    the authoritative database query on any miss — the one source of truth
+    the authoritative database query on any miss: the one source of truth
     this cache can never disagree with, since it is populated *from* it and
     invalidated whenever it changes. That is what "fail closed" means here:
     the cache is never trusted over the database. It does not mean "deny
-    every authorization request whenever Redis is unreachable" — that would
+    every authorization request whenever Redis is unreachable". That would
     turn a transient cache outage into an application-wide denial of
     service, strictly worse than falling back to the database evaluation
     this cache exists only to speed up.
@@ -120,7 +120,7 @@ class AuthorizationCacheService:
 
     @staticmethod
     async def get_user_policies(user_email: str) -> list[Policy] | None:
-        """Returns None on a cache miss or any cache failure — both are
+        """Returns None on a cache miss or any cache failure: both are
         treated identically by the caller: fall through to the database."""
         try:
             raw = await redis_client.get(_user_policies_key(user_email))
@@ -139,7 +139,7 @@ class AuthorizationCacheService:
 
     @staticmethod
     async def set_user_policies(user_email: str, policies: list[Policy]) -> None:
-        """Best-effort populate — a write failure here must never surface
+        """Best-effort populate: a write failure here must never surface
         to the caller (the database query it's caching already
         succeeded; this is purely a subsequent-request optimization)."""
         try:
@@ -151,7 +151,7 @@ class AuthorizationCacheService:
     @staticmethod
     async def invalidate_user_policies(user_email: str) -> None:
         """
-        Called on policy assignment/revocation for this specific user —
+        Called on policy assignment/revocation for this specific user:
         precise invalidation, since exactly one user's effective policy
         set changed.
         """
@@ -163,14 +163,14 @@ class AuthorizationCacheService:
     @staticmethod
     async def invalidate_all_user_policies() -> None:
         """
-        Called on any policy update/delete — a policy's own definition
+        Called on any policy update/delete: a policy's own definition
         changing (actions, conditions, resource_type, is_active) can affect
         every user who holds it, and there is no cheap reverse index from
         policy -> its holders, so this flushes the whole user_policies
         namespace rather than guessing which users are affected. Policy
         edits are rare relative to authorization checks, so a full-
         namespace flush on (infrequent) writes is a deliberate, safe
-        trade-off — never serve a stale grant after a policy edit. Uses
+        trade-off: never serve a stale grant after a policy edit. Uses
         SCAN (not KEYS), so it never blocks Redis even on a large keyspace.
         """
         try:

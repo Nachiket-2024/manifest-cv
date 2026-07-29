@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Rejects a malformed `conditions` block before it's ever persisted — unknown
+# Rejects a malformed `conditions` block before it's ever persisted: unknown
 # keys, wrong types, invalid timezones/IPs/dates must fail at write time, not
 # surface later as a silent always-deny at evaluation time.
 from ...authorization.conditions.condition_validator import ConditionValidationError, validate_conditions
@@ -44,7 +44,7 @@ async def create_policy(
         )
 
     # Privilege-escalation guard: the caller cannot mint a policy granting an
-    # action they do not themselves hold — otherwise policies:create alone
+    # action they do not themselves hold, since otherwise policies:create alone
     # (without system_superuser itself) would let a caller mint an
     # arbitrarily powerful policy.
     await authorization_service.assert_authorized_to_grant(
@@ -85,7 +85,7 @@ async def update_policy(
     db: AsyncSession = Depends(database.get_session),
 ):
     """
-    Partially updates a policy — only provided fields are applied (e.g.
+    Partially updates a policy: only provided fields are applied (e.g.
     this can disable a policy via is_active=False without touching its
     actions).
 
@@ -101,7 +101,7 @@ async def update_policy(
     unassignment, a different endpoint this doesn't go through).
 
     If actions are being changed, the caller must already hold every action
-    the policy would grant afterwards — without this, policies:update alone
+    the policy would grant afterwards, since without this, policies:update alone
     could silently re-grant an existing (possibly widely-assigned) policy
     new, more powerful actions the caller doesn't themselves have.
     """
@@ -126,7 +126,7 @@ async def update_policy(
 
     # Reject a rename that collides with another existing policy up front
     # with a clear 409, rather than letting the database's unique
-    # constraint raise an opaque 500 — mirrors the same check in create_policy.
+    # constraint raise an opaque 500; mirrors the same check in create_policy.
     if "name" in fields and fields["name"] != policy.name:
         existing = await policy_repository.get_by_name(fields["name"], db)
         if existing:
@@ -167,7 +167,7 @@ async def delete_policy(
     deletion."""
     policy = await get_or_404(policy_repository.get_by_name(policy_name, db), "Policy not found")
 
-    # Baseline policies are load-bearing — signup, oauth2, and
+    # Baseline policies are load-bearing: signup, oauth2, and
     # create_system_user.py all look them up by name and assume they exist.
     # Deleting one would silently leave every future account with no
     # default access.

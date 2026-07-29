@@ -105,7 +105,7 @@ describe('PBAC end-to-end: login -> permissions loaded -> conditional UI renders
   it('a failed login never reveals protected content, regardless of what the session check later resolves to', async () => {
     // A failed login short-circuits before the profile fetch, so
     // isAuthenticated stays null until App.tsx's session-sync hook
-    // independently resolves it — simulated here via useAuthSession.
+    // independently resolves it : simulated here via useAuthSession.
     mock.onPost('/auth/login').reply(401, { detail: 'Invalid credentials' });
     mock.onGet('/auth/me').reply(401, { detail: 'Not authenticated' });
 
@@ -130,7 +130,7 @@ describe('PBAC end-to-end: login -> permissions loaded -> conditional UI renders
   });
 });
 
-// Swallow the expected rejection from a failed mutateAsync — the test only
+// Swallow the expected rejection from a failed mutateAsync : the test only
 // cares about the resulting auth-store/DOM state.
 async function result_ignoreRejection(promise: Promise<unknown>): Promise<void> {
   await promise.catch(() => undefined);

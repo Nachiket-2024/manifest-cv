@@ -1,7 +1,9 @@
 name: CI
 
-# Runs on every push and pull request targeting main. Five independent jobs
-# (backend, frontend, secrets scan, docker build, real-tectonic) run in parallel.
+# Runs on every push and pull request targeting main. Six independent jobs
+# (backend, frontend, secrets scan, docker build, real-tectonic, docker full
+# suite) run in parallel; the last of these only actually executes on a push
+# to main (not on pull_request), see its own job below for why.
 on:
   push:
     branches: [main]
@@ -22,7 +24,7 @@ jobs:
     services:
       postgres:
         # AWS ECR Public mirror of the Docker Official postgres image, not
-        # Docker Hub directly — sidesteps Docker Hub's anonymous-pull rate
+        # Docker Hub directly. Sidesteps Docker Hub's anonymous-pull rate
         # limiting, which is the most common cause of GitHub-hosted runners
         # timing out ("context deadline exceeded") pulling service containers.
         image: public.ecr.aws/docker/library/postgres:15
@@ -50,7 +52,7 @@ jobs:
           --health-retries 5
 
     env:
-      # Test-only values — never real secrets. Settings requires every one
+      # Test-only values, never real secrets. Settings requires every one
       # of these to be set, so CI provides them directly as environment
       # variables instead of using a checked-in .env file.
       BACKEND_BASE_URL: http://localhost:8000
@@ -206,14 +208,8 @@ jobs:
         working-directory: frontend
         run: npm ci --legacy-peer-deps
 
-      # Non-blocking: currently fails solely on GHSA-qwww-vcr4-c8h2
-      # (react-router-dom), an RSC-mode-only advisory this SPA can't hit
-      # (no RSC usage) with no patched release to bump to yet — see
-      # docs/mystic_auth/concerns/README.md. Re-tighten to blocking once
-      # upstream ships a fix.
       - name: Audit npm dependencies for known vulnerabilities
         working-directory: frontend
-        continue-on-error: true
         run: npm audit --audit-level=high
 
       - name: Type-check
@@ -239,8 +235,17 @@ jobs:
     name: Docker image build verification
     runs-on: ubuntu-latest
 
-    # Confirms backend and frontend Dockerfiles still build correctly.
-    # No registry push or deployment is performed in this workflow.
+    # Confirms backend and frontend Dockerfiles still build correctly, and
+    # (via the smoke-test steps below) that the actual dev compose stack
+    # boots and serves traffic - a class of bug (bad env wiring in
+    # docker-compose.yml, a broken healthcheck, a missing file the app needs
+    # at runtime) the backend/frontend jobs above can't see at all, since
+    # those run the same source code on a bare runner, never through this
+    # image. This does NOT re-run the test suite through Docker - that's
+    # what docker-full-suite (below) does, only on a push to main, since
+    # re-running identical tests through Docker on every PR
+    # would mostly just double CI time for no new bug-catching power over
+    # the native runs above.
 
     steps:
       - uses: actions/checkout@v4
@@ -270,16 +275,66 @@ jobs:
 
       # Regression guard: backend/logs/ (real request data — paths, timestamps,
       # correlation IDs, written by backend/mystic_auth/logging/logging_config.py) was
-      # previously getting baked straight into the image by `COPY backend/ .`,
-      # since *.log alone doesn't match TimedRotatingFileHandler's rotated
-      # filenames (access.log.2026-07-19, not access.log.log) — a real privacy
-      # leak, not just wasted space. Fixed via .dockerignore; this catches it
-      # coming back the same way a code regression test would.
+      # previously getting baked into the image via `COPY backend/ .`, since
+      # *.log alone doesn't match TimedRotatingFileHandler's rotated filenames
+      # (access.log.2026-07-19, not access.log.log) — a real privacy leak, not
+      # just wasted space. Fixed via .dockerignore; this catches it coming
+      # back. /app/logs itself is expected to exist (backend.Dockerfile
+      # creates it, empty, so a Docker-managed volume mounted there in dev
+      # inherits correct ownership from the image — see docker-compose.yml's
+      # own comment on that volume) — this checks it's EMPTY, i.e. nothing
+      # from a local checkout leaked in via COPY, not that the directory
+      # itself is absent.
       - name: Verify no local logs leaked into the backend image
         run: |
-          docker run --rm backend:ci sh -c 'test ! -d /app/logs' \
-            && echo "OK: /app/logs absent from the built image" \
-            || (echo "FAIL: /app/logs was copied into the built image — check .dockerignore" && exit 1)
+          docker run --rm backend:ci sh -c 'test -z "$(ls -A /app/logs 2>/dev/null)"' \
+            && echo "OK: /app/logs exists but is empty in the built image" \
+            || (echo "FAIL: /app/logs contains files copied into the built image — check .dockerignore" && exit 1)
+
+      # Boots the real dev compose stack (same images/wiring a contributor's
+      # `docker compose up` uses) and confirms it actually serves traffic -
+      # bugsink/bugsink-seed/taskiq_worker are skipped here since nothing
+      # below depends on them and they'd only add boot time.
+      #
+      # BUGSINK_SUPERUSER_EMAIL is blanked out here specifically because
+      # bugsink/bugsink-seed aren't part of this invocation: the backend's
+      # own startup command waits up to ~10s for a Bugsink DSN file that,
+      # without this override, would never arrive, wasting ~10s of an
+      # already-tight boot budget on a shared CI runner for no reason. Real
+      # users running plain `docker compose up` (which does include Bugsink)
+      # keep the default, so this override is CI-only - it never reaches a
+      # real deployment.
+      - name: Boot the dev stack
+        run: |
+          cp .env.example .env
+          sed -i 's/^BUGSINK_SUPERUSER_EMAIL=.*/BUGSINK_SUPERUSER_EMAIL=/' .env
+          docker compose up -d --build postgres redis alembic backend frontend
+
+      - name: Wait for backend to report healthy
+        run: timeout 150 sh -c 'until curl -sf http://localhost:8000/health/ready >/dev/null 2>&1; do sleep 3; done'
+
+      - name: Wait for frontend dev server to respond
+        run: timeout 60 sh -c 'until curl -sf http://localhost:5173 >/dev/null 2>&1; do sleep 3; done'
+
+      - name: Smoke-test the booted stack
+        run: |
+          curl -sf http://localhost:8000/health/ready | grep -q '"status":"ok"' \
+            && echo "OK: backend /health/ready reports ok through the actual image"
+          curl -sf http://localhost:5173 | grep -qi '<div id="root">' \
+            && echo "OK: frontend dev server serves the app shell through the actual image"
+
+      # Only ever runs when something above actually failed - prints the
+      # containers' own logs so a CI failure shows *why* a container never
+      # became healthy instead of just "unhealthy"/a timeout with no context.
+      - name: Show container logs (only runs on failure)
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down the dev stack
+        if: always()
+        run: |
+          docker compose down -v
+          rm -f .env
 
   real-tectonic:
     name: Real tectonic PDF compilation
@@ -446,3 +501,83 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Re-runs the FULL backend + frontend suites through the actual dev
+  # compose stack (not bare runners) - this is the expensive, high-fidelity
+  # check the backend/frontend jobs above intentionally don't do on every
+  # PR, since the code under test is identical either way and doubling CI
+  # time on every push buys little over the native runs above. This job is
+  # what catches the narrower class of bug the native runs structurally
+  # can't: something specific to how the containers/images/compose wiring
+  # behave (a subtly wrong volume mount, an entrypoint issue, a dependency
+  # that's present on the runner but missing from the image). Gated to a
+  # push to main (not pull_request) - that's the point you're actually
+  # merging something in, which is when you'd want to know if this broke;
+  # deliberately no separate nightly schedule on top of that, since a push
+  # to main already fires this on every real change to the repo, and a
+  # schedule would just add a permanent daily cost for the narrow, rare case
+  # of unrelated upstream base-image drift with no corresponding commit.
+  docker-full-suite:
+    name: Full test suite via Docker (main only)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # See docker-build's identical override above for why
+      # BUGSINK_SUPERUSER_EMAIL is blanked here - CI-only, never reaches a
+      # real deployment.
+      - name: Boot the backend stack
+        run: |
+          cp .env.example .env
+          sed -i 's/^BUGSINK_SUPERUSER_EMAIL=.*/BUGSINK_SUPERUSER_EMAIL=/' .env
+          docker compose up -d --build postgres redis alembic backend
+
+      - name: Wait for backend to report healthy
+        run: timeout 180 sh -c 'until curl -sf http://localhost:8000/health/ready >/dev/null 2>&1; do sleep 3; done'
+
+      # Same three tiers, same flags, as the native backend job above -
+      # this is a repeat, not a different set of tests, run through the
+      # actual container this time instead of a bare runner.
+      #
+      # --user root: pytest-cov writes its .coverage database (and
+      # --cov-report=html's htmlcov/) to the current working directory -
+      # here, /repo, the whole-repo bind mount, owned by whatever checked it
+      # out (the runner's own user on GitHub Actions, not the container's
+      # non-root `app` user). That's a broader version of the exact same
+      # class of bug backend_logs's volumes fix this repo's own /app/logs
+      # and /repo/backend/logs - but coverage's own output files are
+      # spread across whatever cwd it's given, not one fixed path, so
+      # carving out another individual named-volume mount per file doesn't
+      # scale. Running this one-off test invocation as root sidesteps the
+      # whole class at once: nothing here is the actual served application
+      # (which stays non-root by default, per backend.Dockerfile's `USER
+      # app`), just a throwaway test run inside a container that's torn
+      # down immediately after.
+      - name: Run the full backend suite inside the backend container
+        run: |
+          docker compose exec -T --user root backend bash -c '
+            cd /repo &&
+            python -m pytest tests/backend/app tests/backend/mystic_auth/unit -q &&
+            python -m pytest tests/backend/mystic_auth/integration -q --cov-append &&
+            python -m pytest tests/backend/mystic_auth/security -q --cov-append --cov-fail-under=85
+          '
+
+      - name: Boot the frontend
+        run: docker compose up -d --build frontend
+
+      - name: Run the full frontend suite inside the frontend container
+        run: docker compose exec -T frontend sh -c "npm run test -- --run"
+
+      # Only ever runs when something above actually failed - see
+      # docker-build's identical step for why.
+      - name: Show container logs (only runs on failure)
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose down -v
+          rm -f .env

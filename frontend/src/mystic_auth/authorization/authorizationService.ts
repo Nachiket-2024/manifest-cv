@@ -8,7 +8,7 @@ export interface AuthorizationCheck {
 }
 
 /**
- * One result in a batch-check response — deliberately minimal (see
+ * One result in a batch-check response, deliberately minimal (see
  * backend/mystic_auth/authorization/schemas/batch_authorization_schema.py): never exposes
  * matched/rejected policies or failed conditions, only enough to drive a UI decision.
  */
@@ -55,7 +55,7 @@ export interface AuditLogEntry {
 }
 
 // This app has no separate single-check endpoint; batch-check with one item IS the
-// single-check call — single and batch authorization must produce identical decisions.
+// single-check call: single and batch authorization must produce identical decisions.
 export const checkPermission = async (
     action: string,
     resourceType: string,
@@ -68,7 +68,7 @@ export const checkPermission = async (
 };
 
 // checks: 1-50 items per request (see backend's MAX_BATCH_SIZE). Rejects on any HTTP error
-// (e.g. an empty or oversized batch, which the backend rejects with 422) — same "let the
+// (e.g. an empty or oversized batch, which the backend rejects with 422), same "let the
 // caller handle it" contract as checkPermission.
 export const checkBatch = async (checks: AuthorizationCheck[]): Promise<AuthorizationCheckResult[]> => {
     const res = await api.post("/authorization/batch-check", {

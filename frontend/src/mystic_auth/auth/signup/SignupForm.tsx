@@ -5,7 +5,7 @@ import { Field as ChakraField } from "@chakra-ui/react";
 import { useSignupMutation } from "./useSignupMutation";
 import FormAlert from "../../ui/FormAlert";
 
-// Shared password policy logic and checklist UI — kept identical to
+// Shared password policy logic and checklist UI, kept identical to
 // PasswordResetConfirmForm so the two flows can't drift apart again.
 import { checkPasswordRules, evaluatePasswordStrength, validatePassword } from "../password_rules/passwordRules";
 import PasswordRulesChecklist from "../password_rules/PasswordRulesChecklist";
@@ -26,7 +26,7 @@ const SignupForm: React.FC = () => {
         setPasswordStrength(evaluatePasswordStrength(value));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.SubmitEvent<HTMLDivElement>) => {
         e.preventDefault();
 
         const passwordError = validatePassword(password);
@@ -133,7 +133,7 @@ const SignupForm: React.FC = () => {
                     </Button>
 
                     {/* Secondary/soft styling to match every other auth form's
-                        Clear button — explicit tokens rather than Chakra's gray
+                        Clear button: explicit tokens rather than Chakra's gray
                         colorPalette defaults, which read as an almost-invisible
                         border in dark mode. */}
                     <Button

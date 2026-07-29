@@ -1,4 +1,4 @@
-# Runs the Vite dev server with HMR — used by docker-compose.yml for local
+# Runs the Vite dev server with HMR : used by docker-compose.yml for local
 # development. This is the default build target so existing `docker compose
 # build`/`up` (no --target flag) keeps working unchanged.
 #
@@ -28,7 +28,7 @@ CMD ["npm", "run", "dev", "--", "--host"]
 
 # Produces the static production bundle (frontend/dist). Only reached when
 # building with --target production (or production's stage below, which
-# depends on it) — docker-compose.yml's dev service never builds this far.
+# depends on it) : docker-compose.yml's dev service never builds this far.
 FROM node:20.20.2-bullseye AS builder
 
 WORKDIR /app
@@ -40,7 +40,7 @@ COPY frontend/ .
 # VITE_* vars are inlined into the static bundle at build time, so unlike
 # the dev target (no frontend/.env bind mount here) they arrive as build
 # args, wired from docker-compose.prod.yml / repo root .env. Re-exporting
-# ARG as ENV is required for `vite build`'s child process to see them —
+# ARG as ENV is required for `vite build`'s child process to see them :
 # ARG alone isn't inherited by RUN's subprocesses. None of these are
 # secrets: all four end up readable in the shipped JS bundle regardless.
 ARG VITE_API_BASE_URL
@@ -54,7 +54,7 @@ ENV VITE_API_BASE_URL=${VITE_API_BASE_URL} \
 
 RUN npm run build
 
-# Serves the static build via nginx — no Node.js, no dev dependencies, no
+# Serves the static build via nginx : no Node.js, no dev dependencies, no
 # source maps of the toolchain, just the compiled assets. Used by
 # docker-compose.prod.yml via `build.target: production`.
 FROM nginx:1.27-alpine AS production

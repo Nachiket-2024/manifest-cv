@@ -21,7 +21,7 @@ import { POLICIES_QUERY_KEY, userPoliciesQueryKey, MY_POLICIES_QUERY_KEY } from 
  * ----------------------------
  * Each invalidates the shared policies list on success so the Policy
  * Management page always reflects the backend's current state rather than
- * a stale cached list — TanStack Query owns this cache, not local state.
+ * a stale cached list. TanStack Query owns this cache, not local state.
  */
 export function useCreatePolicyMutation() {
     return useMutation<PolicyRead, Error, PolicyCreatePayload>({
@@ -81,7 +81,7 @@ export function useAssignPolicyMutation() {
             queryClient.invalidateQueries({ queryKey: userPoliciesQueryKey(userEmail) });
             queryClient.invalidateQueries({ queryKey: MY_POLICIES_QUERY_KEY });
             // If the caller just changed their OWN policies, the Zustand
-            // permissions cache (populated from this same query — see
+            // permissions cache (populated from this same query, see
             // useAuthSession) would otherwise stay stale until the next
             // reload or 401, leaving IfCan/ProtectedRoute checks acting on
             // a permission set that no longer matches the backend.

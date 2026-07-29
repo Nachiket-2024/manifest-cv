@@ -4,13 +4,13 @@ from pydantic import BaseModel, ConfigDict
 
 
 class AuditLogEntryRead(BaseModel):
-    """Schema returned by the security audit log query API — mirrors
+    """Schema returned by the security audit log query API, mirrors
     AuditLog (see audit_log_model.py).
 
     Field name is event_metadata, matching the ORM model's Python attribute
     (the underlying DB/JSON column is named "metadata", but that name is
     reserved on SQLAlchemy's declarative Base, so the model maps it to a
-    differently-named attribute — see audit_log_model.py).
+    differently-named attribute, see audit_log_model.py).
     """
 
     id: int

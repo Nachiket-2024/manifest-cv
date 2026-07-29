@@ -4,7 +4,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...audit_log.audit_log_service import ACCOUNT_VERIFIED, log_security_event
+from ...audit_log.audit_log_service import ACCOUNT_VERIFICATION_REQUESTED, ACCOUNT_VERIFIED, log_security_event
 from ...logging.logging_config import get_logger
 from ..security.login_protection_service import login_protection_service
 from .account_verification_service import account_verification_service
@@ -35,7 +35,7 @@ class AccountVerificationHandler:
 
             email = payload["email"]
 
-            # Distinct namespace from login's "login_lock:email:" key — sharing
+            # Distinct namespace from login's "login_lock:email:" key: sharing
             # it would mean a burst of failed verification attempts (e.g. a
             # double-submitted, already-consumed link) counts towards, and can
             # trip, the unrelated login lockout for the same email. Same
@@ -63,6 +63,32 @@ class AccountVerificationHandler:
 
         except Exception:
             logger.error("Error during account verification:\n%s", traceback.format_exc())
+            return JSONResponse(content={"error": "Internal Server Error"}, status_code=500)
+
+    async def handle_verification_email_request(
+        self, email: str, db: AsyncSession, request: Request | None = None
+    ) -> JSONResponse:
+        try:
+            email_sent = await self.account_verification_service.send_verification_email_if_needed(email, db)
+
+            if email_sent:
+                await log_security_event(
+                    ACCOUNT_VERIFICATION_REQUESTED,
+                    db,
+                    user_email=email,
+                    success=True,
+                    request=request,
+                )
+
+            return JSONResponse(
+                content={
+                    "message": "If this account exists and still needs verification, we've sent a new verification link."
+                },
+                status_code=200,
+            )
+
+        except Exception:
+            logger.error("Error during verification email request:\n%s", traceback.format_exc())
             return JSONResponse(content={"error": "Internal Server Error"}, status_code=500)
 
 

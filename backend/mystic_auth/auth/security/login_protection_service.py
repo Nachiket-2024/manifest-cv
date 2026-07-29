@@ -14,7 +14,7 @@ class LoginProtectionService:
     LOGIN_LOCKOUT_TIME: int = settings.LOGIN_LOCKOUT_TIME
 
     # A separate, more lenient threshold than the per-email one above (see
-    # settings.py for why) — max failed attempts from a single IP across any
+    # settings.py for why): max failed attempts from a single IP across any
     # accounts before that IP is locked out.
     MAX_FAILED_LOGIN_ATTEMPTS_PER_IP: int = settings.MAX_FAILED_LOGIN_ATTEMPTS_PER_IP
     LOGIN_LOCKOUT_TIME_PER_IP: int = settings.LOGIN_LOCKOUT_TIME_PER_IP
@@ -28,7 +28,7 @@ class LoginProtectionService:
         """
         try:
             # INCR creates the key at 0 before incrementing if it doesn't already
-            # exist, so this needs no separate existence check beforehand — a
+            # exist, so this needs no separate existence check beforehand. A
             # previous implementation did a GET first purely to decide between
             # SET and INCR, a redundant Redis round-trip on every failed attempt.
             new_count = await redis_client.incr(key)
@@ -75,7 +75,7 @@ class LoginProtectionService:
         already-locked account) are not redundant despite calling the same
         function. The caller's pre-check answers "should we even try?" before
         any expensive work; this one answers "is the account still unlocked
-        right now, after that work finished?" — closing the race where a
+        right now, after that work finished?", closing the race where a
         concurrent request locks the account in between. Removing either one
         changes behavior: dropping the caller's pre-check means every attempt
         against a locked account still pays for a full password hash

@@ -64,7 +64,7 @@ const UsersPage: React.FC = () => {
             { userEmail: deletingUser.email },
             {
                 onSuccess: () => {
-                    toaster.create({ title: "User deleted — this is reversible via Reactivate", type: "success" });
+                    toaster.create({ title: "User deleted : this is reversible via Reactivate", type: "success" });
                     setDeletingUser(null);
                 },
                 onError: (error) => toaster.create({ title: error.message, type: "error" }),
@@ -118,7 +118,7 @@ const UsersPage: React.FC = () => {
             render: (u) => (
                 <IfCan
                     action={PERMISSIONS.USERS_ASSIGN_ROLE}
-                    fallback={<Text textTransform="capitalize">{u.role ?? "—"}</Text>}
+                    fallback={<Text textTransform="capitalize">{u.role ?? ":"}</Text>}
                 >
                     <NativeSelect.Root
                         size="sm"
@@ -233,7 +233,7 @@ const UsersPage: React.FC = () => {
             <ConfirmDialog
                 isOpen={!!deletingUser}
                 title="Delete user"
-                description={`Delete "${deletingUser?.email}"? This deactivates their account and ends every active session — it's reversible via Reactivate.`}
+                description={`Delete "${deletingUser?.email}"? This deactivates their account and ends every active session : it's reversible via Reactivate.`}
                 confirmLabel="Delete"
                 isLoading={deleteMutation.isPending}
                 onConfirm={handleDeleteConfirm}
@@ -243,7 +243,7 @@ const UsersPage: React.FC = () => {
             <ConfirmDialog
                 isOpen={!!purgingUser}
                 title="Permanently remove user"
-                description={`Permanently remove "${purgingUser?.email}"? This cannot be undone — the account, its policy assignments, and its ability to ever be reactivated are all gone. (Authorization/security audit history is preserved separately.)`}
+                description={`Permanently remove "${purgingUser?.email}"? This cannot be undone : the account, its policy assignments, and its ability to ever be reactivated are all gone. (Authorization/security audit history is preserved separately.)`}
                 confirmLabel="Permanently remove"
                 isLoading={purgeMutation.isPending}
                 onConfirm={handlePurgeConfirm}
@@ -253,7 +253,7 @@ const UsersPage: React.FC = () => {
             <ConfirmDialog
                 isOpen={!!pendingRoleChange}
                 title="Change role"
-                description={`Change ${pendingRoleChange?.user.email}'s role to "${pendingRoleChange?.role}"? Role is display/grouping metadata only — this does not itself change what they're permitted to do.`}
+                description={`Change ${pendingRoleChange?.user.email}'s role to "${pendingRoleChange?.role}"? Role is display/grouping metadata only : this does not itself change what they're permitted to do.`}
                 confirmLabel="Change role"
                 isDestructive={false}
                 isLoading={roleMutation.isPending}

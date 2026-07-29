@@ -2,7 +2,7 @@
 # Runs automatically on the postgres service's FIRST initialization only
 # (the official postgres image executes every script under
 # /docker-entrypoint-initdb.d/ exactly once, against a fresh, empty data
-# directory — never again after that, even across container restarts).
+# directory : never again after that, even across container restarts).
 #
 # Creates a second database on the SAME Postgres server/container this
 # template already runs, owned by the same $POSTGRES_USER, for the

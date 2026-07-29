@@ -11,12 +11,12 @@ now removed):
 
   - policies: the primary authorization unit (identity, description,
     granted actions, resource type, optional conditions, audit fields).
-  - user_policies: the many-to-many assignment of policies to users — the
+  - user_policies: the many-to-many assignment of policies to users: the
     ONLY thing that determines what a user can do.
 
 This migration also seeds the three baseline policies the application ships
-with (authorization/policies/default_policies.py) and — as a one-time
-bridge — assigns each *existing* user the policy set that reproduces their
+with (authorization/policies/default_policies.py) and, as a one-time
+bridge, assigns each *existing* user the policy set that reproduces their
 current role's access exactly, so upgrading doesn't change anyone's
 effective permissions. This is a data migration reading the old `role`
 column, not an ongoing dependency on it: from this point forward, role is
@@ -40,7 +40,7 @@ depends_on: str | Sequence[str] | None = None
 # Mirrors authorization/policies/default_policies.py. Duplicated here
 # (rather than imported) deliberately: a migration must keep producing the
 # exact same schema/data years from now even if the application-code
-# constants are later edited — migrations are a historical record, not a
+# constants are later edited: migrations are a historical record, not a
 # live view of current application state.
 _SELF_SERVICE = {
     "name": "self_service",
@@ -61,7 +61,7 @@ _SYSTEM_SUPERUSER = {
         "admin, and managing the authorization system itself."
     ),
     "actions": ["users:assign_system_role", "users:promote_to_admin", "policies:manage"],
-    # "*": spans two resource types (users, policies) — see
+    # "*": spans two resource types (users, policies), see
     # authorization/policies/default_policies.py for the full rationale.
     "resource_type": "*",
 }

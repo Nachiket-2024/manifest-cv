@@ -65,7 +65,7 @@ describe('Authorized', () => {
     expect(screen.queryByText('Secret Content')).toBeNull();
   });
 
-  it('renders nothing at all while authentication status is still loading — not children, not fallback', () => {
+  it('renders nothing at all while authentication status is still loading : not children, not fallback', () => {
     seed({ isAuthenticated: null });
     const { container } = renderWithAuth(
       <Authorized permission="users:read" fallback={<div>Access Denied</div>}>

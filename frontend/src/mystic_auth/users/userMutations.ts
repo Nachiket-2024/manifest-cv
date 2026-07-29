@@ -14,7 +14,7 @@ import { queryClient } from "../core/queryClient";
 import { USERS_QUERY_KEY } from "./userQueries";
 
 /**
- * Each mutation invalidates the shared users list on success — the User
+ * Each mutation invalidates the shared users list on success: the User
  * Management page's table is a TanStack Query cache read, not local state,
  * so an admin action here is reflected everywhere that list is rendered.
  */

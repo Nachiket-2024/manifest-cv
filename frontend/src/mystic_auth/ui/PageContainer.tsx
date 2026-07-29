@@ -4,7 +4,7 @@ import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 interface PageContainerProps {
     title: string;
     description?: string;
-    /** Right-aligned slot next to the heading — typically a primary action button. */
+    /** Right-aligned slot next to the heading, typically a primary action button. */
     actions?: React.ReactNode;
     children: React.ReactNode;
 }

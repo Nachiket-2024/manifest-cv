@@ -4,7 +4,7 @@
 # (authorization/models/audit_log_model.py, .../repositories/audit_log_repository.py,
 # and the /authorization/audit-log query routes) against the real ASGI app,
 # real PostgreSQL, and real Redis. Per claude.md's Remaining PBAC Work item
-# #1: "Authorization decisions must be auditable" — every real
+# #1: "Authorization decisions must be auditable" : every real
 # authorize()/require() call (i.e. every hit on a PBAC-protected route)
 # must write a row automatically, with no route needing to opt in, and the
 # query API itself must be PBAC-gated.
@@ -66,7 +66,7 @@ async def _create_system_user(client, created_emails, email):
 @pytest_asyncio.fixture(autouse=True)
 async def _cleanup_audit_log(created_emails):
     """Every real authorize() call in these tests writes a permanent audit
-    row (by design — audit history is append-only, never cascade-deleted
+    row (by design : audit history is append-only, never cascade-deleted
     when a test user is torn down). Clean up rows for this test's emails
     specifically so repeated runs don't accumulate unbounded log rows in
     the shared test database."""
@@ -133,7 +133,7 @@ async def test_a_denied_protected_action_is_logged_as_denied(client, created_ema
 @pytest.mark.asyncio
 async def test_inspection_endpoint_does_not_pollute_the_audit_log(client, created_emails):
     # authorization-check calls authorize_detailed directly (a hypothetical
-    # "what would happen if" query) — it must never itself write an audit
+    # "what would happen if" query) : it must never itself write an audit
     # entry, only the real authorize()/require() calls that gate actual
     # routes do.
     target_email = _unique_email("target")

@@ -8,7 +8,7 @@ Adds the persistent audit trail for authorization decisions per
 claude.md's Remaining PBAC Work item #1 ("Authorization decisions must be
 auditable ... Automatically log every authorize() call"). Every real call
 to AuthorizationService.authorize()/require() (i.e. every protected route
-hit) now writes one row here — see authorization_service.py's
+hit) now writes one row here, see authorization_service.py's
 _log_decision. The table has no foreign keys to policies/users
 deliberately: an audit entry must keep reflecting exactly what was
 evaluated at the time even if the policy or user referenced is later

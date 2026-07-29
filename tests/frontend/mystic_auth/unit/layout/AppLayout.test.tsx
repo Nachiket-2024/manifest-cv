@@ -1,22 +1,23 @@
+import type { ComponentProps } from 'react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 
 import { useAuthStore } from '@/store/authStore';
 import AppLayout from '@/layout/AppLayout';
 
 const initialAuthState = useAuthStore.getState();
 
-function renderLayout() {
+function renderLayout(extraNavItems?: ComponentProps<typeof AppLayout>['extraNavItems']) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ChakraProvider value={defaultSystem}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <AppLayout>
+          <AppLayout extraNavItems={extraNavItems}>
             <div>page content</div>
           </AppLayout>
         </MemoryRouter>
@@ -71,5 +72,18 @@ describe('AppLayout', () => {
     await userEvent.click(backdrop);
 
     expect(container.querySelector('[aria-hidden="true"]')).toBeNull();
+  });
+
+  it('renders no extra sidebar links when extraNavItems is omitted', () => {
+    renderLayout();
+
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+  });
+
+  it('renders app-supplied extraNavItems in the sidebar alongside the built-in links', () => {
+    renderLayout([{ label: 'Projects', to: '/projects' }]);
+
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Projects' })).toBeInTheDocument();
   });
 });

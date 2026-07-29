@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Restores a .sql dump (produced by scripts/db_backup.sh) into the `postgres`
-# Docker Compose service. Destructive — overwrites existing rows/tables that
-# the dump also defines — so it asks for confirmation unless -y/--yes is passed.
+# Docker Compose service. Destructive : overwrites existing rows/tables that
+# the dump also defines : so it asks for confirmation unless -y/--yes is passed.
 #
 # Usage: scripts/db_restore.sh <backup-file> [compose-file] [-y|--yes]
 #   compose-file defaults to docker-compose.yml.
@@ -40,7 +40,7 @@ if [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 # Only pull the two vars we need, by name, rather than sourcing the whole
-# .env file — some values (e.g. GMAIL_APP_PASSWORD) contain unquoted spaces
+# .env file : some values (e.g. GMAIL_APP_PASSWORD) contain unquoted spaces
 # that are valid to python-dotenv/pydantic but break a shell `source`.
 if [ -z "${POSTGRES_USER:-}" ] && [ -f .env ]; then
   POSTGRES_USER="$(grep -m1 '^POSTGRES_USER=' .env | cut -d= -f2-)"

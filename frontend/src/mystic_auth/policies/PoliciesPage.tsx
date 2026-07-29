@@ -154,7 +154,7 @@ const PoliciesPage: React.FC = () => {
                 isLoading={isLoading}
                 isError={isError}
                 errorMessage="Failed to load policies"
-                emptyMessage="No policies yet — create one to start granting permissions."
+                emptyMessage="No policies yet : create one to start granting permissions."
             />
 
             <PolicyFormDialog

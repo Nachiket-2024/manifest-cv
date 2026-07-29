@@ -34,6 +34,10 @@
 
 Both compose files assume a reverse proxy / TLS terminator sits in front of the stack in a real deployment — neither attempts to provision TLS itself. See [Deployment Guide](../deployment/guide.md).
 
+## Day-to-day: `dev-up` helpers
+
+`./scripts/dev-up.sh` / `.\scripts\dev-up.ps1` / `scripts\dev-up.cmd` — upstream-owned, generic wrappers around `docker compose up -d` that poll every long-running service until it actually reports healthy, then tail fresh `backend`/`frontend`/`taskiq_worker` logs only (Postgres/Redis/Bugsink/Alembic startup noise stays out of the way). Recommended over plain `docker compose up` for day-to-day work; see [mystic-auth's own Docker Overview](../../mystic_auth/docker/overview.md#day-to-day-dev-up-helpers) for the full rationale and root README's [Run the App](../../../README.md#-run-the-app) for usage.
+
 ## Test suite mounts
 
 `backend` mounts the whole repo root additionally (`.:/repo`), and `frontend` mounts `./tests/frontend:/tests/frontend` + `.:/repo` — both let `docker compose exec` run the top-level `tests/backend/` and `tests/frontend/` suites from inside the Docker network (reaching Postgres/Redis/Qdrant via their container hostnames) without needing a host-side Python/Node environment. See [Testing Overview](../testing/overview.md) ("Running" under each suite) for the exact commands.
@@ -62,8 +66,8 @@ Ran `docker compose up --build` (dev compose) from the repo root after vendoring
 - The full route inventory (`GET /openapi.json`) confirmed all four ManifestCV route groups mounted alongside every inherited mystic-auth route.
 - `curl http://localhost:6333/collections` confirmed the `career_knowledge_chunks` Qdrant collection was created automatically by the backend's startup lifespan hook (`ensure_collection()`).
 - Frontend responded `200` on `http://localhost:5173/` with `<title>ManifestCV</title>`, confirming `VITE_APP_NAME` reached the running container via Vite's `%VITE_APP_NAME%` substitution.
-- `docker compose exec -w /repo backend pytest tests/backend` — all 654 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/backend/app/`); re-confirmed after the app/mystic_auth restructure and the ruff/mypy/bandit/alembic-check adoption.
-- `docker compose exec frontend npm test` — all 284 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/frontend/app/`).
+- `docker compose exec -w /repo backend pytest tests/backend` — all 694 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/backend/app/`); re-confirmed after syncing mystic-auth to upstream `50a04d5` (resend-verification email flow, react-router v8, PBAC/RBAC doc updates).
+- `docker compose exec frontend npm test` — all 296 tests passed (mystic-auth's inherited suite plus ManifestCV's own `tests/frontend/app/`).
 
 `docker-compose.yml` doesn't hardcode `container_name`s or the default `5432`/`6379` host ports for `postgres`/`redis` (`5433`/`6380` instead) — those are the two most common local collision points, and the stack should come up cleanly next to other local projects. Containers still reach each other at `postgres:5432`/`redis:6379`/`qdrant:6333` over the Docker network regardless of host port mappings.
 

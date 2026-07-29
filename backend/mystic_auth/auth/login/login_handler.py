@@ -39,7 +39,7 @@ class LoginHandler:
     ):
         """
         client_ip keys an additional lockout counter alongside the email-based one.
-        This counter aggregates failed attempts across ANY account from a single IP —
+        This counter aggregates failed attempts across ANY account from a single IP:
         the email-keyed counter alone never trips for an attacker credential-stuffing/
         spraying many different emails from one source, since no single email ever
         crosses its own threshold.

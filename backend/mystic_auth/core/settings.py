@@ -6,7 +6,8 @@ class Settings(BaseSettings):
     """Application configuration, loaded from environment variables / .env."""
 
     BACKEND_BASE_URL: str                           # Used to build auth redirect URLs back from the frontend
-    FRONTEND_BASE_URL: str
+    FRONTEND_BASE_URL: str                          # Primary frontend origin, used to build redirect/email links (OAuth callback, verification, password reset), and always CORS-allowed
+    FRONTEND_ADDITIONAL_BASE_URLS: str = ""          # Optional, comma-separated extra CORS-allowed origins (e.g. a second domain, staging alongside prod). Never used for redirect/email links: those always point at FRONTEND_BASE_URL alone, so there's one canonical link target regardless of how many origins are CORS-allowed.
 
     DATABASE_URL: str                               # Async PostgreSQL connection URL
     POSTGRES_USER: str
@@ -44,11 +45,11 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"                         # Application log level (defaulted so existing .env files/CI keep working)
 
-    ENVIRONMENT: str = "development"                # "development" or "production" (defaulted so existing .env files/CI keep working) — gates docs/redoc exposure in main.py
+    ENVIRONMENT: str = "development"                # "development" or "production" (defaulted so existing .env files/CI keep working); gates docs/redoc exposure in main.py
 
     TRUSTED_PROXY_IPS: str = ""                     # Comma-separated reverse proxy IPs to trust X-Forwarded-For from (see auth/security/client_ip.py). Empty (default) = never trust it, use request.client.host as-is.
 
-    SENTRY_DSN: str = ""                            # Optional. Sentry-protocol error-monitoring DSN (works with Sentry itself, or a self-hosted Sentry-SDK-compatible server like Bugsink — see docs/mystic_auth/error-monitoring/overview.md). Empty (default) = error monitoring disabled entirely, no SDK call is ever made.
+    SENTRY_DSN: str = ""                            # Optional. Sentry-protocol error-monitoring DSN (works with Sentry itself, or a self-hosted Sentry-SDK-compatible server like Bugsink; see docs/mystic_auth/error-monitoring/overview.md). Empty (default) = error monitoring disabled entirely, no SDK call is ever made.
     SENTRY_ENVIRONMENT: str = ""                    # Optional. Tag reported alongside every event (e.g. "production", "staging"). Falls back to ENVIRONMENT if unset.
 
     # ManifestCV — AI structuring (Gemini) + vector retrieval (Qdrant). Owned by
@@ -65,10 +66,10 @@ class Settings(BaseSettings):
     # The root .env is shared with docker-compose.yml/docker-compose.prod.yml's
     # `env_file:` directive, which also passes it to infra-only services
     # (e.g. REDIS_PASSWORD for redis-server, BUGSINK_* for the optional
-    # monitoring service — see docs/mystic_auth/error-monitoring/overview.md) that
+    # monitoring service, see docs/mystic_auth/error-monitoring/overview.md) that
     # have no corresponding Settings field. pydantic-settings defaults to
     # extra="forbid", which only actually bites when Settings' own
-    # env_file resolves to a real file — true when running from the repo
+    # env_file resolves to a real file, true when running from the repo
     # root (e.g. tests, which need cwd=/repo to import `backend.app...`),
     # not when running the app itself (cwd=/app, where a relative
     # ".env" doesn't resolve to anything, so only explicitly-declared
@@ -81,12 +82,31 @@ class Settings(BaseSettings):
     @classmethod
     def _secret_key_minimum_strength(cls, value: str) -> str:
         # A short/low-entropy SECRET_KEY would otherwise go undetected until
-        # someone forges a token against it — fail fast at startup instead.
+        # someone forges a token against it; fail fast at startup instead.
         # 32 chars is a floor, not a real entropy guarantee; it only catches
         # placeholder/example values like "changeme" or "secret".
         if len(value) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters long")
         return value
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        """
+        Every origin CORSMiddleware should allow: FRONTEND_BASE_URL always,
+        plus whatever FRONTEND_ADDITIONAL_BASE_URLS supplies. Kept here
+        (rather than inline in main.py) so it's unit-testable on its own,
+        same rationale as client_ip.py parsing TRUSTED_PROXY_IPS itself
+        rather than leaving that to each call site.
+        """
+        extra = (
+            origin.strip()
+            for origin in self.FRONTEND_ADDITIONAL_BASE_URLS.split(",")
+        )
+        # dict.fromkeys, not set(): preserves the (otherwise arbitrary)
+        # order origins were configured in, which matters only for reading
+        # error messages/logs deterministically, never for CORS semantics
+        # itself (allow_origins is checked as an unordered set of matches).
+        return list(dict.fromkeys([self.FRONTEND_BASE_URL, *(o for o in extra if o)]))
 
 
 settings = Settings()

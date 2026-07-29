@@ -20,7 +20,7 @@ router = APIRouter(prefix="/authorization", tags=["Authorization"])
 
 def _definition_for_entry(entry) -> dict | None:
     """
-    The full policy definition snapshot "at" a given history entry — its
+    The full policy definition snapshot "at" a given history entry: its
     new_definition, or (for a "deleted" entry, which has none) its
     previous_definition instead, so every entry type resolves to a
     comparable/rollback-able snapshot without compare/rollback needing
@@ -40,7 +40,7 @@ async def list_policy_history(
     """
     Every recorded change to this policy, newest first. Works even after
     the policy itself has been deleted (history is keyed by policy_name,
-    not a live foreign key — see policy_history_model.py).
+    not a live foreign key, see policy_history_model.py).
     """
     return await policy_history_repository.get_for_policy(policy_name, db, limit=limit, offset=offset)
 
@@ -102,14 +102,14 @@ async def rollback_policy(
 ):
     """
     Restores a policy to a prior recorded definition. The policy must still
-    exist — restoring a deleted policy isn't supported here; recreate it via
+    exist: restoring a deleted policy isn't supported here; recreate it via
     POST /policies instead. Every history entry resolves to a restorable
     definition, including "deleted" entries (their previous_definition is
-    their pre-deletion state — see _definition_for_entry), so rolling back
+    their pre-deletion state, see _definition_for_entry), so rolling back
     to a point before the policy was ever deleted is a valid target.
 
     The restored snapshot is applied via PolicyRepository.update, tagged as
-    a "rolled_back" change so it's distinguishable from an ordinary edit —
+    a "rolled_back" change so it's distinguishable from an ordinary edit:
     this creates a new history entry and never overwrites or removes the
     entry being rolled back to.
 
@@ -117,8 +117,8 @@ async def rollback_policy(
     ordinary edit in terms of what it can grant, so it goes through the same
     guards as PUT /policies/{policy_name}: a malformed conditions block is
     rejected, baseline policies can't be renamed/deactivated, and the caller
-    must already hold every action the restored definition would grant —
-    without this, rolling back to an old revision would be a way to silently
+    must already hold every action the restored definition would grant,
+    since without this, rolling back to an old revision would be a way to silently
     re-grant a more powerful set of actions than update_policy would ever let
     the caller assign directly.
     """

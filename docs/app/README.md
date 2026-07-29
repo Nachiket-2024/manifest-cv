@@ -19,7 +19,7 @@ ManifestCV is built on [mystic-auth](https://github.com/Nachiket-2024/mystic-aut
 Inherited unmodified from the upstream template — mirrored locally under [`docs/mystic_auth/`](../mystic_auth/README.md) rather than only linked out to GitHub, so the deep operational detail is available offline and stays version-matched to the vendored code. Don't edit these directly — they're the template's own docs, refreshed wholesale from upstream.
 
 - [mystic-auth docs index](../mystic_auth/README.md) — the full inherited doc set: template usage/extension surface, authentication flows, OAuth2/PKCE, PBAC architecture and troubleshooting, adding permissions/conditions, security decisions/hardening, background workers, error monitoring
-- [Using This Repository as a Template](../mystic_auth/template-usage.md) — mystic-auth's own contract doc: what it provides, the `sdk.py`/`app_sdk.py` extension surface, and how to pull in upstream updates without conflict
+- [Using This Repository as a Template](../mystic_auth/template-usage/overview.md) — mystic-auth's own contract doc: what it provides, the `sdk.py`/`app_sdk.py` extension surface, and how to pull in upstream updates without conflict
 
 ## Product features
 

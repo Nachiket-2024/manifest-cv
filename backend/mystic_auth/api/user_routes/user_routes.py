@@ -15,7 +15,7 @@ from ...audit_log.audit_log_service import (
 # persists) and the account keeps its old/no password.
 from ...auth.password_logic.password_service import password_service
 
-# Session invalidation on account deletion — the same mechanism logout-all
+# Session invalidation on account deletion: the same mechanism logout-all
 # uses, reused here so a soft-deleted/purged account's existing refresh tokens
 # can't be used to mint a fresh access token even though
 # refresh_token_service.refresh_tokens() itself doesn't check the database
@@ -23,7 +23,7 @@ from ...auth.password_logic.password_service import password_service
 from ...auth.refresh_token_logic.refresh_token_service import refresh_token_service
 
 # Every real authorization check must build context from the actual request
-# the same way — see authorization_dependency.py.
+# the same way, see authorization_dependency.py.
 from ...authorization.context.request_context_builder import build_authorization_context
 from ...authorization.dependencies.authorization_dependency import require_authorization
 
@@ -40,10 +40,10 @@ from ...user_crud.user_crud_collector import user_crud
 # UserRole is used ONLY for the target-account guards below (e.g. "the system
 # account can never be modified via these generic endpoints"). This is
 # deliberately not a PBAC authorization decision: it never asks "what
-# role/policies does the CALLER have" — it protects one specific reserved
+# role/policies does the CALLER have": it protects one specific reserved
 # resource from every caller, regardless of what they're authorized to do in
 # general. Role may still be used as resource metadata/grouping; it must
-# simply never *grant* access, which this doesn't — it only narrows access.
+# simply never *grant* access, which this doesn't; it only narrows access.
 from ...user_table.user_model import UserRole
 from ...user_table.user_schema import UserRead, UserRoleUpdate, UserUpdate
 from ..route_helpers import get_or_404
@@ -61,7 +61,7 @@ async def _prepare_update_data(update_data: UserUpdate) -> dict:
     """
     data = update_data.model_dump(exclude_unset=True)
     # Only ever consulted by update_my_profile's own current-password check
-    # above it in the route handler — never a real column, so it must not
+    # above it in the route handler, never a real column, so it must not
     # reach user_crud.update (which would otherwise set it as a harmless but
     # sloppy unmapped attribute on the ORM object).
     data.pop("current_password", None)
@@ -97,7 +97,7 @@ async def update_my_profile(
 
     # A stolen access-token cookie (e.g. via XSS) is otherwise enough to
     # permanently lock the legitimate owner out by just setting a new
-    # password — no proof of the old one required. Skipped for an
+    # password: no proof of the old one required. Skipped for an
     # OAuth-only account (hashed_password is None) setting a password for
     # the first time, since there's nothing yet to confirm against.
     if update_data.password is not None and user.hashed_password is not None:
@@ -109,7 +109,7 @@ async def update_my_profile(
                 detail="Current password is incorrect",
             )
         # Same check password_reset_service.py already does for the forgot-
-        # password flow — a "change" that doesn't change anything shouldn't
+        # password flow: a "change" that doesn't change anything shouldn't
         # succeed, and shouldn't revoke every other session for no reason.
         if await password_service.verify_password(update_data.password, user.hashed_password):
             raise HTTPException(
@@ -120,7 +120,7 @@ async def update_my_profile(
     prepared_data = await _prepare_update_data(update_data)
     updated_user = await user_crud.update(db_obj=user, update_data=prepared_data, db=db)
 
-    # A password change rotates the credential — any existing session
+    # A password change rotates the credential, so any existing session
     # (including this device's own refresh token) must not survive it,
     # mirroring password_reset_service.py's identical reasoning: an account
     # may be having its password changed specifically because it's
@@ -173,7 +173,7 @@ async def update_any_user(
     prepared_data = await _prepare_update_data(update_data)
     updated_user = await user_crud.update(db_obj=user, update_data=prepared_data, db=db)
 
-    # See update_my_profile's identical comment — an admin-driven password
+    # See update_my_profile's identical comment: an admin-driven password
     # change must revoke the target account's existing sessions too.
     if "hashed_password" in prepared_data:
         await refresh_token_service.revoke_all_tokens_for_user(user_email)
@@ -191,7 +191,7 @@ async def delete_any_user(
     """
     Soft-delete: is_active=False + deleted_at=now (see user_lifecycle_crud.py).
     The row and every FK-referencing row (policy assignments, audit history)
-    stay intact — this is the default, reversible deletion flow. Permanent
+    stay intact: this is the default, reversible deletion flow. Permanent
     removal is a separate, more sensitive operation (see purge_user below).
     """
     user_email = normalize_email(user_email)
@@ -276,7 +276,7 @@ async def reactivate_user(
     user_email = normalize_email(user_email)
     user = await get_or_404(user_crud.get_by_email(user_email, db), "User not found")
 
-    # Reactivate is specifically the soft-delete undo path — nothing to
+    # Reactivate is specifically the soft-delete undo path: nothing to
     # restore if the account was never soft-deleted.
     if user.deleted_at is None:
         raise HTTPException(
@@ -285,7 +285,7 @@ async def reactivate_user(
         )
 
     # Policy assignments were never touched by soft delete, so access returns
-    # exactly as it was — no re-granting needed.
+    # exactly as it was, so no re-granting needed.
     restored_user = await user_crud.reactivate(db_obj=user, db=db)
 
     await log_security_event(
@@ -320,7 +320,7 @@ async def update_user_role(
     # Assigning the system role requires the separate, more sensitive
     # users:assign_system_role authorization. This can't be a static
     # per-route dependency like the others since it depends on *which* role is
-    # being requested in the body, not just who's calling — so it goes
+    # being requested in the body, not just who's calling, so it goes
     # through the same centralized authorization_service the route-level
     # dependency itself uses, never a role check.
     if role_data.role == UserRole.system:

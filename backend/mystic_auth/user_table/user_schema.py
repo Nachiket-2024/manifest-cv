@@ -9,7 +9,7 @@ from .user_model import UserRole
 class UserBase(BaseModel):
     """Shared base schema for User data used across create/read schemas."""
 
-    # Capped to match signup_schema.SignupSchema — an unbounded string here
+    # Capped to match signup_schema.SignupSchema : an unbounded string here
     # would feed straight into Argon2 hashing (password) or be
     # stored/displayed/logged indefinitely (name).
     name: str = Field(..., max_length=100)
@@ -23,17 +23,17 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     """Schema used when registering a new user account. Role defaults to
-    'user' — admin accounts are assigned separately."""
+    'user' : admin accounts are assigned separately."""
 
     password: str = Field(..., max_length=128)
 
 
 class UserUpdate(BaseModel):
     """Schema for user-controlled profile updates only. Role changes are
-    intentionally excluded — use admin endpoints for that.
+    intentionally excluded : use admin endpoints for that.
 
     Backs both PUT /users/me and PUT /users/{email} (admin), so the same
-    max_length caps signup_schema.SignupSchema applies must apply here too —
+    max_length caps signup_schema.SignupSchema applies must apply here too :
     an unbounded password submitted through either of these routes would
     otherwise be fed straight into Argon2 hashing uncapped.
     """
@@ -42,7 +42,7 @@ class UserUpdate(BaseModel):
     password: str | None = Field(default=None, max_length=128)
 
     # Required (by PUT /users/me's own handler, not this schema) when an
-    # account that already has a password is changing it via self-service —
+    # account that already has a password is changing it via self-service :
     # a hijacked access-token cookie would otherwise be enough to fully lock
     # the legitimate owner out by just setting a new password, no proof of
     # the old one needed. Not required for the admin route (PUT
@@ -73,7 +73,7 @@ class UserRead(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    # When this account was soft-deleted, if ever — None means never deleted
+    # When this account was soft-deleted, if ever : None means never deleted
     # (or fully restored via reactivation, which clears it).
     deleted_at: datetime | None = None
 
@@ -89,7 +89,7 @@ class UserRead(UserBase):
     @property
     def has_password(self) -> bool:
         """Whether this account currently has a usable password credential
-        (False for an OAuth-only account — see user_model.py's
+        (False for an OAuth-only account : see user_model.py's
         hashed_password column and oauth2_service.py's login_or_create_user,
         which is the only thing that ever clears it back to None)."""
         return self.hashed_password is not None

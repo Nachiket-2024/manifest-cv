@@ -63,7 +63,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, variant = "form" }) =
                 </Box>
             </Flex>
 
-            {/* Main content — kept tight (not a large py) so the header,
+            {/* Main content: kept tight (not a large py) so the header,
                 card, and footer all fit a normal laptop viewport without
                 scrolling; centered vertically within whatever room remains
                 via flex="1" + justify="center" rather than fixed padding */}
@@ -79,7 +79,7 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({ children, variant = "form" }) =
                 {children}
             </Flex>
 
-            {/* Footer — same soft brand surface as the header, so the page
+            {/* Footer: same soft brand surface as the header, so the page
                 reads as bookended by one consistent identity band rather
                 than a branded top and a plain default-background bottom */}
             <Box

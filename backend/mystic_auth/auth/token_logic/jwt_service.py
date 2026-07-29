@@ -13,7 +13,7 @@ from ...redis.client import redis_client
 logger = get_logger(__name__)
 
 # Redis key template for a user's refresh-token registry (a jti -> expiry Hash).
-# Deliberately NOT named "user:{email}:refresh_tokens" — that name was used
+# Deliberately NOT named "user:{email}:refresh_tokens": that name was used
 # pre-jti-migration for a Redis SET of raw tokens. Reusing the same key name
 # for an incompatible type (Set -> Hash) would make HSET/HGETALL/HDEL raise
 # WRONGTYPE against any Redis instance that still holds the old Set from
@@ -33,7 +33,7 @@ class JWTService:
     Revocation and session tracking are keyed by the token's "jti" claim rather
     than the raw JWT string. Keying off the raw token would mean every valid,
     unexpired refresh token sits in Redis in cleartext (in the per-user session
-    set) — anyone with read access to Redis (a backup, a misconfigured replica,
+    set), so anyone with read access to Redis (a backup, a misconfigured replica,
     a compromised monitoring tool) could lift a token straight out and use it
     without ever touching the database or the JWT secret. A jti is a random,
     otherwise-meaningless identifier: it lets us blacklist/track a specific
@@ -60,16 +60,16 @@ class JWTService:
         token = await asyncio.to_thread(jwt.encode, payload, settings.SECRET_KEY, settings.JWT_ALGORITHM)
 
         # Record jti -> expiry (epoch seconds) in the user's refresh-token
-        # registry — never the raw token itself.
+        # registry, never the raw token itself.
         registry_key = REFRESH_TOKEN_REGISTRY_KEY.format(email=email)
         await redis_client.hset(registry_key, jti, int(expire.timestamp()))
 
         # A jti is only ever removed from this hash by an explicit
-        # revoke/rotation/logout-all — a refresh token that's simply never
+        # revoke/rotation/logout-all: a refresh token that's simply never
         # used again (the common case: a session that quietly goes stale)
         # left its entry here forever, growing this hash without bound over
         # a deployment's lifetime. Piggybacking a sweep on every new token
-        # mint (login/refresh — the exact moments that grow the hash) keeps
+        # mint (login/refresh, the exact moments that grow the hash) keeps
         # it bounded to roughly the user's active session count instead of
         # every refresh token ever issued to them.
         await self._prune_expired_registry_entries(registry_key)
@@ -89,18 +89,18 @@ class JWTService:
                 await redis_client.hdel(registry_key, *expired_jtis)
 
         except Exception:
-            # Best-effort hygiene — must never block minting a new token.
+            # Best-effort hygiene: must never block minting a new token.
             logger.warning("Failed to prune expired refresh-token registry entries:\n%s", traceback.format_exc())
 
     async def create_verification_token(self, email: str, expires_minutes: int | None = None) -> str:
         """type="verify" (rather than "access") scopes this token to the
-        verify-account endpoint only — every protected route requires
+        verify-account endpoint only: every protected route requires
         expected_type="access" via verify_token, so a verification token is
         rejected everywhere else in the app even if it leaks (e.g. via an
         email log or forward).
 
         expires_minutes must match the caller's own single-use Redis key TTL
-        and the expiry stated in the verification email — previously this
+        and the expiry stated in the verification email. Previously this
         was hardcoded to ACCESS_TOKEN_EXPIRE_MINUTES (15min default) while
         account_verification_service set the Redis key TTL and emailed
         wording using RESET_TOKEN_EXPIRE_MINUTES (60min default), so a user
@@ -125,7 +125,7 @@ class JWTService:
         """
         try:
             # The algorithm allowlist is passed as a single-element list, not a
-            # bare string — PyJWT's `algorithms` parameter accepts a bare string
+            # bare string: PyJWT's `algorithms` parameter accepts a bare string
             # as a technically-valid Sequence[str] (Python strings are
             # sequences of characters), which would make its internal
             # membership check an accidental substring match instead of an
@@ -221,7 +221,7 @@ class JWTService:
 
     async def claim_jti_for_rotation(self, jti: str, exp: int | float | None, email: str | None = None) -> bool:
         """
-        Atomically revokes jti only if it wasn't already revoked — returns
+        Atomically revokes jti only if it wasn't already revoked. Returns
         True only for the call that actually revoked it (safe to proceed
         with rotation), False if it was already revoked (either a genuine
         replayed refresh token, or a concurrent request that won the race
@@ -252,7 +252,7 @@ class JWTService:
             return False
 
     async def is_token_revoked_by_jti(self, jti: str | None) -> bool:
-        """Returns False (not just when unrevoked) when no jti was given —
+        """Returns False (not just when unrevoked) when no jti was given:
         tokens minted outside jwt_service, such as password reset tokens,
         carry no jti and were never eligible for this revocation mechanism."""
         if not jti:

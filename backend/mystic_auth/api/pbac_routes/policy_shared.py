@@ -9,7 +9,7 @@ from ...authorization.policies.default_policies import (
 )
 
 # Fine-grained per-operation dependencies (replaces the old single coarse
-# "policies:manage" action — see permissions.py). A caller can now hold,
+# "policies:manage" action, see permissions.py). A caller can now hold,
 # say, policies:read without also being able to create/edit/delete/assign
 # policies, and vice versa. Shared across every pbac_routes module below so
 # each operation is gated identically no matter which file defines the route.
@@ -20,7 +20,7 @@ DELETE_DEPENDENCY = Depends(require_authorization(Permission.POLICIES_DELETE.val
 ASSIGN_DEPENDENCY = Depends(require_authorization(Permission.POLICIES_ASSIGN.value, "policies"))
 REVOKE_DEPENDENCY = Depends(require_authorization(Permission.POLICIES_REVOKE.value, "policies"))
 
-# Baseline policies the system depends on to keep functioning — never
+# Baseline policies the system depends on to keep functioning: never
 # deletable, renameable, or deactivatable via the generic management API
 # (see policy_crud_routes.py), regardless of who holds policies:delete or
 # policies:update.

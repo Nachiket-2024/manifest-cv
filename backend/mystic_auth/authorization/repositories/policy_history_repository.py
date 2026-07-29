@@ -8,14 +8,14 @@ class PolicyHistoryRepository:
     """
     Persistence layer for the policy_history table. Entries are written by
     PolicyRepository's create/update/delete (the only places a policy is
-    ever mutated) and never updated afterwards — only queried back for
+    ever mutated) and never updated afterwards, only queried back for
     inspection, comparison, or as the source of a rollback.
     """
 
     @staticmethod
     def add_entry(data: dict, db: AsyncSession) -> PolicyHistory:
         """
-        Stages a new PolicyHistory row via db.add without committing —
+        Stages a new PolicyHistory row via db.add without committing:
         PolicyRepository's create/update/delete call this alongside their
         own policy mutation and commit both together, so a history entry
         can never be recorded without the mutation it describes actually

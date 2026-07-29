@@ -12,13 +12,13 @@ def require_authorization(action: str, resource_type: str):
     Returns a FastAPI dependency usable as
     `Depends(require_authorization("users:list_all", "users"))` that
     authenticates the caller, builds the request's authorization context
-    (real connection/server clock only — never anything client-supplied,
+    (real connection/server clock only, never anything client-supplied,
     see context/request_context_builder.py), and delegates the actual
     decision entirely to AuthorizationService.require. On success it
     returns the authenticated current_user dict for the route to use.
 
     This is the PBAC replacement for the RBAC-era
-    authorization.permission_checker.require_permission (removed) — routes
+    authorization.permission_checker.require_permission (removed): routes
     declare *what action on what resource* they need; the authorization
     service and policy evaluation engine behind it decide *who currently
     has that*, based entirely on assigned policies. No role ever enters

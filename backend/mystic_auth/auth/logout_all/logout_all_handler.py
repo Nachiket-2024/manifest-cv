@@ -25,14 +25,14 @@ class LogoutAllHandler:
                     status_code=400
                 )
 
-            # decode_payload, not verify_token — an already-revoked refresh
+            # decode_payload, not verify_token: an already-revoked refresh
             # token (e.g. this device's own session, killed moments ago by a
             # password change that revokes every refresh token for the
             # account) must still resolve to its owning email so the rest of
             # that account's sessions can be revoked and cookies cleared,
             # instead of failing outright and leaving stale cookies behind.
             # decode_payload skips the revocation check verify_token does,
-            # but NOT the "type" claim check — a wrong-type token (e.g. an
+            # but NOT the "type" claim check: a wrong-type token (e.g. an
             # access token mistakenly presented here) must still be rejected
             # for revocation purposes, same as refresh_tokens() in
             # refresh_token_service.py.
@@ -52,8 +52,8 @@ class LogoutAllHandler:
             )
 
             # As with plain logout: whether or not there was anything left to
-            # revoke server-side, the caller's goal — no valid session left
-            # in this browser — is met either way, so this always clears
+            # revoke server-side, the caller's goal (no valid session left
+            # in this browser) is met either way, so this always clears
             # cookies and reports success rather than erroring out.
             resp = JSONResponse(
                 content={"message": f"Logged out from {revoked_count} devices"},

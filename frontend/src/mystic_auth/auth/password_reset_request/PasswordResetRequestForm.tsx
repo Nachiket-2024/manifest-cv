@@ -25,7 +25,7 @@ const PasswordResetRequestForm: React.FC = () => {
         }, 1000);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.SubmitEvent<HTMLDivElement>) => {
         e.preventDefault();
 
         if (cooldown > 0) {

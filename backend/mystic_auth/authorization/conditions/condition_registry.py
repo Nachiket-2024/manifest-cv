@@ -13,7 +13,7 @@ class ConditionRegistry:
     Maps a condition key (as it appears in a Policy's `conditions` dict,
     e.g. "self_only", "time") to the ConditionHandler responsible for it.
     This is the one place that needs to change to add a new condition
-    type — neither PolicyEvaluationEngine nor ConditionEvaluationService
+    type: neither PolicyEvaluationEngine nor ConditionEvaluationService
     need any change (see conditions/condition_handler.py's docstring).
     """
 

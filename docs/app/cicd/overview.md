@@ -2,7 +2,7 @@
 
 ## Workflow
 
-`.github/workflows/ci.yml` — triggers on every push and pull request targeting `main`. Five independent jobs, all run in parallel (no job depends on another):
+`.github/workflows/ci.yml` — triggers on every push and pull request targeting `main`. Six independent jobs, all run in parallel (no job depends on another); the last of these, `docker-full-suite`, only actually executes on a push to `main` (not on `pull_request`), see its own section below for why.
 
 ### `backend` — Backend (unit + integration)
 
@@ -21,7 +21,8 @@
 
 - Validates `docker-compose.yml` and `docker-compose.prod.yml` still parse (`docker compose ... config`), using `.env.example` copied to `.env` just to satisfy each file's `env_file` directive — no real secrets involved. One var is appended on top of that copy: `REDIS_PASSWORD`, which `.env.example` deliberately ships empty (a documented local-only convenience — see [Deployment Guide](../deployment/guide.md#required-production-environment-variables)) but which `docker-compose.prod.yml`'s `${REDIS_PASSWORD:?...}` hard-requires just to parse; a placeholder here satisfies that without touching the shipped default.
 - Builds `docker/backend.Dockerfile` and `docker/frontend.Dockerfile --target production` to confirm both images still build cleanly.
-- Regression guard: asserts `/app/logs` is absent from the built backend image — `backend/logs/` (real request data: paths, timestamps, correlation IDs) previously leaked into the image via `COPY backend/ .`, since a bare `*.log` `.dockerignore` entry doesn't match rotated filenames like `access.log.2026-07-19`. Fixed via an explicit `backend/logs/` entry in `.dockerignore`; this step catches it coming back.
+- Regression guard: asserts `/app/logs` is *empty* in the built backend image (the directory itself is expected to exist — `docker/backend.Dockerfile` creates it at build time so a Docker-managed volume mounted there in dev inherits correct ownership, see that Dockerfile's own comment) — `backend/logs/` (real request data: paths, timestamps, correlation IDs) previously leaked into the image via `COPY backend/ .`, since a bare `*.log` `.dockerignore` entry doesn't match rotated filenames like `access.log.2026-07-19`. Fixed via an explicit `backend/logs/` entry in `.dockerignore`; this step catches it coming back.
+- Boots the real dev Compose stack (`postgres`, `redis`, `alembic`, `backend`, `frontend` — `bugsink`/`bugsink-seed`/`taskiq_worker` skipped, nothing here depends on them) from the images just built, waits for the backend to report healthy and the frontend dev server to respond, then smoke-tests both (`/health/ready` returns `"status":"ok"`, the frontend serves `<div id="root">`) — catches bad env wiring or a broken healthcheck the `backend`/`frontend` jobs above can't see, since those run the same source code on a bare runner, never through the actual image.
 - **No push to a registry, no deploy step** — this repo has no deploy pipeline; that's an explicit scope boundary (a template repository shouldn't assume a specific cloud/hosting target), not an oversight.
 
 ### `real-tectonic` — Real tectonic PDF compilation
@@ -38,6 +39,13 @@
 - Uses the official `gitleaks/gitleaks-action@v2`, same as upstream's own CI.
 - Fails the job on any match.
 
+### `docker-full-suite` — Full test suite via Docker (main only)
+
+- Gated to `github.event_name == 'push' && github.ref == 'refs/heads/main'` — deliberately does **not** run on every PR: the code under test is identical to what the native `backend`/`frontend` jobs already ran, so re-running through Docker on every push would mostly double CI time for no new bug-catching power. This job exists for the narrower class of bug the native runs structurally can't see — a subtly wrong volume mount, an entrypoint issue, a dependency present on the runner but missing from the image — and a push to `main` is the point you'd actually want to know about that.
+- Boots `postgres`, `redis`, `alembic`, `backend` (same `BUGSINK_SUPERUSER_EMAIL`-blanking trick as `docker-build`, so the backend doesn't wait ~10s for a Bugsink DSN that's never coming in this invocation), waits for `/health/ready`, then re-runs the **full** backend suite — unit + integration + security, same three tiers and flags as the native `backend` job — inside the running `backend` container (`docker compose exec -T --user root backend ...`; `--user root` only because `pytest-cov`'s coverage-file writes need it, not the served app itself, which stays non-root).
+- Boots `frontend`, then runs the full frontend suite (`npm run test -- --run`) inside that container.
+- No `real-tectonic`-style PDF compilation here — that's already covered by its own dedicated job above, against every push/PR, not just `main`.
+
 ## What's covered
 
 - Backend unit/integration/security suites, against real Postgres/Redis, gated by an 80% cumulative-coverage threshold (actual coverage runs a few points above this — see [Testing Overview](../testing/overview.md)); performance tests run too, non-blocking.
@@ -47,6 +55,7 @@
 - Real `tectonic` PDF compilation, inside the actual production backend image — not just mocked.
 - Dependency vulnerability scanning on every push/PR: `pip-audit` (backend) and `npm audit --audit-level=high` (frontend) — lightweight steps added to the existing jobs, not new jobs, so CI time is barely affected. There is no scheduled/automated dependency-update bot in this repo — dependency bumps are a manual, deliberate action (see the header comment in `backend/requirements.txt`), not something that opens PRs on its own.
 - Full-history secret scanning (`gitleaks`) on every push/PR.
+- On a push to `main` only: the full backend + frontend suites re-run through the actual Docker images/Compose wiring (`docker-full-suite`), plus a real-stack boot-and-smoke-test (health endpoint + frontend shell) as part of `docker-build` on every push/PR.
 
 ## What's not covered (tracked, not silently missing)
 

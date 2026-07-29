@@ -10,7 +10,7 @@ class UserLifecycleCRUD:
     Deliberately separate from UserBaseCRUD.update: both operations touch
     exactly two columns (is_active, deleted_at) with app-computed values, not
     caller-supplied ones, so they don't belong behind the generic "update with
-    an arbitrary dict" entry point the way a profile edit does — that dict
+    an arbitrary dict" entry point the way a profile edit does : that dict
     would let a caller set deleted_at to anything.
     """
 
@@ -33,7 +33,7 @@ class UserLifecycleCRUD:
 
     async def reactivate(self, db_obj, db: AsyncSession):
         """Sets is_active=True and clears deleted_at. Deliberately does NOT
-        touch policy assignments — whatever the account held before deletion
+        touch policy assignments : whatever the account held before deletion
         is what it holds again, restored exactly as an admin left it, not
         silently re-granted or reset."""
         if not db_obj:

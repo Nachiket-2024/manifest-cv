@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class AuditLogEntryRead(BaseModel):
-    """Schema returned by the audit log query API — mirrors
+    """Schema returned by the audit log query API : mirrors
     AuthorizationAuditLog (see models/audit_log_model.py)."""
 
     id: int

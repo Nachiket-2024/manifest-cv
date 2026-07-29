@@ -15,18 +15,18 @@ def build_authorization_context(request: Request) -> dict:
     claude.md's "Every authorization check should use the same context
     builder" and "Do not trust client supplied values."
 
-    `ip_address` is resolved via auth/security/client_ip.py — the literal TCP peer
+    `ip_address` is resolved via auth/security/client_ip.py: the literal TCP peer
     (request.client.host) by default, or the real client behind
     X-Forwarded-For only if that peer is itself a configured trusted proxy
     (TRUSTED_PROXY_IPS). Never a header/query/body value trusted
     unconditionally, which a caller could set to whatever they like.
 
     `current_time` always comes from this backend's own clock (UTC, ISO
-    8601) — never anything the caller supplies. The one documented
+    8601), never anything the caller supplies. The one documented
     exception is the authorization-check *inspection* endpoint
     (api/pbac_routes/authorization_check_routes.py's check_user_authorization), which
     deliberately accepts a caller-supplied hypothetical context to answer
-    "what would happen if" — that endpoint never calls this builder, and
+    "what would happen if": that endpoint never calls this builder, and
     never represents a real access decision.
 
     `security_context` starts empty: this app does not implement MFA/

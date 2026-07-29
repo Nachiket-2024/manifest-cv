@@ -6,3 +6,11 @@ export interface VerifyAccountPayload {
 export interface VerifyAccountResponse {
     message: string;
 }
+
+export interface VerificationEmailRequestPayload {
+    email: string;
+}
+
+export interface VerificationEmailRequestResponse {
+    message: string;
+}

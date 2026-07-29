@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -41,11 +42,12 @@ from .sdk import (  # noqa: E402
     security_audit_router,
     settings,
     user_router,
+    watch_for_late_dsn,
 )
 
 logger = get_logger("main")
 
-# Before the app starts serving requests — so every request from the very
+# Before the app starts serving requests, so every request from the very
 # first one onward is covered. A no-op when SENTRY_DSN is unset (see
 # error_monitoring/sentry_service.py and docs/mystic_auth/error-monitoring/overview.md).
 init_sentry()
@@ -55,20 +57,29 @@ init_sentry()
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     """
     On startup, ensures ManifestCV's Qdrant collection exists (idempotent —
-    safe on every restart, see retrieval/qdrant_client.py). On shutdown
-    (SIGTERM from `docker stop` / orchestrator rolling restarts) explicitly
-    dispose the DB connection pool and close the Redis and Qdrant clients
-    instead of relying on the process dying and the OS reclaiming the
-    sockets.
+    safe on every restart, see retrieval/qdrant_client.py) and starts
+    watch_for_late_dsn() as a fire-and-forget background task, a no-op
+    unless init_sentry() above ran with SENTRY_DSN still unset (see that
+    function's own docstring for why: Bugsink can take longer to become
+    healthy than this app takes to boot, on a fresh/cold start). Never
+    awaited, so it can't delay startup or block a single request; cancelled
+    on shutdown along with everything else.
+
+    On shutdown (SIGTERM from `docker stop` / orchestrator rolling
+    restarts) explicitly dispose the DB connection pool and close the
+    Redis and Qdrant clients instead of relying on the process dying and
+    the OS reclaiming the sockets.
     """
     await ensure_qdrant_collection()
+    dsn_watcher = asyncio.create_task(watch_for_late_dsn())
     yield
+    dsn_watcher.cancel()
     await database.engine.dispose()
     await redis_client.aclose()
     await close_qdrant_client()
 
 
-# In production, the interactive API docs are disabled — they're a debugging
+# In production, the interactive API docs are disabled: they're a debugging
 # aid with no reason to be publicly reachable, and disabling them is one less
 # thing to lock down at a proxy.
 _is_production = settings.ENVIRONMENT.lower() == "production"
@@ -79,19 +90,22 @@ app = FastAPI(
     openapi_url=None if _is_production else "/openapi.json",
 )
 
-# Starlette applies middleware in reverse of add order — the LAST middleware
+# Starlette applies middleware in reverse of add order: the LAST middleware
 # added ends up OUTERMOST, running first on the way in. So
 # CorrelationIdMiddleware is added last, making it outermost, so
 # request.state.request_id (and the logging contextvar it sets) is populated
 # before every other middleware runs, including LoggingMiddleware's "Incoming
 # request" log line below.
 
-# Sourced from settings (FRONTEND_BASE_URL) rather than hardcoded, so this
-# works unchanged across local/staging/production instead of only ever
-# allowing http://localhost:5173.
+# Sourced from settings (FRONTEND_BASE_URL + optional
+# FRONTEND_ADDITIONAL_BASE_URLS) rather than hardcoded, so this works
+# unchanged across local/staging/production instead of only ever allowing
+# http://localhost:5173. See Settings.cors_allowed_origins for how the list
+# is built. Redirect/email links still always point at FRONTEND_BASE_URL
+# alone regardless of how many origins are CORS-allowed here.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_BASE_URL],
+    allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type"],
@@ -99,7 +113,7 @@ app.add_middleware(
 
 app.add_middleware(LoggingMiddleware)
 
-# Security-hardening response headers (X-Frame-Options, CSP, HSTS, etc.) — see
+# Security-hardening response headers (X-Frame-Options, CSP, HSTS, etc.), see
 # security_headers_middleware.py for per-header reasoning.
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -121,7 +135,7 @@ app.include_router(auth_router)
 app.include_router(refresh_token_router)
 app.include_router(user_router)
 # Split from a single pbac_routes/policy_routes.py into feature-based modules
-# (CRUD, history, assignment, checks, audit log) — see backend/mystic_auth/api/pbac_routes/.
+# (CRUD, history, assignment, checks, audit log), see backend/mystic_auth/api/pbac_routes/.
 # Registration order matters: policy_assignment_router defines
 # /authorization/users/me/policies before its own
 # /authorization/users/{user_email}/policies, so it must be included whole;

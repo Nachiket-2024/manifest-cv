@@ -3,7 +3,7 @@ from .condition_handler import ConditionHandler
 
 class ContextAttributesCondition(ConditionHandler):
     """
-    "context_attributes": {key: expected_value, ...} — every listed key
+    "context_attributes": {key: expected_value, ...}: every listed key
     must match its expected value in the caller-supplied context (e.g.
     {"mfa_verified": True} for an MFA-gated action). An empty/missing map
     imposes no restriction. Unsatisfiable if no context was supplied.

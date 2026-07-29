@@ -1,25 +1,45 @@
 import React from "react";
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 
 import { IfCan } from "../authorization/IfCan";
-import { NAV_ITEMS } from "./navItems";
+import { NAV_ITEMS, type NavItem } from "./navItems";
 import { APP_NAME } from "../core/settings";
 
 interface SidebarProps {
     isOpen: boolean;
     onNavigate: () => void;
+    /**
+     * App-supplied links, merged with the built-in ones and sorted by
+     * `order` (see NavItem: items without one sort last, in the order
+     * given, which is why omitting `order` entirely still reproduces the
+     * original append-only behavior). Same NavItem shape and same IfCan
+     * gating as the built-ins, see AppLayout's own docstring and
+     * docs/mystic_auth/template-usage/overview.md#shared-chrome-extension-points.
+     * Optional and defaults to none, so existing callers see no change.
+     */
+    extraItems?: NavItem[];
 }
 
 /**
  * Primary app navigation. Permanently visible on md+ screens; on smaller
  * screens it's an off-canvas panel toggled by Navbar's menu button (slides
- * in via transform so it stays in the DOM — avoids remounting nav state).
+ * in via transform so it stays in the DOM, avoiding remounting nav state).
  * Each permission-gated link is wrapped in IfCan so a caller who lacks that
  * permission never sees it; the route itself is still independently
  * enforced by ProtectedRoute.
  */
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onNavigate }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onNavigate, extraItems }) => {
+    // Array.prototype.sort is stable (guaranteed since ES2019), so two items
+    // with the same order (or both missing one) keep their relative
+    // position from the merged array rather than getting shuffled.
+    // undefined - undefined would be NaN, not 0, which is why both sides
+    // fall back to Infinity rather than comparing `order` directly.
+    const items = extraItems && extraItems.length > 0
+        ? [...NAV_ITEMS, ...extraItems].sort(
+              (a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)
+          )
+        : NAV_ITEMS;
     return (
         <Box
             as="nav"
@@ -46,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onNavigate }) => {
             </Box>
 
             <Stack p={3} gap={1}>
-                {NAV_ITEMS.map((item) => {
+                {items.map((item) => {
                     const link = (
                         <NavLink
                             key={item.to}

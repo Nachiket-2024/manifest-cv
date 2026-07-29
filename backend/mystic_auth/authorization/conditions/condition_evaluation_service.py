@@ -11,7 +11,7 @@ class ConditionEvaluationService:
     The engine calls this service with a policy's whole `conditions` dict;
     this service dispatches each key to its registered handler (via
     ConditionRegistry) and ANDs the results. The engine itself never knows
-    what "self_only" or "time" mean — only that "all present condition
+    what "self_only" or "time" mean, only that "all present condition
     keys must be satisfied".
     """
 
@@ -30,7 +30,7 @@ class ConditionEvaluationService:
         {"self_only": True, "time": {...}}; None/empty means an
         unconditional grant. Thin wrapper over evaluate_detailed (mirrors
         PolicyEvaluationEngine.evaluate's relationship to its own
-        evaluate_detailed) — one evaluation code path, not two.
+        evaluate_detailed): one evaluation code path, not two.
         """
         return self.evaluate_detailed(conditions, user_email, resource, context)["satisfied"]
 
@@ -43,14 +43,14 @@ class ConditionEvaluationService:
     ) -> dict:
         """
         Same inputs as evaluate(), but reports exactly which condition
-        key(s) failed rather than just a bool — this is what lets
+        key(s) failed rather than just a bool: this is what lets
         PolicyEvaluationEngine build an AuthorizationDecision's
         failed_conditions for a rejected policy, instead of only knowing
         *that* a policy's conditions didn't pass.
 
         Every key is checked (not short-circuited on the first failure) so
         every failing key is reported. An unrecognized key (no registered
-        handler — e.g. a typo, or an unsupported condition type) fails
+        handler, e.g. a typo, or an unsupported condition type) fails
         safe: it counts as a failed key rather than being silently
         ignored.
 

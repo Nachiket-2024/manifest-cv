@@ -1,10 +1,11 @@
 import React from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Heading, Text, VStack } from "@chakra-ui/react";
+import { useSearchParams, useNavigate } from "react-router";
+import { Heading, Text, VStack, Stack, StackSeparator } from "@chakra-ui/react";
 
 import VerifyAccountButton from "./VerifyAccountButton";
+import VerificationEmailRequestForm from "./VerificationEmailRequestForm";
 
-// Shared surface styling (theme surface/border tokens) — replaces this
+// Shared surface styling (theme surface/border tokens), replacing this
 // page's own hand-rolled Box with a plain border/shadow.
 import Card from "../../ui/Card";
 
@@ -35,13 +36,24 @@ const VerifyAccountPage: React.FC = () => {
                     Click the button below to verify your account and activate access.
                 </Text>
 
-                <VStack>
+                <Stack
+                    align="center"
+                    gap={6}
+                    separator={<StackSeparator borderColor="border.default" />}
+                >
                     <VerifyAccountButton
                         token={token}
                         email={email}
                         onSuccess={handleSuccessRedirect}
                     />
-                </VStack>
+
+                    <VStack w="full" gap={3}>
+                        <Text fontSize="md" color="fg.muted">
+                            Link expired or already used?
+                        </Text>
+                        <VerificationEmailRequestForm initialEmail={email} />
+                    </VStack>
+                </Stack>
             </Card>
         </AuthLayout>
     );

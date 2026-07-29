@@ -3,13 +3,13 @@ import traceback
 from ...authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
 
 # PBAC: new users get their access via an explicit default policy assignment,
-# never via their (metadata-only) role — see claude.md's "Roles" section: "New
+# never via their (metadata-only) role: see claude.md's "Roles" section: "New
 # users must receive access through default policy assignment, not default roles."
 from ...authorization.repositories.policy_repository import policy_repository
 from ...logging.logging_config import get_logger
 from ...user_crud.user_crud_collector import user_crud
 
-# Default role assigned to all new users — metadata only (display/grouping); it
+# Default role assigned to all new users, metadata only (display/grouping); it
 # grants no access. See the PBAC policy assignment below for what actually
 # authorizes a new account.
 from ...user_table.user_model import UserRole
@@ -26,7 +26,7 @@ class SignupService:
     # oauth2_service.login_or_create_user): every real caller supplies a
     # genuine AsyncSession via Depends(database.get_session), but unit tests
     # call this directly with db=None while mocking every db-touching
-    # collaborator (user_crud, policy_repository) below it — an `AsyncSession`
+    # collaborator (user_crud, policy_repository) below it: an `AsyncSession`
     # annotation would be accurate for production but wrong for that test
     # pattern, and `AsyncSession | None` pushes the same mismatch onto every
     # collaborator's own (correctly non-optional) signature instead.
@@ -50,14 +50,14 @@ class SignupService:
                 "name": name,
                 "email": email,
                 "hashed_password": hashed_password,
-                "role": UserRole.user,      # Metadata/display only — grants nothing
+                "role": UserRole.user,      # Metadata/display only, grants nothing
                 "is_verified": False,
                 "is_active": True,
             }
 
             new_user = await user_crud.create(user_data, db)
 
-            # Assign the baseline self-service policy — the actual source of
+            # Assign the baseline self-service policy: the actual source of
             # this account's access, per PBAC.
             self_service_policy = await policy_repository.get_by_name(SELF_SERVICE_POLICY_NAME, db)
             if self_service_policy:
@@ -65,12 +65,12 @@ class SignupService:
                     user_id=new_user.id, policy_id=self_service_policy.id, db=db, assigned_by="system"
                 )
             else:
-                # Should never happen once the seeding migration has run —
+                # Should never happen once the seeding migration has run.
                 # logged loudly rather than failing signup outright, since a
                 # missing baseline policy is an operational/migration issue, not
                 # something this particular signup request caused.
                 logger.error(
-                    "Default policy '%s' not found — new user %s created with no assigned policies",
+                    "Default policy '%s' not found, new user %s created with no assigned policies",
                     SELF_SERVICE_POLICY_NAME, email,
                 )
 

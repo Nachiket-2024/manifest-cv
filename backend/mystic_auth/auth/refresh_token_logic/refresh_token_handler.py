@@ -35,7 +35,7 @@ class RefreshTokenHandler:
 
             client_ip = get_client_ip(request) or "unknown"
 
-            # These must live in distinct key namespaces — rate_limiter_service
+            # These must live in distinct key namespaces: rate_limiter_service
             # and login_protection_service each maintain their own independent
             # counter/TTL semantics (a sliding request count vs. a failure
             # count), and sharing one key made every refresh call, successful or
@@ -59,7 +59,7 @@ class RefreshTokenHandler:
                     detail="Too many failed refresh attempts. Try later."
                 )
 
-            # refresh_tokens returns a plain dict[str, str], not the schema —
+            # refresh_tokens returns a plain dict[str, str], not the schema;
             # convert it the same way oauth2_login_handler does, rather than
             # accessing attributes that a dict doesn't have.
             tokens_dict = await refresh_token_service.refresh_tokens(refresh_token, db, request)

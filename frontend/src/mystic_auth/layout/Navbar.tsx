@@ -12,7 +12,7 @@ interface NavbarProps {
 /**
  * Top bar shown alongside Sidebar. Hosts the mobile menu toggle (hidden on
  * md+, where Sidebar is always visible), the caller's own name, and the
- * existing LogoutButton container (unchanged — already owns its own
+ * existing LogoutButton container (unchanged, already owns its own
  * mutation/navigation logic).
  */
 const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {

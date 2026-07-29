@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...audit_log.audit_log_repository import audit_log_repository
 from ...audit_log.audit_log_schema import AuditLogEntryRead
 
-# Authentication-only dependency (no permission required) — used by
+# Authentication-only dependency (no permission required), used by
 # /security-log/me, where a user inspects their own security events regardless
 # of whether they hold security_audit:read.
 from ...auth.current_user.current_user_dependency import get_current_user
@@ -39,7 +39,7 @@ async def list_my_security_audit_log(
 ):
     """
     The caller's own security events, newest first. Scoped server-side to
-    current_user's email — no security_audit:read permission is required
+    current_user's email, no security_audit:read permission is required
     since inspecting one's own history isn't a privileged operation, and the
     caller cannot request another user's entries through this endpoint.
     """

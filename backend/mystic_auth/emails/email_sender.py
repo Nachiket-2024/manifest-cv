@@ -8,7 +8,7 @@ from ..core.settings import settings
 
 class EmailSender(Protocol):
     """Minimal seam between `taskiq_tasks/email_tasks.py` and whatever
-    actually transports the message — swapping providers (e.g. SES,
+    actually transports the message: swapping providers (e.g. SES,
     SendGrid, Postmark) means writing one new class here, not touching the
     Taskiq task or any of its callers."""
 
@@ -18,7 +18,7 @@ class EmailSender(Protocol):
 
 class SMTPEmailSender:
     """Sends via SMTP with STARTTLS (host/port settings-driven, Gmail by
-    default). Raises on failure — the caller (send_email_task) is
+    default). Raises on failure; the caller (send_email_task) is
     responsible for catching and logging, matching the previous inline
     aiosmtplib.send behavior."""
 

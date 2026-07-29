@@ -1,7 +1,7 @@
 # tests/backend/mystic_auth/performance/conftest.py
 #
 # Shares the same real-dependency fixtures (client, created_emails, Redis
-# isolation) as tests/backend/integration/ and tests/backend/security/ —
+# isolation) as tests/backend/integration/ and tests/backend/security/ :
 # performance tests run against the same real Postgres/Redis, seeded with
 # realistic bulk volume via direct SQL (seeding hundreds of rows through
 # the HTTP API one at a time would itself dominate the timing being
@@ -18,7 +18,7 @@ def unique_tag() -> str:
 
 async def bulk_seed_users(count: int, tag: str) -> list[str]:
     """Inserts `count` verified, active users directly (bypassing signup's
-    password hashing, which is deliberately slow — irrelevant to what
+    password hashing, which is deliberately slow : irrelevant to what
     these tests measure) and returns their emails."""
     emails = [f"perftest_{tag}_{i}@example.com" for i in range(count)]
     async with database.async_session() as session:

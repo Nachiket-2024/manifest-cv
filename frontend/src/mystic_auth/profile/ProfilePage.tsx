@@ -17,10 +17,10 @@ import { toaster } from "../ui/toasterInstance";
 /**
  * ProfilePage
  * ----------------------------
- * Self-service account page: view own profile (name/email/role — the same
+ * Self-service account page: view own profile (name/email/role, the same
  * fields DashboardPage shows) plus the effective policies currently granted
  * (GET /authorization/users/me/policies), and update own name/password
- * (PUT /users/me). No permission required beyond authentication — this is
+ * (PUT /users/me). No permission required beyond authentication: this is
  * exactly the self-service surface users:read_own/users:update_own exist
  * for.
  */
@@ -45,7 +45,7 @@ const ProfilePage: React.FC = () => {
     const isDirty = editedName !== (name ?? "") || newPassword.length > 0;
     useUnsavedChangesWarning(isDirty);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = (e: React.SubmitEvent<HTMLDivElement>) => {
         e.preventDefault();
         setLocalError("");
 
@@ -56,7 +56,7 @@ const ProfilePage: React.FC = () => {
                 return;
             }
             // Only an account that already has a password needs to confirm
-            // it — setting one for the first time on an OAuth-only account
+            // it: setting one for the first time on an OAuth-only account
             // has nothing to confirm against.
             if (hasPassword && !currentPassword) {
                 setLocalError("Enter your current password to set a new one");
@@ -107,7 +107,7 @@ const ProfilePage: React.FC = () => {
 
                         <Field.Root>
                             <Field.Label>Role</Field.Label>
-                            <Input value={role ?? "—"} disabled textTransform="capitalize" />
+                            <Input value={role ?? ":"} disabled textTransform="capitalize" />
                         </Field.Root>
 
                         <Field.Root>

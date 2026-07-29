@@ -3,7 +3,7 @@
 # End-to-end PBAC coverage for /users/* against the real ASGI app, real
 # PostgreSQL, and real Redis (see conftest.py). Authorization here is
 # entirely policy-driven (see authorization/): role is metadata only and
-# is never consulted to decide what a caller may do — these tests prove
+# is never consulted to decide what a caller may do: these tests prove
 # that directly (see "identical roles, different permissions" below),
 # not just that the previously-RBAC-era route behavior still holds.
 import uuid
@@ -29,12 +29,12 @@ def _unique_email(prefix: str = "inttest") -> str:
     return f"{prefix}-{uuid.uuid4().hex}@example.com"
 
 
-# conftest.py's `client` fixture uses base_url="https://testserver" — a
+# conftest.py's `client` fixture uses base_url="https://testserver", a
 # dotless hostname, which CPython's http.cookiejar (what httpx's cookie jar
 # is built on) normalizes to "testserver.local" internally for matching
 # purposes. Cookies set manually here must match that (domain, path, name)
 # key exactly, or they land as a second, separate jar entry instead of
-# overwriting the real one from a prior response — see
+# overwriting the real one from a prior response, see
 # _post_with_refresh_cookie's docstring below for why that matters.
 _TEST_COOKIE_DOMAIN = "testserver.local"
 
@@ -42,11 +42,11 @@ _TEST_COOKIE_DOMAIN = "testserver.local"
 async def _post_with_refresh_cookie(client, url: str, refresh_token: str):
     """Posts to a refresh_token-cookie-gated endpoint with an explicit cookie
     value, independent of whatever the client's shared cookie jar currently
-    holds — needed to simulate stale/reused/forged/cross-session tokens.
+    holds, needed to simulate stale/reused/forged/cross-session tokens.
     httpx deprecated per-request `cookies=` in favor of setting cookies on
     the client itself, hence setting it here rather than passing `cookies=`.
     Both domain and path must match the real cookie's (see
-    _TEST_COOKIE_DOMAIN above) — the jar keys cookies by (domain, path,
+    _TEST_COOKIE_DOMAIN above): the jar keys cookies by (domain, path,
     name), so an inexact match creates a second entry alongside the real one
     instead of overwriting it, which then survives the endpoint's own
     cookie-clearing response untouched."""
@@ -56,7 +56,7 @@ async def _post_with_refresh_cookie(client, url: str, refresh_token: str):
 
 async def _assign_policies(email: str, policy_names: list[str]) -> None:
     """Grants real capability the same way the policy management API
-    would (see backend/mystic_auth/api/pbac_routes/policy_assignment_routes.py) —
+    would (see backend/mystic_auth/api/pbac_routes/policy_assignment_routes.py):
     this is the ONLY thing that determines what an account can do under PBAC."""
     async with database.async_session() as session:
         user = await user_crud.get_by_email(email, session)
@@ -72,7 +72,7 @@ async def _create_verified_user(
 ):
     """Signs up and verifies a user. `role` is set purely as display/
     grouping metadata (and, for system_email, to trigger the target-account
-    protection invariant in user_routes.py — see its module docstring for
+    protection invariant in user_routes.py; see its module docstring for
     why that's not an authorization decision). `policy_names` is what
     actually grants capability; defaults to just self_service, mirroring
     what real signup does (see signup_service.py)."""
@@ -196,7 +196,7 @@ async def test_identical_roles_can_have_different_permissions(client, created_em
 async def test_a_plain_role_user_with_admin_policy_gets_admin_capability(client, created_emails):
     # The converse: role="user" (the lowest metadata tier) with
     # user_administration assigned directly must be authorized exactly like
-    # an "admin"-role account — role plays no part in the decision at all.
+    # an "admin"-role account: role plays no part in the decision at all.
     email = _unique_email()
     await _create_verified_user(
         client, created_emails, email,
@@ -229,14 +229,14 @@ async def test_list_all_users_respects_limit_query_param(client, created_emails)
 # Per claude.md's "Roles" section: "The system must support ... users
 # without roles", and Testing Requirements: "users without roles still
 # work". role is nullable precisely so this is possible (see
-# user_model.py) — a roleless account must still authenticate (real login,
+# user_model.py): a roleless account must still authenticate (real login,
 # real JWT, real GET /auth/me) and be authorized purely via its assigned
 # policies, with no fallback to any role-based behavior anywhere.
 
 async def _create_roleless_user(created_emails, email: str, policy_names: list[str]) -> None:
     """Creates a fully real, loggable-in account with role=None directly
     (signup_service always sets role="user" for display purposes, so a
-    genuinely roleless account can only be produced this way today — there
+    genuinely roleless account can only be produced this way today; there
     is no API to clear an existing role, which is out of scope here)."""
     async with database.async_session() as session:
         hashed_password = await password_service.hash_password(PASSWORD)
@@ -279,7 +279,7 @@ async def test_roleless_user_can_authenticate_and_use_self_service(client, creat
 @pytest.mark.asyncio
 async def test_roleless_user_gets_admin_level_access_when_assigned_admin_policies(client, created_emails):
     # The strongest form of the claim: a roleless account isn't capped at
-    # "basic" access — it gets exactly whatever policies it holds, same as
+    # "basic" access: it gets exactly whatever policies it holds, same as
     # any role-carrying account, proving role never enters the decision.
     email = _unique_email("roleless-admin")
     await _create_roleless_user(
@@ -326,7 +326,7 @@ async def test_admin_cannot_modify_system_user(client, created_emails):
     # lacked the system-user guard present on delete/role-update: an admin
     # could PUT a new password onto the system account and take it over
     # entirely. This guard is a target-resource invariant, not a PBAC
-    # decision — see user_routes.py's UserRole import note.
+    # decision; see user_routes.py's UserRole import note.
     admin_email = _unique_email("admin")
     system_email = _unique_email("system")
     await _create_system_user(client, created_emails, system_email)
@@ -335,7 +335,7 @@ async def test_admin_cannot_modify_system_user(client, created_emails):
     resp = await client.put(f"/users/{system_email}", json={"password": "NewPass123!"})
     assert resp.status_code == 403
 
-    # The system account's password must be unchanged — verify by logging
+    # The system account's password must be unchanged: verify by logging
     # in with the original password.
     login_resp = await client.post(
         "/auth/login", json={"email": system_email, "password": PASSWORD}
@@ -379,7 +379,7 @@ async def test_admin_cannot_assign_system_role_to_another_user(client, created_e
 @pytest.mark.asyncio
 async def test_admin_can_change_user_role_to_admin_and_back_via_role_endpoint(client, created_emails):
     # Role changes are bidirectional through the single generic /role
-    # endpoint — there is no separate one-directional "promote" path. An
+    # endpoint; there is no separate one-directional "promote" path. An
     # admin holding only user_administration (which grants users:assign_role,
     # not users:assign_system_role) can move a non-system user to any
     # non-system role, in either direction.
@@ -438,7 +438,7 @@ async def test_admin_delete_soft_deletes_a_user(client, created_emails):
 
     async with database.async_session() as session:
         user = await user_crud.get_by_email(target_email, session)
-        assert user is not None  # row still exists — this is a soft delete
+        assert user is not None  # row still exists, this is a soft delete
         assert user.is_active is False
         assert user.deleted_at is not None
 
@@ -462,7 +462,7 @@ async def test_soft_deleted_user_cannot_login(client, created_emails):
 @pytest.mark.asyncio
 async def test_soft_delete_revokes_the_deleted_users_active_session(client, created_emails):
     # A deleted account's existing refresh token must stop working
-    # immediately, not just "eventually, once it expires on its own" — see
+    # immediately, not just "eventually, once it expires on its own"; see
     # delete_any_user's Step 4 in user_routes.py.
     admin_email = _unique_email("admin")
     target_email = _unique_email("target")
@@ -512,7 +512,7 @@ async def test_self_password_change_revokes_existing_sessions(client, created_em
 async def test_logout_after_self_password_change_still_succeeds_and_clears_cookies(client, created_emails):
     # Regression guard for the actual bug report: PUT /users/me revokes the
     # session's own refresh token (see test above), but never rotates or
-    # clears its cookies — so the browser is still holding that now-revoked
+    # clears its cookies, so the browser is still holding that now-revoked
     # refresh_token cookie. Clicking Logout right after a password-change
     # toast must not surface "invalid refresh token or already revoked" and
     # leave the user stuck looking logged in; it must still succeed and
@@ -559,7 +559,7 @@ async def test_logout_after_admin_password_change_for_another_user_still_succeed
 ):
     # "Other users" variant of the bug report: an admin-driven password
     # change (PUT /users/{email}) revokes the TARGET account's sessions,
-    # not the admin's own — so the target, still holding their own
+    # not the admin's own, so the target, still holding their own
     # now-revoked refresh_token cookie from before the admin acted, must
     # be able to log out cleanly too, not just the self-service path.
     target_email = _unique_email("target")
@@ -568,7 +568,7 @@ async def test_logout_after_admin_password_change_for_another_user_still_succeed
 
     admin_email = _unique_email("admin")
     # Logs in as admin on the same shared client, replacing the cookie jar
-    # — mirrors a real second browser/session, not the target's own tab.
+    # this mirrors a real second browser/session, not the target's own tab.
     await _create_admin(client, created_emails, admin_email)
 
     admin_update_resp = await client.put(
@@ -576,14 +576,14 @@ async def test_logout_after_admin_password_change_for_another_user_still_succeed
     )
     assert admin_update_resp.status_code == 200
 
-    # The target's own now-revoked cookie, explicitly presented — the jar
+    # The target's own now-revoked cookie, explicitly presented: the jar
     # currently holds the admin's session, not the target's.
     logout_resp = await _post_with_refresh_cookie(client, "/auth/logout", target_refresh_token)
 
     assert logout_resp.status_code == 200
     # The response's Set-Cookie deletes "refresh_token" at path=/auth
     # regardless of whose value the jar currently holds under that same
-    # (name, path) key — so this also proves the admin's own still-live
+    # (name, path) key, so this also proves the admin's own still-live
     # refresh_token cookie doesn't survive the target's logout call.
     assert not any(cookie.name == "refresh_token" for cookie in client.cookies.jar)
 
@@ -591,7 +591,7 @@ async def test_logout_after_admin_password_change_for_another_user_still_succeed
 @pytest.mark.asyncio
 async def test_repeated_logout_calls_with_the_same_token_both_succeed(client, created_emails):
     # Simulates two tabs, or a client retrying a request it never saw the
-    # response for — the same refresh_token value presented twice. The
+    # response for: the same refresh_token value presented twice. The
     # second call's token is already revoked by the first and must still
     # succeed rather than error, exactly like the post-password-change case.
     email = _unique_email()
@@ -607,7 +607,7 @@ async def test_repeated_logout_calls_with_the_same_token_both_succeed(client, cr
 
 @pytest.mark.asyncio
 async def test_logout_with_malformed_refresh_token_cookie_still_succeeds_and_clears_cookies(client, created_emails):
-    # Not just "a real but revoked token" — a cookie value that isn't even
+    # Not just "a real but revoked token": a cookie value that isn't even
     # a decodable JWT at all (corrupted, truncated, tampered) must be
     # handled the same lenient way, not treated as a different error class.
     email = _unique_email()
@@ -655,7 +655,7 @@ async def test_self_password_change_rejects_wrong_current_password(client, creat
     assert resp.status_code == 400
     assert "current password" in resp.json()["detail"].lower()
 
-    # The old password must still work — the rejected change had no effect.
+    # The old password must still work: the rejected change had no effect.
     login_resp = await client.post("/auth/login", json={"email": email, "password": PASSWORD})
     assert login_resp.status_code == 200
 
@@ -672,7 +672,7 @@ async def test_self_password_change_rejects_same_password(client, created_emails
     assert resp.status_code == 400
     assert "different from the current password" in resp.json()["detail"].lower()
 
-    # No session revocation happened — the old password still works.
+    # No session revocation happened: the old password still works.
     login_resp = await client.post("/auth/login", json={"email": email, "password": PASSWORD})
     assert login_resp.status_code == 200
 
@@ -694,7 +694,7 @@ async def test_admin_password_change_rejects_same_password(client, created_email
 async def test_setting_a_first_password_on_an_oauth_only_account_does_not_require_current_password(
     client, created_emails
 ):
-    # An OAuth-only account has hashed_password=None — there is nothing yet
+    # An OAuth-only account has hashed_password=None, so there is nothing yet
     # to confirm against, so the current-password requirement must not
     # block this, otherwise such an account could never add a password.
     email = _unique_email()
@@ -714,7 +714,7 @@ async def test_setting_a_first_password_on_an_oauth_only_account_does_not_requir
 @pytest.mark.asyncio
 async def test_admin_password_change_does_not_require_admins_current_password(client, created_emails):
     # PUT /users/{email} reuses UserUpdate, but the current-password check
-    # only applies to the self-service route (update_my_profile) — an admin
+    # only applies to the self-service route (update_my_profile); an admin
     # changing someone else's password authenticates via their own
     # users:update_any permission, not by proving the target's old password.
     admin_email = _unique_email("admin")
@@ -729,7 +729,7 @@ async def test_admin_password_change_does_not_require_admins_current_password(cl
 
 @pytest.mark.asyncio
 async def test_self_profile_update_without_password_does_not_revoke_sessions(client, created_emails):
-    # Only a password change should trigger revocation — an ordinary name
+    # Only a password change should trigger revocation: an ordinary name
     # update must not log the user out of their other sessions.
     email = _unique_email()
     login_resp = await _create_verified_user(client, created_emails, email)
@@ -762,7 +762,7 @@ async def test_admin_password_change_revokes_targets_existing_sessions(client, c
 
 @pytest.mark.asyncio
 async def test_admin_without_purge_permission_cannot_purge(client, created_emails):
-    # users:purge is granted only by system_superuser — an admin holding
+    # users:purge is granted only by system_superuser: an admin holding
     # only user_administration (which includes users:delete_any) does not
     # have it; hard delete is a deliberately separate, more sensitive action.
     admin_email = _unique_email("admin")
@@ -775,7 +775,7 @@ async def test_admin_without_purge_permission_cannot_purge(client, created_email
 
     async with database.async_session() as session:
         user = await user_crud.get_by_email(target_email, session)
-        assert user is not None  # untouched — the purge was rejected
+        assert user is not None  # untouched: the purge was rejected
 
 
 @pytest.mark.asyncio
@@ -845,7 +845,7 @@ async def test_reactivate_rejects_a_never_deleted_user(client, created_emails):
 @pytest.mark.asyncio
 async def test_admin_without_reactivate_permission_cannot_reactivate(client, created_emails):
     # users:reactivate is granted only by system_superuser, same tier as
-    # users:purge — restoring access is more sensitive than day-to-day
+    # users:purge, restoring access is more sensitive than day-to-day
     # user administration.
     admin_email = _unique_email("admin")
     target_email = _unique_email("target")

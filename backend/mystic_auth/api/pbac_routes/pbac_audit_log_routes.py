@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Authentication-only dependency (no permission required) — used by
+# Authentication-only dependency (no permission required) : used by
 # /audit-log/me, where a user inspects their own decisions regardless of
 # whether they hold policies:read
 from ...auth.current_user.current_user_dependency import get_current_user
@@ -24,7 +24,7 @@ async def list_audit_log(
 ):
     """Recent authorization decisions across every user, newest first.
     Every real authorize()/require() call anywhere in the app writes one of
-    these rows automatically (see AuthorizationService._log_decision) —
+    these rows automatically (see AuthorizationService._log_decision) :
     nothing needs to opt in."""
     return await audit_log_repository.get_all(db, limit=limit, offset=offset)
 
@@ -40,7 +40,7 @@ async def list_my_audit_log(
     The caller's own authorization decisions, newest first. No
     policies:read (or any other) permission required, since a user
     inspecting their own authorization history is not a privileged
-    operation. Scoped server-side to current_user's email — the caller
+    operation. Scoped server-side to current_user's email : the caller
     cannot request another user's entries through this endpoint (see
     list_audit_log_for_user for that, which does require policies:read).
     """

@@ -3,21 +3,21 @@ from sqlalchemy.future import select
 
 from ...user_table.user_model import User
 
-# The one centralized Redis abstraction for authorization data — see its own
+# The one centralized Redis abstraction for authorization data, see its own
 # docstring for exactly what is (and deliberately isn't) cached, and why.
 # Every mutation below invalidates whatever it could have made stale.
 from ..caching.authorization_cache_service import authorization_cache_service
 from ..models.policy_model import Policy, UserPolicy
 
 # Every create/update/delete below also stages a policy_history row in the
-# same transaction — see claude.md's "Policy Versioning and Change History":
+# same transaction, see claude.md's "Policy Versioning and Change History":
 # every policy mutation must be traceable and reversible.
 from .policy_history_repository import policy_history_repository
 
 
 def _definition_snapshot(policy: Policy) -> dict:
     """
-    The versioned "definition" of a policy — everything that determines
+    The versioned "definition" of a policy: everything that determines
     what it grants, for policy_history's previous_definition/
     new_definition columns. Deliberately excludes id/timestamps: those
     identify *which row*, not *what it currently grants*, and would make
@@ -37,13 +37,13 @@ class PolicyRepository:
     """
     Persistence layer for policies and user<->policy assignments. This is
     the only place that issues queries against the policies/user_policies
-    tables — evaluators and services call through here rather than building
+    tables: evaluators and services call through here rather than building
     their own queries, so the schema/query shape only needs to change in
     one place.
 
     Policies are looked up by name throughout the app (routes take a
     human-readable policy_name, never a numeric id), so there is no
-    get_by_id — add one if/when a caller actually needs id-based lookup.
+    get_by_id; add one if/when a caller actually needs id-based lookup.
 
     create/update/delete each stage a policy_history row (via
     policy_history_repository.add_entry) alongside their own mutation and
@@ -83,7 +83,7 @@ class PolicyRepository:
 
     @staticmethod
     async def get_all(db: AsyncSession, limit: int = 1000, offset: int = 0) -> list[Policy]:
-        # Capped — every other list endpoint in the app (audit log, policy
+        # Capped: every other list endpoint in the app (audit log, policy
         # history) bounds its query the same way; this one previously read
         # the whole table unconditionally.
         stmt = select(Policy).order_by(Policy.id).limit(limit).offset(offset)
@@ -102,7 +102,7 @@ class PolicyRepository:
         """
         `change_type` is "updated" for a normal edit, or "rolled_back" when
         this call is restoring a prior version (see
-        api/pbac_routes/policy_history_routes.py's rollback endpoint) — the
+        api/pbac_routes/policy_history_routes.py's rollback endpoint); the
         only difference is how the resulting
         history entry is labeled; the mutation logic is identical either
         way, so rollback reuses this method rather than duplicating it.
@@ -121,7 +121,7 @@ class PolicyRepository:
         ]
 
         # A no-op update (nothing actually differs) still gets a history
-        # entry — the caller explicitly asked for this change, and an
+        # entry: the caller explicitly asked for this change, and an
         # empty changed_fields list is itself meaningful information
         # (e.g. rolling back to a version identical to the current one).
         policy_history_repository.add_entry(
@@ -141,7 +141,7 @@ class PolicyRepository:
         await db.commit()
         await db.refresh(db_obj)
 
-        # This policy's definition changed — every user who holds it may
+        # This policy's definition changed: every user who holds it may
         # now have a stale cached effective-policy set (see
         # AuthorizationCacheService.invalidate_all_user_policies's own
         # docstring for why this is a full-namespace flush rather than a
@@ -176,7 +176,7 @@ class PolicyRepository:
         await db.delete(db_obj)
         await db.commit()
 
-        # See update()'s own comment — deleting a policy can strand every
+        # See update()'s own comment: deleting a policy can strand every
         # holder's cached effective-policy set just as editing one can.
         await authorization_cache_service.invalidate_all_user_policies()
 
@@ -190,7 +190,7 @@ class PolicyRepository:
 
         Cache-aside: this is the one authorization-hot-path query cached
         by AuthorizationCacheService (see its docstring for exactly what's
-        cached and why) — checked first; on a miss (or any cache failure),
+        cached and why); checked first; on a miss (or any cache failure),
         falls through to the database and populates the cache for next
         time. A cache read failure is indistinguishable from a miss here
         by design (see AuthorizationCacheService's "fail closed" note).
@@ -213,7 +213,7 @@ class PolicyRepository:
 
     @staticmethod
     async def get_policies_for_user(user_email: str, db: AsyncSession) -> list[Policy]:
-        """Every assigned policy (active or not) — for inspection/listing,
+        """Every assigned policy (active or not): for inspection/listing,
         not for making an authorization decision (use
         get_active_policies_for_user for that)."""
         stmt = (
@@ -231,7 +231,7 @@ class PolicyRepository:
         How many users currently hold this policy (assigned, regardless of
         the policy's own is_active flag). Used by
         api/pbac_routes/policy_assignment_routes.py's revoke endpoint to refuse removing the
-        last remaining holder of system_superuser — see claude.md's
+        last remaining holder of system_superuser, see claude.md's
         "System policies are protected": deleting a policy row is already
         blocked for baseline policies, but *revoking every assignment* of
         system_superuser would leave the system equally unrecoverable
@@ -255,7 +255,7 @@ class PolicyRepository:
         "system" for automated assignment (e.g. default policy at signup),
         for the audit trail.
 
-        `user_email` is the receiving user's email, if the caller has it —
+        `user_email` is the receiving user's email, if the caller has it:
         used only to precisely invalidate that user's cached effective-
         policy set (see AuthorizationCacheService). Optional and backward
         compatible: system-side self-assignment at signup/OAuth2/system-
@@ -292,7 +292,7 @@ class PolicyRepository:
     ) -> bool:
         """
         `user_email` is optional, used only for precise cache invalidation
-        — see assign_policy_to_user's own docstring. Returns True if an
+        see assign_policy_to_user's own docstring. Returns True if an
         assignment was found and removed, False if the user didn't hold
         this policy to begin with.
         """

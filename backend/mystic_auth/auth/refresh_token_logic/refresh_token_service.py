@@ -3,7 +3,7 @@ import traceback
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Refresh token reuse is likely theft, not a routine expired/invalid refresh —
+# Refresh token reuse is likely theft, not a routine expired/invalid refresh:
 # see _handle_reuse_detected.
 from ...audit_log.audit_log_service import REFRESH_TOKEN_REUSE_DETECTED, log_security_event
 from ...logging.logging_config import get_logger
@@ -20,7 +20,7 @@ class RefreshTokenService:
         refresh_token: str, db: AsyncSession | None = None, request: Request | None = None
     ) -> dict[str, str] | None:
         try:
-            # Decoded once and threaded through the rest of this method — a
+            # Decoded once and threaded through the rest of this method, since a
             # previous version decoded the same token up to three separate times
             # (once each in is_token_revoked, verify_token, and revoke_token) and
             # checked its revocation status against Redis twice. This is the
@@ -36,7 +36,7 @@ class RefreshTokenService:
                 logger.warning("Refresh token payload missing 'jti' claim")
                 return None
 
-            # Type is checked before the token is ever claimed/revoked below —
+            # Type is checked before the token is ever claimed/revoked below:
             # a wrong-type token (e.g. an access token mistakenly presented
             # here) must be rejected without side effects, never burned as if
             # it were a real refresh token.
@@ -47,7 +47,7 @@ class RefreshTokenService:
                 )
                 return None
 
-            # Refresh tokens are single-use — claim_jti_for_rotation atomically
+            # Refresh tokens are single-use: claim_jti_for_rotation atomically
             # revokes this jti only if it wasn't already revoked. A revoked jti
             # being presented again means it was replayed: either the
             # legitimate user retried a stale token, two concurrent requests
@@ -130,7 +130,7 @@ class RefreshTokenService:
     ) -> None:
         """
         payload is the already-decoded claims of a refresh token whose jti Redis
-        shows as already revoked — accepting it directly avoids decoding the
+        shows as already revoked. Accepting it directly avoids decoding the
         token a second time, since the caller already did that once to reach
         this point.
         """
@@ -146,7 +146,7 @@ class RefreshTokenService:
         # revocations, since this indicates likely token theft rather than an
         # expected rotation.
         logger.critical(
-            "Refresh token reuse detected for %s — revoked %d active session(s)",
+            "Refresh token reuse detected for %s, revoked %d active session(s)",
             email, revoked_count,
         )
 

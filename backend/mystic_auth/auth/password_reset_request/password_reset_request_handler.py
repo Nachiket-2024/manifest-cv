@@ -18,13 +18,13 @@ class PasswordResetRequestHandler:
 
     async def handle_password_reset_request(self, email: str, db, request: Request | None = None):
         try:
-            # Service internally checks if user exists — returns False if not found.
+            # Service internally checks if user exists; returns False if not found.
             email_sent = await self.password_reset_service.send_reset_email(email, db)
 
             if not email_sent:
                 logger.info("Password reset requested for non-existing email: %s", email)
             else:
-                # Only audit-log a real request — matches signup_handler's
+                # Only audit-log a real request, matching signup_handler's
                 # anti-enumeration reasoning (never persist a signal that would
                 # let an attacker distinguish "no such account" from "request
                 # sent" via a side channel).
@@ -32,7 +32,7 @@ class PasswordResetRequestHandler:
                     PASSWORD_RESET_REQUESTED, db, user_email=email, success=True, request=request
                 )
 
-            # Always return 200 regardless of whether the user exists — prevents
+            # Always return 200 regardless of whether the user exists: prevents
             # email enumeration.
             return JSONResponse(
                 content={"message": "If the email exists, a reset link has been sent."},

@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class PolicyBase(BaseModel):
     """
-    Shared shape for policy create/update/read schemas — mirrors the
+    Shared shape for policy create/update/read schemas : mirrors the
     Policy ORM model's authorization-relevant fields (see policy_model.py).
     """
 
@@ -13,7 +13,7 @@ class PolicyBase(BaseModel):
     description: str | None = Field(default=None, max_length=500)
     actions: list[str]
     resource_type: str = Field(..., max_length=100)
-    # Optional conditions narrowing the grant (e.g. {"self_only": true}) —
+    # Optional conditions narrowing the grant (e.g. {"self_only": true}) :
     # validated separately at write time (see conditions/condition_validator.py).
     conditions: dict | None = None
 
@@ -25,7 +25,7 @@ class PolicyCreate(PolicyBase):
 
 class PolicyUpdate(BaseModel):
     """
-    Schema for partially updating an existing policy. All fields optional —
+    Schema for partially updating an existing policy. All fields optional :
     only provided fields are applied (see repository's update semantics).
     """
 
@@ -36,7 +36,7 @@ class PolicyUpdate(BaseModel):
     conditions: dict | None = None
     is_active: bool | None = None
 
-    # Not a Policy column itself — recorded in policy_history as this
+    # Not a Policy column itself : recorded in policy_history as this
     # change's audit-trail explanation (see api/pbac_routes/policy_crud_routes.py).
     change_reason: str | None = Field(default=None, max_length=500)
 
@@ -70,16 +70,16 @@ class AuthorizationCheckRequest(BaseModel):
     """
     Request body for the effective-authorization / inspection endpoint.
     POST (not GET+query params) because resource/context are arbitrary
-    nested JSON, not flat scalars — the same shape
+    nested JSON, not flat scalars : the same shape
     AuthorizationService.authorize/require accept in-process.
     """
 
-    # min_length=1 rejects an empty-string action/resource_type outright —
+    # min_length=1 rejects an empty-string action/resource_type outright :
     # mirrored in batch_authorization_schema.py's BatchAuthorizationCheckItem.
     action: str = Field(..., min_length=1, max_length=200)
     resource_type: str = Field(..., min_length=1, max_length=100)
     # The specific resource instance to check ownership/attribute
-    # conditions against (e.g. {"email": "...", "status": "draft"}) — omit
+    # conditions against (e.g. {"email": "...", "status": "draft"}) : omit
     # for an unconditional or resource-agnostic check.
     resource: dict | None = None
     # Additional contextual information for context_attributes conditions
@@ -91,7 +91,7 @@ class AuthorizationCheckResponse(BaseModel):
     """
     Response for the effective-authorization / inspection endpoint.
     Mirrors AuthorizationDecision (see evaluators/authorization_decision.py)
-    — this is that same explanation, shaped for the API.
+    : this is that same explanation, shaped for the API.
     """
 
     user_email: str
@@ -99,22 +99,22 @@ class AuthorizationCheckResponse(BaseModel):
     resource_type: str
     authorized: bool
     # Policies whose resource_type + action matched, regardless of whether
-    # their conditions passed — "what was even considered".
+    # their conditions passed : "what was even considered".
     candidate_policies: list[str]
     # The subset of candidates whose conditions actually passed. Non-empty
     # iff authorized is True.
     granting_policies: list[str]
-    # The subset of candidates whose conditions did NOT pass — always
+    # The subset of candidates whose conditions did NOT pass : always
     # candidate_policies minus granting_policies.
     rejected_policies: list[str]
-    # {policy_name: [condition_key, ...]} for every rejected policy —
+    # {policy_name: [condition_key, ...]} for every rejected policy :
     # exactly which condition(s) failed, not just that something did.
     failed_conditions: dict[str, list[str]]
-    # None when authorized; otherwise a short, machine-readable reason —
+    # None when authorized; otherwise a short, machine-readable reason :
     # see AuthorizationDecision.denial_reason for the possible values.
     denial_reason: str | None
-    # Every policy the user held at evaluation time, regardless of match —
+    # Every policy the user held at evaluation time, regardless of match :
     # a superset of candidate_policies.
     evaluated_policies: list[str]
-    # ISO 8601 UTC — when this decision was computed (server clock).
+    # ISO 8601 UTC : when this decision was computed (server clock).
     evaluation_timestamp: str

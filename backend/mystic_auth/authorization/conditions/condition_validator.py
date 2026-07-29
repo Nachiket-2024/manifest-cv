@@ -17,7 +17,7 @@ class ConditionValidationError(ValueError):
         super().__init__("; ".join(errors))
 
 
-# Mirrors conditions/condition_registry.py's default_condition_registry —
+# Mirrors conditions/condition_registry.py's default_condition_registry,
 # kept as its own explicit set (rather than importing the registry) so this
 # validator's "which keys exist" list is a deliberate, reviewable contract,
 # not implicitly whatever handlers happen to be registered.
@@ -43,12 +43,12 @@ def validate_conditions(conditions: dict | None) -> None:
         ConditionValidationError: if `conditions` isn't a JSON object, if
         it contains a key outside this app's supported vocabulary, or if
         any key's value fails that condition type's own shape/type/range
-        checks (see the per-key validators below) — collecting every
+        checks (see the per-key validators below): collecting every
         problem found across the whole block, not just the first.
 
     Called from api/pbac_routes/policy_crud_routes.py's create_policy and update_policy
     *before* any database write (claude.md: "Must happen before database
-    writes") — an invalid conditions block must never be persisted. This
+    writes"): an invalid conditions block must never be persisted. This
     is a write-time complement to ConditionEvaluationService's own
     fail-safe deny-on-unknown-key behavior at *evaluation* time (defense in
     depth): that runtime fail-safe protects against conditions that
@@ -124,7 +124,7 @@ def _validate_time(value) -> list[str]:
 
 def _validate_date_range(value) -> list[str]:
     # Canonical, only-supported field names are "start"/"end" (matching
-    # the "time" condition's own start/end naming) — mirrored exactly by
+    # the "time" condition's own start/end naming), mirrored exactly by
     # DateRangeCondition.evaluate. No aliases (e.g. "start_date"/"end_date")
     # are recognized; a dict using them fails the "requires at least one
     # of" check below the same as an empty dict would.

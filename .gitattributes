@@ -1,0 +1,7 @@
+# Shell scripts must keep LF endings regardless of the checkout platform's
+# core.autocrlf setting: a CRLF shebang line ("#!/bin/bash\r") fails to
+# resolve inside a Linux container ("cannot execute: required file not
+# found"), which is exactly what breaks docker/postgres-init/init-bugsink-db.sh
+# when checked out on Windows with core.autocrlf=true and no override like
+# this one in place.
+*.sh text eol=lf
