@@ -41,7 +41,8 @@ from .sdk import (  # noqa: E402
     refresh_token_router,
     security_audit_router,
     settings,
-    user_router,
+    user_management_router,
+    user_self_service_router,
     watch_for_late_dsn,
 )
 
@@ -56,14 +57,14 @@ init_sentry()
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
     """
-    On startup, ensures ManifestCV's Qdrant collection exists (idempotent —
+    On startup, ensures ManifestCV's Qdrant collection exists (idempotent,
     safe on every restart, see retrieval/qdrant_client.py) and starts
     watch_for_late_dsn() as a fire-and-forget background task, a no-op
     unless init_sentry() above ran with SENTRY_DSN still unset (see that
-    function's own docstring for why: Bugsink can take longer to become
-    healthy than this app takes to boot, on a fresh/cold start). Never
-    awaited, so it can't delay startup or block a single request; cancelled
-    on shutdown along with everything else.
+    function's own docstring: Bugsink can take longer to become healthy
+    than this app takes to boot on a fresh/cold start). Never awaited, so
+    it can't delay startup or block a single request. Cancelled on
+    shutdown along with everything else.
 
     On shutdown (SIGTERM from `docker stop` / orchestrator rolling
     restarts) explicitly dispose the DB connection pool and close the
@@ -109,6 +110,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type"],
+    # Custom response headers are invisible to browser JS by default even
+    # when the request itself succeeds. Without this, X-Total-Count (see
+    # list_all_users) is present on the wire but unreadable via axios.
+    expose_headers=["X-Total-Count"],
 )
 
 app.add_middleware(LoggingMiddleware)
@@ -133,7 +138,17 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 app.include_router(auth_router)
 app.include_router(refresh_token_router)
-app.include_router(user_router)
+# Split from a single user_routes.py into user_self_service_routes.py (GET/PUT
+# /users/me, no admin permission) and user_management_routes.py (users:list_all/
+# update_any/delete_any/purge/reactivate/assign_role, gated accordingly), see
+# backend/mystic_auth/api/user_routes/. Registration order matters here: the
+# self-service router must come first, since user_management_router's PUT
+# /users/{user_email} would otherwise shadow PUT /users/me (Starlette matches
+# routes in registration order across the whole app, not per-router). The
+# same hazard is why policy_assignment_router's own /me-before-{email}
+# ordering below matters within a single router.
+app.include_router(user_self_service_router)
+app.include_router(user_management_router)
 # Split from a single pbac_routes/policy_routes.py into feature-based modules
 # (CRUD, history, assignment, checks, audit log), see backend/mystic_auth/api/pbac_routes/.
 # Registration order matters: policy_assignment_router defines
@@ -149,7 +164,7 @@ app.include_router(pbac_audit_log_router)
 app.include_router(security_audit_router)
 app.include_router(health_router)
 
-# ManifestCV's own domains. resume_router is included before document_router
+# ManifestCV's own domains. Resume_router is included before document_router
 # since document_router's prefix ("/resumes/{draft_id}") nests under it.
 app.include_router(career_knowledge_router)
 app.include_router(resume_router)

@@ -36,7 +36,7 @@ class PasswordService:
         # every login attempt (including the DUMMY_HASH timing-mitigation path).
         # argon2-cffi raises on a mismatch (VerifyMismatchError) or a
         # malformed/foreign hash (InvalidHashError) rather than returning
-        # False, unlike passlib's `.verify`; normalized to a bool here so
+        # False, unlike passlib's `.verify`. Normalized to a bool here so
         # callers don't need to know that.
         try:
             return await asyncio.to_thread(_hasher.verify, hashed_password, plain_password)
@@ -65,7 +65,7 @@ class PasswordService:
         expire = datetime.now(UTC) + timedelta(minutes=expires_minutes)
 
         # The "reset" type claim lets verify_reset_token reject any other
-        # validly-signed JWT (e.g. an access or refresh token, which carries the
+        # validly-signed JWT (e.g. An access or refresh token, which carries the
         # same SECRET_KEY signature) that happens to also carry an "email" claim.
         # Role is intentionally excluded: the single users table makes it
         # unnecessary.
@@ -90,7 +90,7 @@ class PasswordService:
             if not payload.get("email"):
                 return None
 
-            # Rejects any other validly-signed JWT (e.g. a stolen but
+            # Rejects any other validly-signed JWT (e.g. A stolen but
             # still-valid access/refresh token sharing the same SECRET_KEY) that
             # happens to also carry an "email" claim.
             if payload.get("type") != "reset":

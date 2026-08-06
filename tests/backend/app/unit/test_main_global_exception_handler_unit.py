@@ -10,7 +10,7 @@ MODULE = "backend.app.main"
 @pytest.mark.asyncio
 async def test_global_exception_handler_reports_to_error_monitoring_and_returns_generic_500(mocker):
     # Regression guard: this handler is the ONE place every otherwise-
-    # unhandled exception passes through; it's also the only place
+    # unhandled exception passes through. It's also the only place
     # error_monitoring.sentry_service.capture_exception ever gets called
     # from (see that module's own docstring for why: this handler already
     # intercepts every exception before Starlette would consider it

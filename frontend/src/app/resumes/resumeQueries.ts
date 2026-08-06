@@ -11,7 +11,7 @@ import {
 import axios from "axios";
 
 export const RESUME_DRAFTS_QUERY_KEY = ["resume-drafts"] as const;
-// "list" disambiguates this from resumeDraftQueryKey(draftId) below — both
+// "list" disambiguates this from resumeDraftQueryKey(draftId) below. Both
 // share the "resume-drafts" prefix (so invalidating RESUME_DRAFTS_QUERY_KEY
 // still catches every paginated page, same as before pagination existed),
 // but "list" (a string) never collides with a numeric draftId.
@@ -38,7 +38,7 @@ export function useResumeDraftQuery(draftId: number) {
         queryKey: resumeDraftQueryKey(draftId),
         queryFn: async () => (await getResumeDraftApi(draftId)).data,
         // A non-numeric :draftId route param (stale bookmark, typo'd URL,
-        // manual edit) produces NaN — skip the fetch entirely rather than
+        // manual edit) produces NaN. Skip the fetch entirely rather than
         // send a doomed `/resumes/NaN` request and cache a NaN-keyed result.
         enabled: !Number.isNaN(draftId),
     });
@@ -52,7 +52,7 @@ export function useResumeTemplatesQuery(draftId: number, enabled: boolean) {
     });
 }
 
-// Returns the raw Blob, not an object URL — object URLs are a side effect
+// Returns the raw Blob, not an object URL. Object URLs are a side effect
 // (must be revoked) that doesn't belong in cached query data, which can be
 // reused/replayed by the cache independently of any one component's
 // lifetime. The caller derives (and revokes) its own object URL from the
@@ -62,7 +62,7 @@ export function useResumeTemplatePreviewQuery(draftId: number, templateId: strin
         queryKey: resumeTemplatePreviewQueryKey(draftId, templateId ?? ""),
         queryFn: () => fetchResumeTemplatePreviewBlob(draftId, templateId!),
         enabled: templateId !== null,
-        // Every render freshly compiles the PDF server-side (no persistence —
+        // Every render freshly compiles the PDF server-side (no persistence,
         // see fetchResumeTemplatePreviewBlob's own docstring), so a cached
         // blob from a prior visit is never known-fresh against the resume's
         // current content.
@@ -72,7 +72,7 @@ export function useResumeTemplatePreviewQuery(draftId: number, templateId: strin
         // would otherwise re-trigger a full server-side tectonic recompile
         // (and flash the "Compiling preview..." loader) every time the tab
         // regains focus, even though the already-shown preview is still
-        // correct — recompiling here buys nothing over the already-rendered
+        // correct. Recompiling here buys nothing over the already-rendered
         // blob, since nothing about the resume changed just by tabbing away.
         refetchOnWindowFocus: false,
     });

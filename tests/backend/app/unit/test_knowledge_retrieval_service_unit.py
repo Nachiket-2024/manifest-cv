@@ -3,7 +3,7 @@
 # Covers retrieval/knowledge_retrieval_service.py's own error-handling
 # logic directly (unlike the manifestcv integration suites, which mock this
 # module's public functions wholesale at each route's import site and so
-# never actually exercise this code) — specifically the RetrievalError
+# never actually exercise this code). Specifically the RetrievalError
 # wrapping/timeout behavior added around every outbound Qdrant call.
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
@@ -51,10 +51,10 @@ def test_chunk_markdown_returns_empty_list_for_blank_content():
 
 @pytest.mark.asyncio
 async def test_index_knowledge_base_wraps_qdrant_delete_failure_as_retrieval_error(mocker):
-    # embed_text must be mocked here too — index_knowledge_base embeds every
-    # chunk before touching Qdrant at all (see its own docstring), so a real,
-    # unmocked embed_text call would hit the network before ever reaching
-    # the delete step this test means to exercise.
+    # embed_text must be mocked here too, since index_knowledge_base embeds
+    # every chunk before touching Qdrant at all (see its own docstring), so a
+    # real, unmocked embed_text call would hit the network before ever
+    # reaching the delete step this test means to exercise.
     client = _fake_client()
     client.delete.side_effect = ConnectionError("qdrant unreachable")
     mocker.patch(f"{MODULE}.get_client", return_value=client)
@@ -153,10 +153,10 @@ async def test_qdrant_call_wraps_timeout_as_retrieval_error(mocker):
 @pytest.mark.asyncio
 async def test_concurrent_reindex_for_same_user_is_serialized_not_interleaved(mocker):
     """Two concurrent index_knowledge_base calls for the same user_id must
-    not interleave their delete/upsert pairs (see _reindex_lock's docstring)
-    — each call's delete must be immediately followed by its own upsert
-    before the other call's delete ever runs, or Qdrant could end up
-    reflecting neither save cleanly."""
+    not interleave their delete/upsert pairs (see _reindex_lock's docstring).
+    Each call's delete must be immediately followed by its own upsert before
+    the other call's delete ever runs, or Qdrant could end up reflecting
+    neither save cleanly."""
     call_log: list[str] = []
 
     async def _delete(*args, **kwargs):

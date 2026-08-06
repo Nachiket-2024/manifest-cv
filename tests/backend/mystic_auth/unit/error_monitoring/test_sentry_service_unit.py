@@ -153,7 +153,7 @@ async def test_watch_for_late_dsn_is_a_no_op_when_dsn_already_set(mocker):
 @pytest.mark.asyncio
 async def test_watch_for_late_dsn_is_a_no_op_when_bugsink_is_not_configured(mocker):
     # No BUGSINK_SUPERUSER_EMAIL means Bugsink isn't part of this run at
-    # all, so the DSN file will never appear; don't poll for it.
+    # all, so the DSN file will never appear. Don't poll for it.
     mocker.patch(f"{MODULE}.settings.SENTRY_DSN", "")
     mocker.patch(f"{MODULE}.os.environ.get", return_value=None)
     fake_file = mocker.patch(f"{MODULE}._BUGSINK_BACKEND_DSN_FILE", new=MagicMock())

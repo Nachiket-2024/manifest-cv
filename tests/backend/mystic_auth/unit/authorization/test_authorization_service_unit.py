@@ -1,7 +1,7 @@
 # tests/backend/mystic_auth/unit/test_authorization_service_unit.py
 #
 # Unit coverage for AuthorizationService, the centralized layer routes and
-# services must go through per claude.md's target flow:
+# services must go through per the target authorization flow:
 #   Request -> Authentication -> Authorization Service
 #           -> Policy Evaluation Engine -> Allow / Deny
 # These tests mock the repository (DB boundary) and exercise the real
@@ -25,7 +25,7 @@ def _policy(actions, resource_type="users", conditions=None, name=None):
 
 def _mock_audit_log(mocker):
     """authorize()/require() always write an audit entry (see
-    _log_decision); mocked explicitly in tests that don't care about the
+    _log_decision). Mocked explicitly in tests that don't care about the
     audit trail itself, rather than relying on _log_decision's own
     try/except (which would otherwise silently swallow the AttributeError
     from calling db.add() on the db=None these tests pass)."""
@@ -126,9 +126,9 @@ async def test_authorize_passes_resource_through_for_ownership_conditions(mocker
 
 
 # ---------------------------- authorize_detailed (explainability) ----------------------------
-# authorize_detailed now returns an AuthorizationDecision (see
-# evaluators/authorization_decision.py), per claude.md's Authorization
-# Decision Explainability, "detailed APIs should use new structure".
+# authorize_detailed returns an AuthorizationDecision from
+# evaluators/authorization_decision.py so callers get the structured
+# explanation behind the decision.
 
 @pytest.mark.asyncio
 async def test_authorize_detailed_reports_matched_policies(mocker):
@@ -175,7 +175,7 @@ async def test_authorize_detailed_distinguishes_matched_from_rejected_on_conditi
 
 
 # ---------------------------- Automatic audit logging ----------------------------
-# Per claude.md's Remaining PBAC Work: "Automatically log every authorize()
+# The PBAC audit logging requirement: "Automatically log every authorize()
 # call". Logged inside authorize() (not authorize_detailed) so the
 # authorization-check inspection endpoint's hypothetical "what would happen
 # if" queries, which call authorize_detailed directly, never pollute the
@@ -206,7 +206,7 @@ async def test_authorize_writes_an_audit_log_entry_with_the_decision(mocker):
 
 @pytest.mark.asyncio
 async def test_authorize_writes_failed_conditions_for_a_rejected_policy(mocker):
-    """claude.md: 'audit logs should capture explanation': a denial
+    """'audit logs should capture explanation': a denial
     caused by a failed condition must be traceable from the audit trail
     alone, without re-running the evaluation."""
     conditioned_policy = _policy(
@@ -303,7 +303,7 @@ async def test_authorize_log_entry_carries_the_supplied_context(mocker):
 @pytest.mark.asyncio
 async def test_authorize_detailed_does_not_write_an_audit_log_entry(mocker):
     # Calling authorize_detailed directly (as the inspection endpoint does)
-    # must not produce an audit entry; only real authorize()/require()
+    # must not produce an audit entry. Only real authorize()/require()
     # calls do.
     mocker.patch(
         f"{MODULE}.policy_repository.get_active_policies_for_user",
@@ -337,7 +337,7 @@ async def test_authorize_still_returns_correctly_even_if_audit_logging_fails(moc
 
 
 # ---------------------------- authorize_batch ----------------------------
-# claude.md's Batch Authorization API: "reuse the existing AuthorizationService
+# the batch authorization API contract: "reuse the existing AuthorizationService
 # and AuthorizationDecision flow", "avoid repeated policy database queries
 # inside one batch request", "single authorization and batch authorization
 # must produce identical authorization decisions", "fail closed for invalid

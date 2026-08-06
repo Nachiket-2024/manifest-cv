@@ -25,15 +25,19 @@ ACCOUNT_VERIFICATION_REQUESTED = "account_verification_requested"
 ACCOUNT_VERIFIED = "account_verified"
 ACCOUNT_LOCKED = "account_locked"
 REFRESH_TOKEN_REUSE_DETECTED = "refresh_token_reuse_detected"
+SESSION_REVOKED = "session_revoked"           # One specific session ended via the Manage Sessions card
 ACCOUNT_DELETED = "account_deleted"           # Soft delete (reversible)
 ACCOUNT_PURGED = "account_purged"             # Hard delete (irreversible)
 ACCOUNT_REACTIVATED = "account_reactivated"   # Restored from soft delete
+POLICY_ASSIGNED = "policy_assigned"
+POLICY_REVOKED = "policy_revoked"
+USER_ROLE_CHANGED = "user_role_changed"
 
 # Case-insensitive substring denylist for metadata keys that must never be
 # persisted verbatim. Every current call site only ever passes emails/counts
-# (see call sites across auth/*, user_routes.py), so this is a defense-in-depth
+# (see call sites across auth/*, user_management_routes.py), so this is a defense-in-depth
 # backstop against a future call site accidentally passing something
-# sensitive; not a fix for an existing leak.
+# sensitive. Not a fix for an existing leak.
 _SENSITIVE_METADATA_KEY_MARKERS = ("password", "hash", "token", "secret", "cookie", "jwt", "credential")
 
 
@@ -63,7 +67,7 @@ async def log_security_event(
 
     `db=None` is accepted (rather than requiring a real session) purely so
     unit tests can call handlers/services directly without wiring a session
-    through every mocked collaborator; a real request always supplies one via
+    through every mocked collaborator. A real request always supplies one via
     Depends(database.get_session).
     """
     if db is None:

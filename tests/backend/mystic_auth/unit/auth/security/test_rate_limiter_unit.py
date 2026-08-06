@@ -200,5 +200,5 @@ async def test_rate_limited_skips_account_check_when_extractor_returns_none(mock
     result = await handler(request=_make_request())
 
     assert result == "ok"
-    # Only the IP key should have been checked; no ":account:" lookup at all
+    # Only the IP key should have been checked. No ":account:" lookup at all
     assert all(":account:" not in call.args[0] for call in incr_mock.call_args_list)

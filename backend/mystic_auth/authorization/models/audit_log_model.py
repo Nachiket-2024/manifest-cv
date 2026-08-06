@@ -10,7 +10,7 @@ from ...database.base import Base
 
 class AuthorizationAuditLog(Base):
     """
-    One row per authorization decision (per claude.md's Remaining PBAC
+    One row per authorization decision (per the PBAC
     Work: "Authorization decisions must be auditable" / "Automatically log
     every authorize() call"). Written by
     AuthorizationService.authorize_detailed, the single choke point every
@@ -53,7 +53,7 @@ class AuthorizationAuditLog(Base):
     resource_type: Mapped[str]
 
     # Best-effort identifier for the specific resource instance involved
-    # (e.g. a target user's email), since "resource" can be an arbitrary
+    # (e.g. A target user's email), since "resource" can be an arbitrary
     # dict, not every check has (or needs) one.
     resource_identifier: Mapped[str | None]
 

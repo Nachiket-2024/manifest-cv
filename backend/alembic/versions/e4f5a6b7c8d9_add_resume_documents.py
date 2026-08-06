@@ -4,7 +4,7 @@ Revision ID: e4f5a6b7c8d9
 Revises: d3e4f5a6b7c8
 Create Date: 2026-07-16 00:00:02.000000
 
-The finalized, compiled PDF for one approved resume draft — one per draft,
+The finalized, compiled PDF for one approved resume draft. One per draft,
 re-finalizing with a different template overwrites the previous row rather
 than accumulating history (see resume_document_table/resume_document_model.py).
 """
@@ -22,7 +22,6 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.create_table(
         'resume_documents',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
@@ -36,5 +35,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_table('resume_documents')

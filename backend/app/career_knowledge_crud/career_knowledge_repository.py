@@ -7,7 +7,7 @@ from ..career_knowledge_table.career_knowledge_model import CareerKnowledgeBase
 class CareerKnowledgeRepository:
     """
     Persistence layer for the single per-user career knowledge base. Every
-    method is scoped by user_id at the query level — the caller
+    method is scoped by user_id at the query level. The caller
     (career_knowledge_routes.py) always passes the authenticated user's own
     id, never a caller-supplied owner field.
     """
@@ -21,7 +21,7 @@ class CareerKnowledgeRepository:
     @staticmethod
     async def create(user_id: int, raw_input: str, content: str, db: AsyncSession) -> CareerKnowledgeBase:
         # content is the AI-structured Markdown built from raw_input (see
-        # ai_integration.gemini_client.structure_knowledge_base) — the
+        # ai_integration.gemini_client.structure_knowledge_base). The
         # caller (career_knowledge_routes.py) generates it before calling
         # this, keeping this repository free of any AI-provider dependency.
         entry = CareerKnowledgeBase(user_id=user_id, raw_input=raw_input, content=content)

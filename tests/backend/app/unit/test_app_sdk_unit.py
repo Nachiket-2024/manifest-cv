@@ -1,6 +1,6 @@
 # tests/backend/app/unit/test_app_sdk_unit.py
 #
-# app/app_sdk.py is ManifestCV's own extension surface — the
+# app/app_sdk.py is ManifestCV's own extension surface. The
 # counterpart to mystic-auth's app.sdk for glue mystic-auth has no reason
 # to provide. Currently just get_user_id_by_email, the translation every
 # owner-scoped ManifestCV route depends on to turn mystic-auth's
@@ -29,7 +29,7 @@ async def test_get_user_id_by_email_resolves_id_for_known_user(mocker):
 
 @pytest.mark.asyncio
 async def test_get_user_id_by_email_returns_none_for_unknown_user():
-    # No mock override needed for user_crud here beyond returning None —
+    # No mock override needed for user_crud here beyond returning None -
     # a caller whose email doesn't resolve to a row must get None, not an
     # exception, so route handlers can turn it into a 404 (see
     # api/application_routes/application_routes.py's _current_user_id).

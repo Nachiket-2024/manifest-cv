@@ -3,8 +3,8 @@
 # OAuth2 account-linking / CSRF flows against the real ASGI app, real
 # PostgreSQL, and real Redis (see conftest.py). The only mocked pieces are
 # the two outbound calls to Google itself (token exchange, userinfo), an
-# external third party CLAUDE.md permits mocking ("mock external
-# dependencies only when required"). Everything else, including state
+# external provider calls are mocked at the HTTP boundary. Everything else,
+# including state
 # generation and single-use consumption in Redis, account
 # lookup/creation/linking in Postgres, and JWT issuance and cookie
 # handling, is real.
@@ -137,7 +137,7 @@ async def test_oauth2_login_clears_password_on_pre_hijacked_unverified_account(c
 
 @pytest.mark.asyncio
 async def test_oauth2_login_does_not_touch_password_of_already_verified_account(client, created_emails, mocker):
-    # The legitimate case CLAUDE.md requires: a password user who already
+    # Legitimate account linking: a password user who already
     # verified their email can add Google as an additional login method
     # without losing their existing password.
     email = _unique_email()
@@ -145,7 +145,9 @@ async def test_oauth2_login_does_not_touch_password_of_already_verified_account(
     assert signup_resp.status_code == 200
     created_emails.append(email)
 
-    from backend.mystic_auth.auth.verify_account.account_verification_service import account_verification_service
+    from backend.mystic_auth.auth.verify_account.account_verification_service import (
+        account_verification_service,
+    )
     from backend.mystic_auth.redis.client import redis_client
 
     token = await account_verification_service.create_verification_token(email)
@@ -260,7 +262,7 @@ async def test_oauth2_pkce_mismatch_rejected_end_to_end_no_user_created(client, 
 @pytest.mark.asyncio
 async def test_oauth2_cancelled_consent_redirects_cleanly_instead_of_422(client):
     # Regression guard: code/state used to be required route params with no
-    # default, so Google's real cancellation redirect (?error=access_denied,
+    # default, so Google's real cancellation redirect (-error=access_denied,
     # no code at all) previously hit FastAPI's own 422 validation response
     # instead of a clean redirect to the frontend login page.
     await client.get("/auth/oauth2/login/google")  # sets a real oauth_state cookie

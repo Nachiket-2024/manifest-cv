@@ -7,7 +7,7 @@ from ..application_table.application_model import ApplicationRecord
 class ApplicationRepository:
     """
     Persistence layer for tracked applications. Every method is scoped by
-    user_id at the query level — the caller (application_routes.py) always
+    user_id at the query level. The caller (application_routes.py) always
     passes the authenticated user's own id.
     """
 
@@ -23,7 +23,7 @@ class ApplicationRepository:
     async def list_by_user(
         user_id: int, db: AsyncSession, limit: int = 20, offset: int = 0
     ) -> list[ApplicationRecord]:
-        # id.desc() as a final tie-breaker — application_date/created_at
+        # id.desc() as a final tie-breaker. application_date/created_at
         # alone aren't a stable sort key when two rows share both (e.g.
         # several applications logged the same day), which would otherwise
         # let offset pagination skip or duplicate a row across pages.

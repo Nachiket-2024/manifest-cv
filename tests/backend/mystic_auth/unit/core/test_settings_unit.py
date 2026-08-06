@@ -44,7 +44,7 @@ def test_settings_ignores_env_vars_that_are_not_declared_fields():
     # REDIS_PASSWORD (redis-server's own auth) and BUGSINK_* (the optional
     # self-hosted error-monitoring service, see
     # docs/mystic_auth/error-monitoring/overview.md) have no corresponding Settings
-    # field. pydantic-settings defaults to extra="forbid", which crashed
+    # field. Pydantic-settings defaults to extra="forbid", which crashed
     # Settings() construction the moment any such var was present : this
     # only actually surfaced when Settings' own env_file resolved to a real
     # file (true when cwd=/repo, e.g. running tests) rather than the app's

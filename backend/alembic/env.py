@@ -16,7 +16,7 @@ from app.application_table.application_model import ApplicationRecord  # noqa: F
 from app.career_knowledge_table.career_knowledge_model import CareerKnowledgeBase  # noqa: F401
 from app.resume_document_table.resume_document_model import ResumeDocument  # noqa: F401
 
-# ManifestCV's own models — required here (not just wherever they're first
+# ManifestCV's own models. Required here (not just wherever they're first
 # imported at runtime) so `alembic revision --autogenerate` sees them even
 # when invoked as a bare CLI command with nothing else importing app.* first.
 from app.resume_table.resume_model import ResumeDraft  # noqa: F401
@@ -25,6 +25,7 @@ from mystic_auth.authorization.models.audit_log_model import AuthorizationAuditL
 from mystic_auth.authorization.models.policy_history_model import PolicyHistory  # noqa: F401
 from mystic_auth.authorization.models.policy_model import Policy, UserPolicy  # noqa: F401
 from mystic_auth.database.base import Base
+from mystic_auth.user_session.session_model import UserSession  # noqa: F401
 from mystic_auth.user_table.user_model import User  # noqa: F401
 
 load_dotenv()

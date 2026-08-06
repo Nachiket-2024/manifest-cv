@@ -37,7 +37,12 @@ class AccountVerificationService:
             email_body = render_transactional_email(
                 preheader="Verify your email address to activate your account.",
                 heading="Verify Your Email Address",
-                accent_color="#3498db",
+                # brand.600 - the exact teal every solid colorPalette="brand"
+                # button in the app itself renders as (frontend/src/mystic_auth/
+                # theme/system.ts), not an unrelated generic blue: this is the
+                # first branded touchpoint a lot of users see before ever
+                # reaching the app, so it should already look like it.
+                accent_color="#2c7a7b",
                 intro="Thanks for signing up. Please confirm this is your email address by clicking the button below.",
                 cta_label="Verify Email Address",
                 cta_url=verify_url,
@@ -84,7 +89,7 @@ class AccountVerificationService:
         expires_minutes: int = settings.RESET_TOKEN_EXPIRE_MINUTES
     ) -> str:
         # type="verify": this token is only valid for email confirmation,
-        # not for accessing any protected routes. expires_minutes must be
+        # not for accessing any protected routes. Expires_minutes must be
         # forwarded so the JWT's own exp claim matches the Redis single-use
         # key's TTL and the expiry stated in the verification email above.
         return await jwt_service.create_verification_token(email=email, expires_minutes=expires_minutes)
@@ -104,7 +109,7 @@ class AccountVerificationService:
             # consumed exactly once even under concurrent requests. A separate
             # GET-then-DELETE has a TOCTOU race: two concurrent requests can
             # both pass the GET before either runs the DELETE, both treating a
-            # single-use token as valid. password_reset_service.py already
+            # single-use token as valid. Password_reset_service.py already
             # fixed this same class of bug the same way.
             exists = await redis_client.getdel(f"verify:{token}")
             if not exists:

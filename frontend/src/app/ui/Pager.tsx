@@ -1,10 +1,12 @@
 import React from "react";
 import { Button, HStack, Text } from "@chakra-ui/react";
 
+import { SECONDARY_BUTTON_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
+
 interface PagerProps {
     offset: number;
     limit: number;
-    /** Count of rows the current page actually returned — fewer than
+    /** Count of rows the current page actually returned. Fewer than
      * `limit` means this is the last page (standard offset-pagination
      * heuristic, avoids needing a separate total-count endpoint). */
     rowCount: number | undefined;
@@ -13,7 +15,7 @@ interface PagerProps {
 
 /**
  * Shared Previous/Next pager for offset-paginated list pages (Resumes,
- * Applications) — mirrors the limit/offset convention already used by the
+ * Applications). Mirrors the limit/offset convention already used by the
  * inherited audit-log endpoints (see backend/app/api/audit_log_routes/).
  */
 const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }) => {
@@ -21,7 +23,7 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
     const hasNextPage = rowCount !== undefined && rowCount === limit;
 
     if (offset === 0 && !hasNextPage) {
-        // Nothing to page through — one page's worth of rows or fewer.
+        // Nothing to page through. One page's worth of rows or fewer.
         return null;
     }
 
@@ -32,7 +34,7 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
             </Text>
             <Button
                 size="sm"
-                variant="outline"
+                {...SECONDARY_BUTTON_PROPS}
                 onClick={() => onOffsetChange(Math.max(0, offset - limit))}
                 disabled={!hasPreviousPage}
             >
@@ -40,7 +42,7 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
             </Button>
             <Button
                 size="sm"
-                variant="outline"
+                {...SECONDARY_BUTTON_PROPS}
                 onClick={() => onOffsetChange(offset + limit)}
                 disabled={!hasNextPage}
             >

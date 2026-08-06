@@ -12,8 +12,8 @@ from ...authorization.schemas.policy_history_schema import (
 from ...authorization.schemas.policy_schema import PolicyRead
 from ...authorization.services.authorization_service import authorization_service
 from ...database.connection import database
-from ..route_helpers import get_or_404
-from .policy_shared import PROTECTED_POLICY_NAMES, READ_DEPENDENCY, UPDATE_DEPENDENCY
+from ..get_or_404 import get_or_404
+from .policy_permissions import PROTECTED_POLICY_NAMES, READ_DEPENDENCY, UPDATE_DEPENDENCY
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
 
@@ -102,7 +102,7 @@ async def rollback_policy(
 ):
     """
     Restores a policy to a prior recorded definition. The policy must still
-    exist: restoring a deleted policy isn't supported here; recreate it via
+    exist: restoring a deleted policy isn't supported here. Recreate it via
     POST /policies instead. Every history entry resolves to a restorable
     definition, including "deleted" entries (their previous_definition is
     their pre-deletion state, see _definition_for_entry), so rolling back

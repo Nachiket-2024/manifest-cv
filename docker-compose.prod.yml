@@ -1,32 +1,35 @@
-# ---------------------------- Production Compose ----------------------------
+# ---------------------------- Real Deployment Compose ----------------------------
 # Run with: docker compose -f docker-compose.prod.yml up -d --build
 #
-# Differences from docker-compose.yml (dev):
-#   - No bind mounts : images are self-contained, code isn't shared from host
-#   - No --reload on backend/taskiq_worker
-#   - frontend builds docker/frontend.Dockerfile's `production` target
-#     (nginx serving the static Vite build) instead of the Vite dev server
-#   - restart: unless-stopped on long-running services, so they recover from
-#     crashes/host reboots without manual intervention
-#   - deploy.resources.limits on every service, so a leak/runaway process in
-#     one container can't starve the host or its siblings. `docker compose`
-#     (Compose V2, not Swarm) enforces these directly via the container
-#     runtime : no orchestrator required. Values are conservative starting
-#     points, not load-tested; tune them against real traffic.
+# This is the file an actual internet-facing deployment (e.g. A VPS) runs.
+# For testing the production-style build locally without deploying anywhere,
+# use docker-compose.local-prod.yml instead.
 #
-# Out of scope (by design : see CLAUDE.md "no unnecessary cloud-specific
-# tooling"): this file assumes a reverse proxy / TLS terminator sits in
-# front of it in a real deployment (e.g. nginx/Caddy/Traefik on the host,
-# or a cloud load balancer) — it does not attempt to provision one.
+# Differences from docker-compose.local-prod.yml:
+#   - Adds a Caddy service that terminates TLS (automatic Let's Encrypt certs
+#     from PUBLIC_DOMAIN) and is the only container with ports published to
+#     the host. See docker/Caddyfile.
+#   - postgres, redis, backend, and frontend no longer publish ports to the
+#     host at all. They're still reachable container-to-container by service
+#     name on the default network (Caddy -> frontend -> backend), so nothing
+#     about how requests flow changes, only what a port scan against the
+#     host can see. Use docker-compose.local-prod.yml or `docker compose
+#     exec` for local debugging access instead.
+#   - REDIS_PASSWORD and a real (non-placeholder) SECRET_KEY /
+#     POSTGRES_PASSWORD are effectively required here, not just recommended:
+#     this file assumes .env holds real production secrets.
+#
+# Everything else (restart policies, resource limits, healthchecks,
+# migration gating) is unchanged from docker-compose.local-prod.yml.
 
 # Every service uses Docker's default json-file log driver, which has no
-# built-in size cap — without one, a busy production stack (this dev
+# built-in size cap. Without one, a busy production stack (this dev
 # compose file's own backend even enables --access-log) fills the host's
 # disk over weeks/months, and a full disk stops every container from
 # writing, not just the noisy one. 10MB x 3 files per service is a small,
-# conservative cap; raise it if you need longer local log retention (this
+# conservative cap. Raise it if you need longer local log retention (this
 # has no bearing on Bugsink/Sentry-based error monitoring, which is
-# separate — see docs/mystic_auth/error-monitoring/overview.md).
+# separate. See docs/mystic_auth/error-monitoring/overview.md).
 x-logging: &default-logging
   driver: json-file
   options:
@@ -46,9 +49,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # See docker-compose.yml's identical mount : creates the separate
-      # "bugsink" database the Bugsink service below uses, once against a
-      # fresh volume.
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -66,9 +66,9 @@ services:
     image: redis:7
     restart: unless-stopped
     # See docker-compose.yml for the REDIS_PASSWORD rationale. Unlike the
-    # dev compose file, this one requires it outright (":?" fails the whole
+    # dev compose file, this one requires it outright (":-" fails the whole
     # `up` with a clear error if unset/empty) rather than silently falling
-    # back to an unauthenticated Redis — Redis backs rate limiting, login
+    # back to an unauthenticated Redis. Redis backs rate limiting, login
     # lockout, and the taskiq broker, so an operator who forgets to set it
     # before a real deployment should find out immediately, not run
     # unauthenticated indefinitely with no signal anything is wrong.
@@ -85,7 +85,7 @@ services:
           cpus: "0.5"
           memory: 256M
 
-  # ManifestCV — self-hosted, free, no signup/API key/cloud account needed.
+  # ManifestCV. Self-hosted, free, no signup/API key/cloud account needed.
   # No healthcheck: the qdrant/qdrant image ships neither curl nor wget to
   # probe its own HTTP API with, so backend depends on it with the default
   # service_started condition rather than service_healthy.
@@ -96,7 +96,7 @@ services:
       - qdrant_storage:/qdrant/storage
     logging: *default-logging
     # Its in-memory vector index can grow unbounded with knowledge-base
-    # ingestion — without a cap, an unexpectedly large index can OOM the
+    # ingestion. Without a cap, an unexpectedly large index can OOM the
     # host and take down every co-located container with it, not just this
     # one. Same conservative-starting-point caveat as every other limit in
     # this file: tune against real usage, not load-tested.
@@ -113,14 +113,9 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env
-    # Same DSN-wait rationale as docker-compose.yml's backend service: waits
-    # for bugsink-seed to write SENTRY_DSN into the shared bugsink_dsn
-    # volume, only when Bugsink is configured (BUGSINK_SUPERUSER_EMAIL set).
-    # Bounded at ~10s so a slow/broken seed doesn't delay a normal boot. This
-    # is safe to share with dev unchanged because SENTRY_DSN is a
-    # container-to-container address (bugsink:8000) in both environments :
-    # unlike VITE_SENTRY_DSN below, it never depends on how Bugsink is
-    # reverse-proxied for public/browser access.
+    # Wait up to ~10s for bugsink-seed to write backend SENTRY_DSN, only
+    # when Bugsink is configured. This DSN is container-to-container
+    # (bugsink:8000), so it is not tied to the public Bugsink URL.
     command: |
       sh -c "if [ -n \"$$BUGSINK_SUPERUSER_EMAIL\" ]; then
         for i in $$(seq 1 20); do
@@ -143,14 +138,12 @@ services:
     volumes:
       # Read-only: only bugsink-seed writes here (see that service below).
       - bugsink_dsn:/shared/bugsink-dsn:ro
-    ports:
-      - "8000:8000"
+    # No host port published. Only frontend's nginx (same Docker network)
+    # ever needs to reach this service, as backend:8000.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
       interval: 10s
       timeout: 3s
-      # See docker-compose.yml's identical healthcheck for why this budget
-      # is 10 retries / 30s start_period rather than a tighter 5/10s.
       retries: 10
       start_period: 30s
     logging: *default-logging
@@ -161,7 +154,7 @@ services:
           memory: 512M
 
   frontend:
-    # Explicit, prod-specific tag : see docker-compose.yml's frontend
+    # Explicit, prod-specific tag. See docker-compose.yml's frontend
     # service for why (avoids clobbering the dev image).
     image: manifest-cv-frontend:prod
     # Same reasoning as docker-compose.yml's frontend service: this tag is
@@ -173,38 +166,79 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       target: production                            # nginx + static build, not the Vite dev server
-      # Vite bakes these in at build time — see frontend.Dockerfile's own
+      # Vite bakes these in at build time. See frontend.Dockerfile's own
       # comment on why they must be passed here rather than read at runtime.
       # Compose interpolates ${VAR} below from root .env (the same file
-      # backend/mystic_auth/core/settings.py reads via env_file — it ignores
+      # backend/mystic_auth/core/settings.py reads via env_file. It ignores
       # unrecognized keys, so VITE_-prefixed ones being in there too is
       # fine), or from the shell environment if exported there instead
-      # (overrides .env — useful for a CI pipeline with no checked-out .env).
+      # (overrides .env. Useful for a CI pipeline with no checked-out .env).
       # VITE_SENTRY_DSN specifically can't be auto-wired from bugsink-seed
-      # the way backend's SENTRY_DSN is above: it needs whatever *publicly*
-      # reaches Bugsink in production (a reverse-proxy route you set up
-      # deliberately, per Bugsink's no-exposed-port-by-default posture :
-      # see docs/mystic_auth/error-monitoring/overview.md#security-notes),
-      # which bugsink-seed has no way to know, and it's baked in at this
-      # build step rather than read at container startup regardless. Set it
+      # the way backend's SENTRY_DSN is above. It needs whatever *publicly*
+      # reaches Bugsink in production, a reverse-proxy route you set up
+      # deliberately per Bugsink's no-exposed-port-by-default posture, which
+      # bugsink-seed has no way to know, and it's baked in at this build
+      # step rather than read at container startup regardless. Set it
       # manually in .env once you know that address.
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL}
         VITE_APP_NAME: ${VITE_APP_NAME}
         VITE_SENTRY_DSN: ${VITE_SENTRY_DSN}
         VITE_SENTRY_ENVIRONMENT: ${VITE_SENTRY_ENVIRONMENT}
+    # Stable address used by TRUSTED_PROXY_IPS: FastAPI sees this container
+    # as the immediate peer for API requests nginx.frontend.conf proxies
+    # through. Caddy sits in front of this, appending its own hop to
+    # X-Forwarded-For. Get_client_ip() (backend/mystic_auth/auth/security/
+    # client_ip.py) already reads the left-most entry, so the extra hop
+    # needs no code change, only TRUSTED_PROXY_IPS staying pinned here.
+    networks:
+      default:
+        ipv4_address: 172.28.0.10
     restart: unless-stopped
-    ports:
-      - "80:80"
+    # No host port published. Caddy is the only public entrypoint.
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
       interval: 10s
       timeout: 3s
       retries: 5
       start_period: 5s
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # Terminates TLS and is the only service reachable from outside this host.
+  # See docker/Caddyfile. PUBLIC_DOMAIN (required) must already point at
+  # this host's public IP in DNS before first start, or certificate
+  # issuance fails.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN}
+      # Caddy's tls directive (see docker/Caddyfile) requires a real-looking
+      # email address. It fails to parse the config entirely if this is
+      # blank. Falls back to a syntactically valid placeholder rather than
+      # empty, so an unset ACME_EMAIL doesn't crash-loop the container.
+      ACME_EMAIL: ${ACME_EMAIL:-you@example.com}
+      BUGSINK_PUBLIC_DOMAIN: ${BUGSINK_PUBLIC_DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
     logging: *default-logging
     deploy:
       resources:
@@ -229,12 +263,8 @@ services:
         condition: service_healthy
       alembic:
         condition: service_completed_successfully
-    # Override backend.Dockerfile's inherited HEALTHCHECK, which curls
-    # localhost:8000/health/ready : taskiq_worker shares that image but
-    # serves no HTTP at all, so the inherited check always fails and
-    # reports this container as permanently "unhealthy" even when the
-    # worker itself is running fine. This checks the actual worker process
-    # via /proc directly : this slim image has neither `pgrep` nor `ps`.
+    # Override the backend image healthcheck. This container serves no HTTP,
+    # so check for the taskiq process directly via /proc.
     healthcheck:
       test: ["CMD-SHELL", "for p in /proc/[0-9]*/cmdline; do grep -aq taskiq \"$$p\" 2>/dev/null && exit 0; done; exit 1"]
       interval: 30s
@@ -248,7 +278,7 @@ services:
           cpus: "1"
           memory: 512M
 
-  # One-shot: runs migrations then exits. No restart policy : restarting it
+  # One-shot migration runner. No restart policy because restarting it
   # would just re-apply an already-applied migration in a loop.
   alembic:
     build:
@@ -264,7 +294,7 @@ services:
         condition: service_healthy
     logging: *default-logging
 
-  # Self-hosted error monitoring : see docker-compose.yml's identical
+  # Self-hosted error monitoring. See docker-compose.yml's identical
   # service for the full explanation. Starts by default in production too:
   #   docker compose -f docker-compose.prod.yml up -d --build
   bugsink:
@@ -284,12 +314,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Same override as docker-compose.yml's identical service, for the same
-    # reason : see there for the full explanation (why it must be a YAML
-    # list, why `$$PORT`, why `--timeout 60`). Matters even more here: this
-    # service is capped at 1 CPU below, making a worker actually starving
-    # past Gunicorn's default 30s timeout under real load more likely, not
-    # less, than in dev.
+    # Same command shape as dev. It must stay a YAML list because `monofy`,
+    # not a shell, interprets && and |||. The 60s timeout gives Gunicorn more
+    # room under CPU limits.
     command:
       - monofy
       - bugsink-show-version
@@ -335,10 +362,7 @@ services:
           cpus: "1"
           memory: 512M
 
-  # Runs once against a healthy bugsink, then exits : see docker-compose.yml's
-  # identical service for the full explanation. No restart policy, same as
-  # alembic above: it's one-shot and idempotent (get_or_create), not a
-  # long-running process to keep alive.
+  # One-shot, idempotent Bugsink project seeder. No restart policy.
   bugsink-seed:
     image: bugsink/bugsink:2
     # Root only for this one-shot container: the default non-root "bugsink"
@@ -366,9 +390,9 @@ services:
       User = get_user_model()
       user = User.objects.get(username=os.environ['BUGSINK_SUPERUSER_EMAIL'])
 
-      team, _ = Team.objects.get_or_create(name='MysticAuth')
+      team, _ = Team.objects.get_or_create(name='ManifestCV')
       TeamMembership.objects.get_or_create(team=team, user=user, defaults={'role': TeamRole.ADMIN, 'accepted': True})
-      project, _ = Project.objects.get_or_create(team=team, name='MysticAuth')
+      project, _ = Project.objects.get_or_create(team=team, name='ManifestCV')
 
       key = project.sentry_key.hex
       os.makedirs('/shared/bugsink-dsn', exist_ok=True)
@@ -380,8 +404,19 @@ services:
 volumes:
   postgres_data:
   qdrant_storage:
-  # Shared between bugsink-seed (writer) and backend (reader) — see the
+  # Shared between bugsink-seed (writer) and backend (reader). See the
   # bugsink-seed service above for why this exists. Unlike docker-compose.yml,
   # frontend doesn't read from this: VITE_SENTRY_DSN is a build arg here (see
   # the frontend service above), not something read at container startup.
   bugsink_dsn:
+  # Caddy's certificate/ACME account state. Losing this means re-issuing
+  # certs on next start, which Let's Encrypt rate-limits, so it's a named
+  # volume (persists across `docker compose down`), not ephemeral.
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

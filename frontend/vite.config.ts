@@ -7,10 +7,10 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  // VITE_* vars live in the repo root .env/.env.example, not frontend/.env —
+  // VITE_* vars live in the repo root .env/.env.example, not frontend/.env -
   // one file for both the dev server (loaded here) and the production build
   // (docker-compose.prod.yml's build args, sourced from the same root .env
-  // via Compose's own interpolation — see .env.example).
+  // via Compose's own interpolation. See .env.example).
   envDir: '..',
   plugins: [
     react(),
@@ -40,6 +40,6 @@ export default defineConfig({
   // build-time warning. Reverting to Rollup's own automatic chunking
   // (its default module-graph analysis doesn't create this circular
   // dependency) trades away that caching optimization for a build that
-  // actually works; re-introduce chunking later only with real production
+  // actually works. Re-introduce chunking later only with real production
   // verification (not just curl on the built files) that nothing crashes.
 });

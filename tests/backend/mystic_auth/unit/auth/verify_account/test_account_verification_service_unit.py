@@ -78,7 +78,7 @@ async def test_create_verification_token_forwards_expires_minutes_to_jwt_service
 @pytest.mark.asyncio
 async def test_verify_token_rejects_token_of_the_wrong_type(mocker):
     # A validly-signed, unexpired token minted for some other purpose (not
-    # type="verify") must never be accepted here. jwt_service.verify_token
+    # type="verify") must never be accepted here. Jwt_service.verify_token
     # itself enforces expected_type, so it returns None before this service
     # ever sees a payload.
     mocker.patch(

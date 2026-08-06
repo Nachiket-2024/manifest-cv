@@ -13,15 +13,15 @@ class Policy(Base):
     A Policy is the primary authorization unit in this PBAC system. Users
     are authorized by the policies assigned to them (see UserPolicy below),
     never by their role: role is metadata only (display/reporting), per
-    claude.md's "Roles" section.
+    the role-as-metadata invariant.
 
-    Fields map directly onto claude.md's required policy shape:
+    Fields map directly onto the required policy shape:
       - identity/description: name, description
       - allowed actions: actions (a list of action-identifier strings, e.g.
         "users:read_own", the same vocabulary as authorization/permissions.py)
       - affected resources: resource_type ("users", or "*" for any resource)
       - conditions: conditions (JSON, e.g. {"self_only": true} for an
-        ownership-scoped grant; see evaluators/policy_evaluator.py for how
+        ownership-scoped grant. See evaluators/policy_evaluator.py for how
         these are interpreted)
       - audit information: created_at/updated_at/created_by
       - inheritance/composition: deliberately NOT modeled as policy-to-policy
@@ -67,7 +67,13 @@ class Policy(Base):
     # historical row necessarily has one.
     created_by: Mapped[str | None]
 
-    user_links: Mapped[list["UserPolicy"]] = relationship(back_populates="policy", cascade="all, delete-orphan")
+    # Quoted forward reference is required, not stylistic: UserPolicy is
+    # defined below in this same file, and without `from __future__ import
+    # annotations` this annotation is evaluated eagerly at class-body
+    # execution time, before UserPolicy exists.
+    user_links: Mapped[list["UserPolicy"]] = relationship(  # noqa: UP037
+        back_populates="policy", cascade="all, delete-orphan"
+    )
 
 
 class UserPolicy(Base):
@@ -75,8 +81,8 @@ class UserPolicy(Base):
     Many-to-many assignment of policies to users. This is the ONLY thing
     that determines what a user can do, never their role. Two users with
     the identical role can hold different UserPolicy rows and therefore
-    have different authorization outcomes (see claude.md's Testing
-    Requirements: "identical roles can have different permissions").
+    have different authorization outcomes. Identical roles can have
+    different permissions because policy assignments, not roles, grant access.
     """
 
     __tablename__ = "user_policies"
@@ -95,4 +101,4 @@ class UserPolicy(Base):
     # migration-seeded / signup-time default assignments
     assigned_by: Mapped[str | None]
 
-    policy: Mapped["Policy"] = relationship(back_populates="user_links")
+    policy: Mapped[Policy] = relationship(back_populates="user_links")

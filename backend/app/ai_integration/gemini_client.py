@@ -11,7 +11,7 @@ from .prompts import (
     build_structure_knowledge_base_prompt,
 )
 
-# Embedding vector size — must match retrieval/qdrant_client.py's
+# Embedding vector size. Must match retrieval/qdrant_client.py's
 # collection definition exactly, since Qdrant collections are fixed-size.
 # gemini-embedding-001 is MRL-trained, so truncating its native output to
 # this smaller dimensionality via output_dimensionality still yields a
@@ -23,12 +23,12 @@ EMBEDDING_DIMENSIONS = 768
 # identical (and easy to verify) across both the genai client's text and
 # embedding methods without depending on SDK-version-specific config
 # shapes. Without this, a stalled/slow Gemini response would hang the
-# request indefinitely — the caller's own HTTP client would eventually give
+# request indefinitely. The caller's own HTTP client would eventually give
 # up, but this coroutine (and the connection it's serving) would not.
 _REQUEST_TIMEOUT_SECONDS = 30
 
 # Constructed lazily (on first use, not at import time) so importing this
-# module never requires a valid GEMINI_API_KEY — matters for anything that
+# module never requires a valid GEMINI_API_KEY. Matters for anything that
 # imports the package without actually calling Gemini.
 _client: genai.Client | None = None
 
@@ -43,7 +43,7 @@ def _get_client() -> genai.Client:
 async def _generate_text(prompt: str, empty_result_error: str) -> str:
     """
     Shared plumbing for every plain text-generation call (structuring,
-    resume generation/refinement) — keeps prompt construction (prompts.py)
+    resume generation/refinement). Keeps prompt construction (prompts.py)
     and error semantics (AIIntegrationError) consistent across callers.
     """
     client = _get_client()
@@ -70,10 +70,10 @@ async def structure_knowledge_base(raw_input: str) -> str:
     """
     Reorganizes a user's raw career text dump into clean Markdown.
     Permitted: rewrite, summarize, reorganize.
-    Prohibited: inventing anything not present in raw_input — enforced by
-    the prompt in prompts.py; no code-level fact-checking happens here (an
-    LLM call can't be made to structurally guarantee this — the prompt is
-    the only lever available at this layer).
+    Prohibited: inventing anything not present in raw_input. Enforced by
+    the prompt in prompts.py. No code-level fact-checking happens here: an
+    LLM call can't be made to structurally guarantee this, so the prompt is
+    the only lever available at this layer.
     """
     prompt = build_structure_knowledge_base_prompt(raw_input)
     return await _generate_text(prompt, "Gemini returned an empty structured knowledge base")
@@ -108,7 +108,7 @@ async def refine_resume(
 
 async def embed_text(text: str) -> list[float]:
     """
-    Generates a semantic embedding vector for one chunk of text — used to
+    Generates a semantic embedding vector for one chunk of text. Used to
     index knowledge base sections in Qdrant (see
     retrieval/knowledge_retrieval_service.py) and to embed search queries
     against them.

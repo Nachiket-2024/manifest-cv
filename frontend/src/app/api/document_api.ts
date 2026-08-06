@@ -17,8 +17,8 @@ export const listResumeTemplatesApi = (draftId: number) =>
     api.get<TemplateInfo[]>(`/resumes/${draftId}/templates`);
 
 // A missing VITE_API_BASE_URL at build time (unset env var in production)
-// would otherwise silently produce a literal "undefined/resumes/..." URL —
-// this fails loudly instead, at the point the URL is actually needed, so
+// would otherwise silently produce a literal "undefined/resumes/..." URL.
+// This fails loudly instead, at the point the URL is actually needed, so
 // the real cause is obvious rather than a mysterious 404'd iframe/link.
 function requireApiBaseUrl(apiBaseUrl: string): string {
     if (!apiBaseUrl) {
@@ -31,7 +31,7 @@ function requireApiBaseUrl(apiBaseUrl: string): string {
 // so the browser never frames the backend's own origin: mystic-auth's
 // SecurityHeadersMiddleware unconditionally sends X-Frame-Options: DENY on
 // every response, with no per-route opt-out (see
-// docs/mystic_auth/security/hardening.md) — a direct cross-origin iframe
+// docs/mystic_auth/security/hardening.md). A direct cross-origin iframe
 // src pointing at this URL would render blank. Fetching the PDF bytes as a
 // blob and handing the frontend's own `blob:` object URL to the <iframe>
 // sidesteps this entirely: X-Frame-Options only governs framing of the

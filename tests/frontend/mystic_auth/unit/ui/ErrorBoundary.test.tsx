@@ -4,7 +4,7 @@ import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
 // Mocked so these tests exercise ErrorBoundary's own catch-and-render
 // behavior without depending on VITE_SENTRY_DSN or the real @sentry/react
-// SDK. reportError itself has its own dedicated coverage in
+// SDK. ReportError itself has its own dedicated coverage in
 // core/errorMonitoring.test.ts.
 vi.mock('@/core/errorMonitoring', () => ({
   reportError: vi.fn(),
@@ -42,7 +42,7 @@ describe('ErrorBoundary', () => {
   it('renders the fallback instead of crashing the whole tree when a child throws during render', () => {
     // React logs the error to the console on its own in addition to
     // componentDidCatch, silenced here so the test's own output stays
-    // readable; the assertions below are what actually prove the boundary
+    // readable. The assertions below are what actually prove the boundary
     // caught it, not the absence of a console line.
     vi.spyOn(console, 'error').mockImplementation(() => {});
 

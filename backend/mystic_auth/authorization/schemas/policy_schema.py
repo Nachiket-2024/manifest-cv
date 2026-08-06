@@ -110,7 +110,7 @@ class AuthorizationCheckResponse(BaseModel):
     # {policy_name: [condition_key, ...]} for every rejected policy :
     # exactly which condition(s) failed, not just that something did.
     failed_conditions: dict[str, list[str]]
-    # None when authorized; otherwise a short, machine-readable reason :
+    # None when authorized. Otherwise a short, machine-readable reason :
     # see AuthorizationDecision.denial_reason for the possible values.
     denial_reason: str | None
     # Every policy the user held at evaluation time, regardless of match :

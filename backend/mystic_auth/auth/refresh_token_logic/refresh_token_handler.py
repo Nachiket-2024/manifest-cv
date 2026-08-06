@@ -22,7 +22,9 @@ class RefreshTokenHandler:
     """Validates and rotates refresh tokens, with rate limiting and brute-force protection."""
 
     @staticmethod
-    async def handle_refresh_tokens(request: Request, refresh_token: str | None, db: AsyncSession | None = None):
+    async def handle_refresh_tokens(
+        request: Request, refresh_token: str | None, db: AsyncSession | None = None
+    ) -> JSONResponse:
         try:
             # Same 401 outcome as an invalid token, so a client can't distinguish
             # "never had a session" from "had one that's now invalid" purely from
@@ -37,7 +39,7 @@ class RefreshTokenHandler:
 
             # These must live in distinct key namespaces: rate_limiter_service
             # and login_protection_service each maintain their own independent
-            # counter/TTL semantics (a sliding request count vs. a failure
+            # counter/TTL semantics (a sliding request count vs. A failure
             # count), and sharing one key made every refresh call, successful or
             # not, count towards the 5-attempt lockout threshold: a handful of
             # legitimate token rotations from one IP could trip "too many failed

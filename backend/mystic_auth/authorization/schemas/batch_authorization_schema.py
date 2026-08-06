@@ -8,7 +8,7 @@ MAX_BATCH_SIZE = 50
 class BatchAuthorizationCheckItem(BaseModel):
     """
     One entry in a batch-check request : the same shape a single
-    authorize() call takes. min_length=1 on action/resource_type (not just
+    authorize() call takes. Min_length=1 on action/resource_type (not just
     max_length) rejects the empty-string form of a malformed check up
     front, consistent with AuthorizationCheckRequest's own fields (see
     policy_schema.py).
@@ -40,7 +40,7 @@ class BatchAuthorizationCheckResult(BaseModel):
     action: str
     resource_type: str
     allowed: bool
-    # None when allowed; otherwise a short, machine-readable classification
+    # None when allowed. Otherwise a short, machine-readable classification
     # (e.g. "no_matching_policy", "condition_failed") : coarse enough to be
     # useful without naming which policy/condition was involved.
     denial_reason: str | None = None

@@ -3,7 +3,7 @@
 # End-to-end coverage for /resumes/* against the real ASGI app, real
 # PostgreSQL, and real Redis (see tests/backend/conftest.py). AI (Gemini)
 # and retrieval (Qdrant) calls are mocked at the route module's import
-# site — see test_career_knowledge_routes_integration.py's module docstring
+# site. See test_career_knowledge_routes_integration.py's module docstring
 # for why.
 import uuid
 from unittest.mock import AsyncMock
@@ -113,7 +113,7 @@ async def test_full_draft_lifecycle(client, created_emails, _mock_ai_and_retriev
     assert list_resp.status_code == 200
     assert [d["id"] for d in list_resp.json()] == [draft_id]
 
-    # Direct manual edit — no AI call.
+    # Direct manual edit. No AI call.
     edit_resp = await client.put(f"/resumes/{draft_id}", json={"content": "# Hand-edited resume"})
     assert edit_resp.status_code == 200
     assert edit_resp.json()["resume_content"] == "# Hand-edited resume"
@@ -184,7 +184,7 @@ async def test_list_drafts_is_paginated_newest_first(client, created_emails, _mo
         assert create_resp.status_code == 201
         draft_ids.append(create_resp.json()["id"])
 
-    # Default order is newest first — draft_ids were created oldest to newest.
+    # Default order is newest first. draft_ids were created oldest to newest.
     default_resp = await client.get("/resumes/")
     assert [d["id"] for d in default_resp.json()] == list(reversed(draft_ids))
 

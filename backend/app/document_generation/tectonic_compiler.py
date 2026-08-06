@@ -5,9 +5,9 @@ from pathlib import Path
 from .exceptions import LatexCompilationError
 
 # tectonic's first-ever compile in a fresh container fetches its LaTeX
-# format bundle over the network (see docker/backend.Dockerfile); a stalled
+# format bundle over the network (see docker/backend.Dockerfile). A stalled
 # fetch, or a pathological .tex input, would otherwise hang this coroutine
-# — and the request handling it — forever. 60s comfortably covers a cold
+# and the request handling it forever. 60s comfortably covers a cold
 # bundle fetch plus a normal one-page resume compile with room to spare.
 _COMPILE_TIMEOUT_SECONDS = 60
 
@@ -15,7 +15,7 @@ _COMPILE_TIMEOUT_SECONDS = 60
 async def compile_latex_to_pdf(tex_source: str) -> bytes:
     """
     Compiles a self-contained .tex document to PDF using the tectonic
-    engine (installed in the backend Docker image — see
+    engine (installed in the backend Docker image, see
     docker/backend.Dockerfile). Runs in an isolated temp directory per
     call so concurrent compilations never collide, and nothing written by
     tectonic (its own cache aside) outlives the call.

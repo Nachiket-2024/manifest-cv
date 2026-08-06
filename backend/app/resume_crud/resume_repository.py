@@ -7,7 +7,7 @@ from ..resume_table.resume_model import ResumeDraft
 class ResumeRepository:
     """
     Persistence layer for resume drafts. Every method is scoped by user_id
-    at the query level — the caller (resume_routes.py) always passes the
+    at the query level. The caller (resume_routes.py) always passes the
     authenticated user's own id, never a caller-supplied owner field, so one
     user's drafts are never reachable via another user's requests.
     """
@@ -22,7 +22,7 @@ class ResumeRepository:
     async def list_by_user(user_id: int, db: AsyncSession, limit: int = 20, offset: int = 0) -> list[ResumeDraft]:
         # id.desc() as a tie-breaker: created_at alone isn't a stable sort
         # key when two rows share a timestamp, which would otherwise let
-        # offset pagination skip or duplicate a row across pages — same
+        # offset pagination skip or duplicate a row across pages. Same
         # reasoning as audit_log_repository's own ordering.
         stmt = (
             select(ResumeDraft)

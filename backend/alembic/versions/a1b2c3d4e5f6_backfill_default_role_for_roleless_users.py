@@ -12,12 +12,9 @@ in oauth2_service.py that gives new OAuth2 signups the same default role
 role=NULL. That shows as a blank/missing role on Dashboard/Profile in the
 frontend. Backfill every NULL role to 'user' (the normal, non-privileged
 default) so every account displays a role consistently, without touching
-access. It deliberately excludes the reserved system account, which is
-identified by a NULL hashed_password + role IS NULL combination being
-impossible for it (the system account always has both a role and a
-password set by create_system_user.py), so this WHERE clause can never
-accidentally touch it, but the exclusion is still made explicit below for
-defense in depth.
+access. The reserved system account is never affected: it always has both
+a role and a password set by create_system_user.py, so a `role IS NULL`
+WHERE clause can never match it.
 """
 from collections.abc import Sequence
 

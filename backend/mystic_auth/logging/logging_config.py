@@ -28,15 +28,32 @@ os.makedirs(LOG_DIR, exist_ok=True)
 ACCESS_LOG_PATH = os.path.join(LOG_DIR, 'access.log')
 
 
+def _make_access_handler(level: int, formatter: logging.Formatter) -> logging.Handler:
+    handler: logging.Handler = TimedRotatingFileHandler(
+        ACCESS_LOG_PATH,
+        when="midnight",
+        interval=1,
+        # backupCount=0 previously meant "never delete a rotated file",
+        # not "keep no backups" (TimedRotatingFileHandler's own
+        # semantics: 0 disables pruning entirely), so access.log.* grew
+        # unbounded on a long-running deployment. 30 days is a
+        # reasonable default retention window for access logs.
+        backupCount=30
+    )
+    handler.setLevel(level)
+    handler.setFormatter(formatter)
+    return handler
+
+
 def _make_stream_formatter(json_fields: str, console_fields: str) -> logging.Formatter:
     """
     Human-readable console output in dev, structured JSON in production.
-    For the terminal (StreamHandler) only; file output (access_handler
+    For the terminal (StreamHandler) only. File output (access_handler
     below) stays JSON unconditionally regardless of environment.
 
-    In dev, a person watches this terminal live (e.g. ./scripts/dev-up.sh),
+    In dev, a person watches this terminal live, for example through ./scripts/docker/dev-up.sh.
     so JSON there only costs readability. In production, nobody watches the
-    terminal directly; logs ship to a real aggregator (Loki/ELK/CloudWatch/
+    terminal directly. Logs ship to a real aggregator (Loki/ELK/CloudWatch/
     etc.) that needs actual structured fields, not text to regex-guess
     apart. Standard practice (structlog's own default: ConsoleRenderer for
     dev, JSONRenderer for prod), not a new idea.
@@ -81,19 +98,7 @@ def get_logger(name: str = "base_logger") -> logging.Logger:
 
         request_id_filter = RequestIdFilter()
 
-        access_handler = TimedRotatingFileHandler(
-            ACCESS_LOG_PATH,
-            when="midnight",
-            interval=1,
-            # backupCount=0 previously meant "never delete a rotated file",
-            # not "keep no backups" (TimedRotatingFileHandler's own
-            # semantics: 0 disables pruning entirely), so access.log.* grew
-            # unbounded on a long-running deployment. 30 days is a
-            # reasonable default retention window for access logs.
-            backupCount=30
-        )
-        access_handler.setLevel(logging.INFO)
-        access_handler.setFormatter(file_formatter)
+        access_handler = _make_access_handler(logging.INFO, file_formatter)
         access_handler.addFilter(request_id_filter)
 
         stream_handler = logging.StreamHandler()
@@ -141,14 +146,7 @@ def get_worker_logger(name: str = "worker") -> logging.Logger:
 
         request_id_filter = RequestIdFilter()
 
-        access_handler = TimedRotatingFileHandler(
-            ACCESS_LOG_PATH,
-            when="midnight",
-            interval=1,
-            backupCount=30
-        )
-        access_handler.setLevel(logging.INFO)
-        access_handler.setFormatter(file_formatter)
+        access_handler = _make_access_handler(logging.INFO, file_formatter)
         access_handler.addFilter(request_id_filter)
 
         stream_handler = logging.StreamHandler()

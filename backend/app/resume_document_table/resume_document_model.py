@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 
 if TYPE_CHECKING:
     # mypy can't follow the dynamic import below, so it gets a normal,
-    # statically-resolvable import instead — never executed at runtime,
+    # statically-resolvable import instead. Never executed at runtime,
     # since TYPE_CHECKING is always False when the module actually runs.
     from mystic_auth.database.base import Base
 else:
@@ -20,12 +20,11 @@ else:
 class ResumeDocument(Base):
     """
     The finalized, compiled PDF for one approved resume draft. One per
-    draft (unique resume_draft_id) —
-    re-finalizing with a different template overwrites the previous one
-    rather than accumulating history, since only the current selection
-    matters until the user saves an application (at which point
-    ApplicationRecord copies a snapshot that outlives this row — see
-    application_table/application_model.py).
+    draft (unique resume_draft_id): re-finalizing with a different template
+    overwrites the previous one rather than accumulating history, since
+    only the current selection matters until the user saves an application.
+    At that point ApplicationRecord copies a snapshot that outlives this
+    row (see application_table/application_model.py).
     """
 
     __tablename__ = "resume_documents"

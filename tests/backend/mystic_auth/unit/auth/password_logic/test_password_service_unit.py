@@ -96,7 +96,7 @@ async def test_validate_password_strength_accepts_mixed_case_and_digit():
 # ---------------------------- create_reset_token / verify_reset_token ----------------------------
 # Regression guards for the missing "type" claim: previously a reset token's
 # JWT payload carried only email + exp, so any other validly-signed JWT with
-# an "email" claim (e.g. a stolen but still-valid access/refresh token, which
+# an "email" claim (e.g. A stolen but still-valid access/refresh token, which
 # shares the same SECRET_KEY) would pass verify_reset_token's checks : the
 # Redis single-use record was the only real gate against token-type confusion.
 
@@ -126,7 +126,7 @@ async def test_verify_reset_token_rejects_token_missing_type_claim():
 
 @pytest.mark.asyncio
 async def test_verify_reset_token_rejects_token_with_wrong_type_claim():
-    # e.g. a real access token, which shares the same SECRET_KEY/ALGORITHM
+    # e.g. A real access token, which shares the same SECRET_KEY/ALGORITHM
     wrong_type_token = pyjwt.encode(
         {"email": "user@example.com", "type": "access", "exp": time.time() + 600},
         settings.SECRET_KEY,

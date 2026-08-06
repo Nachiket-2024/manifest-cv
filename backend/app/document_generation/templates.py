@@ -1,7 +1,7 @@
 """
-LaTeX document templates — each wraps the same converted body
+LaTeX document templates. Each wraps the same converted body
 (markdown_to_latex.markdown_to_latex_body) in a different preamble/visual
-style. Adding a new visual style means adding one entry here; the body
+style. Adding a new visual style means adding one entry here. The body
 conversion itself never needs to change.
 """
 

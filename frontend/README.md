@@ -2,7 +2,7 @@
 
 React 19 + TypeScript SPA built with Vite, Chakra UI v3, Zustand, and TanStack Query.
 
-This is one piece of ManifestCV — see the repository root [`README.md`](../README.md) for the full quickstart (Docker and local setup), and [`docs/app/architecture/frontend.md`](../docs/app/architecture/frontend.md) for the module layout, routing, and state-management conventions used here.
+This is one piece of ManifestCV. See the repository root [`README.md`](../README.md) for the full quickstart (Docker and local setup), and [`docs/app/architecture/frontend.md`](../docs/app/architecture/frontend.md) for the module layout, routing, and state-management conventions used here.
 
 ## Scripts
 

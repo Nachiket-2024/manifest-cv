@@ -1,9 +1,7 @@
 from datetime import UTC, datetime
 
-# This engine delegates all condition-key logic (self_only, time, network,
-# ...) here rather than containing any condition-specific branching itself,
-# see claude.md's Advanced Policy Conditions architecture: Authorization
-# Engine -> Condition Evaluation Service -> Condition Handlers.
+# This engine delegates condition-key logic to the condition-handler layer:
+# PolicyEvaluationEngine -> ConditionEvaluationService -> ConditionHandler.
 from ..conditions.condition_evaluation_service import condition_evaluation_service
 
 # evaluate() takes already-fetched Policy rows so this module has no DB
@@ -17,7 +15,7 @@ class PolicyEvaluationEngine:
     The single place authorization decisions are actually computed. Pure
     and DB-free by design: it takes a user's already-fetched policies (the
     repository's job) and answers one question: "do any of these policies
-    allow this action on this resource, given this context?", without
+    allow this action on this resource, given this context-", without
     knowing how those policies were fetched or what a route is.
 
     This keeps the engine trivially unit-testable (no DB, no FastAPI, no
@@ -25,11 +23,11 @@ class PolicyEvaluationEngine:
     (routes via the authorization service/dependency, background jobs,
     management APIs computing "effective authorization" for inspection).
 
-    Decision rule: default-deny; ALLOW if at least one active, applicable
+    Decision rule: default-deny. ALLOW if at least one active, applicable
     policy's conditions are satisfied. There is currently no explicit-deny
-    policy concept (claude.md's spec describes Allow/Deny as the evaluation
-    *outcome*, not necessarily two competing policy types); every policy
-    is a grant, and having zero applicable policies naturally means "deny".
+    policy concept. Allow/Deny is the evaluation outcome, not a pair of
+    competing policy types. Every policy is a grant, and having zero
+    applicable policies naturally means "deny".
 
     This engine only matches action/resource_type and then delegates a
     policy's whole `conditions` block to ConditionEvaluationService: it
@@ -50,24 +48,24 @@ class PolicyEvaluationEngine:
     ) -> bool:
         """
         `policies` must already be filtered to the user's active, assigned
-        policies (is_active=True); this engine does not re-check that.
+        policies (is_active=True). This engine does not re-check that.
         `user_email` is used only for ownership-style conditions (e.g.
         "self_only"), never to look up a role. `resource` is the specific
         resource instance being acted on, if any, needed to evaluate
-        ownership or resource-state conditions; `context` carries
+        ownership or resource-state conditions. `context` carries
         additional contextual information (e.g. request metadata) needed
-        for "context_attributes" conditions (e.g. an MFA-gated action).
+        for "context_attributes" conditions (e.g. An MFA-gated action).
 
         Returns True if any policy whose resource_type + action matches has
         satisfied conditions, False (default-deny) otherwise, including
         when `policies` is empty.
 
-        Thin wrapper over evaluate_detailed's `.allowed`; this is the fast
-        path every real authorize() call goes through; evaluate_detailed's
+        Thin wrapper over evaluate_detailed's `.allowed`. This is the fast
+        path every real authorize() call goes through. Evaluate_detailed's
         extra explainability bookkeeping (failed_conditions,
         denial_reason, ...) is cheap relative to a DB round trip, so there
-        is one evaluation code path, not two, per claude.md's "Keep normal
-        authorization fast" (satisfied) + "no duplicated permission logic".
+        is one evaluation code path, not two. This keeps the hot path fast
+        without duplicating permission logic.
         """
         return PolicyEvaluationEngine.evaluate_detailed(
             policies, action, resource_type, user_email, resource, context
@@ -85,9 +83,8 @@ class PolicyEvaluationEngine:
         """
         Same inputs as evaluate(), but returns a full AuthorizationDecision
         (see authorization_decision.py) explaining the decision rather than
-        just a bool; this is what powers the authorization-check endpoint,
-        audit logging, and testing (claude.md's Authorization Decision
-        Explainability): not just *whether* access was granted, but *which*
+        just a bool. This is what powers the authorization-check endpoint,
+        audit logging, and tests. It explains not just *whether* access was granted, but *which*
         policies were even in play, which of those actually granted it,
         which failed and on what condition, and a machine-readable reason
         when denied.

@@ -69,7 +69,7 @@ async def test_logout_all_with_wrong_type_token_does_not_revoke_but_still_clears
 async def test_logout_all_with_already_revoked_token_still_resolves_email_and_revokes_remaining_sessions(mocker):
     # Regression guard: right after a password change (which revokes every
     # refresh token for the account), this device's own refresh-token cookie
-    # is already revoked. jwt_service.verify_token would reject it outright
+    # is already revoked. Jwt_service.verify_token would reject it outright
     # (no email recoverable), but decode_payload : which skips the
     # revocation check, same as reuse-detection in refresh_token_service :
     # still yields the owning email, so logout-all can still revoke whatever
@@ -85,7 +85,7 @@ async def test_logout_all_with_already_revoked_token_still_resolves_email_and_re
 
     response = await logout_all_handler.handle_logout_all("already-revoked-token")
 
-    revoke_mock.assert_awaited_once_with("user@example.com")
+    revoke_mock.assert_awaited_once_with("user@example.com", None)
     assert response.status_code == 200
     headers = _set_cookie_headers(response)
     assert any(h.startswith("access_token=") for h in headers)

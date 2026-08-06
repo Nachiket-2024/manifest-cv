@@ -4,7 +4,7 @@ Revision ID: d3e4f5a6b7c8
 Revises: c1d2e3f4a5b6
 Create Date: 2026-07-16 00:00:01.000000
 
-A tailored resume in progress for one job description — many per user,
+A tailored resume in progress for one job description. Many per user,
 unlike career_knowledge_bases (see resume_table/resume_model.py).
 """
 from collections.abc import Sequence
@@ -21,7 +21,6 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.create_table(
         'resume_drafts',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
@@ -35,5 +34,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_table('resume_drafts')

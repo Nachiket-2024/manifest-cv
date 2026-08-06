@@ -18,9 +18,9 @@ const DashboardPage = lazy(() => import("../mystic_auth/dashboard/DashboardPage"
 const UsersPage = lazy(() => import("../mystic_auth/users/UsersPage"));
 const PoliciesPage = lazy(() => import("../mystic_auth/policies/PoliciesPage"));
 const AuditLogPage = lazy(() => import("../mystic_auth/audit_log/AuditLogPage"));
-const ProfilePage = lazy(() => import("../mystic_auth/profile/ProfilePage"));
+const AccountSettingsPage = lazy(() => import("../mystic_auth/account_settings/AccountSettingsPage"));
 
-// ManifestCV's own domains — each user's private career knowledge base,
+// ManifestCV's own domains. Each user's private career knowledge base,
 // resume drafts, and job applications.
 const CareerKnowledgePage = lazy(() => import("./career_knowledge/CareerKnowledgePage"));
 const ResumeDraftsPage = lazy(() => import("./resumes/ResumeDraftsPage"));
@@ -32,13 +32,17 @@ const ApplicationsPage = lazy(() => import("./applications/ApplicationsPage"));
 // here at the app root), not re-exported from sdk.ts since it's meant to
 // be called exactly once, here, not from arbitrary feature code.
 import { useAuthSession } from "../mystic_auth/auth/current_user/useCurrentUserQuery";
+// Real-time push for cross-tab/cross-device session revocation, same
+// "call exactly once, at the app root" reasoning as useAuthSession above.
+import { useSessionEventsStream } from "../mystic_auth/auth/useSessionEventsStream";
 
 import { AppLayout, ProtectedRoute, PERMISSIONS, Toaster, useAuthStore, LoadingState } from "./sdk";
 import type { NavItem } from "./sdk";
+import { BRAND_SOLID_HOVER_PROPS } from "../mystic_auth/ui/styles/buttonStyles";
 
 // ManifestCV's own sidebar links, added via AppLayout's extraNavItems prop
 // rather than editing mystic_auth/layout/navItems.ts directly (that file
-// stays upstream-owned — see
+// stays upstream-owned. See
 // docs/mystic_auth/template-usage/overview.md#shared-chrome-extension-points).
 // No permission required on any of these: every authenticated user has
 // their own private knowledge base, resume drafts, and applications.
@@ -63,6 +67,7 @@ const NotFoundPage: React.FC = () => {
                     size="md"
                     fontWeight="bold"
                     onClick={() => navigate("/")}
+                    {...BRAND_SOLID_HOVER_PROPS}
                 >
                     Go Home
                 </Button>
@@ -94,6 +99,7 @@ const NotAuthorizedPage: React.FC = () => {
                     size="md"
                     fontWeight="bold"
                     onClick={() => navigate("/")}
+                    {...BRAND_SOLID_HOVER_PROPS}
                 >
                     Go Home
                 </Button>
@@ -104,10 +110,11 @@ const NotAuthorizedPage: React.FC = () => {
 
 const App: React.FC = () => {
     useAuthSession();
+    useSessionEventsStream();
 
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-    // isAuthenticated is null until the session check resolves; showing a
+    // isAuthenticated is null until the session check resolves. Showing a
     // loading screen until then avoids a flash of unauthenticated content.
     if (isAuthenticated === null) {
         return <LoadingState message="Checking session..." fullScreen />;
@@ -184,20 +191,20 @@ const App: React.FC = () => {
                     }
                 />
                 <Route
-                    path="/profile"
+                    path="/account-settings"
                     element={
                         <ProtectedRoute>
                             <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
-                                <ProfilePage />
+                                <AccountSettingsPage />
                             </AppLayout>
                         </ProtectedRoute>
                     }
                 />
 
-                {/* ManifestCV's own domains. No permission prop: every
-                    authenticated user has their own private knowledge base,
-                    resume drafts, and applications — ownership is enforced
-                    server-side by user_id-scoped queries, not PBAC. */}
+                {/* ManifestCV's own domains have no permission prop. Every authenticated
+                    user has their own private knowledge base, resume drafts, and
+                    applications, with ownership enforced server-side by user_id-scoped
+                    queries rather than PBAC. */}
                 <Route
                     path="/career-knowledge"
                     element={

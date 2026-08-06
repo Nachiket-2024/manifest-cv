@@ -2,7 +2,7 @@
 #
 # Real-DB proof that request_context_builder.build_authorization_context
 # is actually used for real decisions, and a client cannot influence it:
-# claude.md's "context spoofing attempts". Uses POST /authorization/batch-
+# context-spoofing attempts. Uses POST /authorization/batch-
 # check as the enforcement vehicle: unlike the admin inspection endpoint
 # (which deliberately accepts caller-supplied context for "what if"
 # simulation), batch-check always builds its context from the real
@@ -61,7 +61,7 @@ async def test_forged_x_forwarded_for_header_does_not_grant_access(client, creat
 async def test_forged_x_forwarded_for_header_does_not_bypass_a_denial(client, created_emails):
     """The inverse proof: a policy that allows some OTHER IP (matching
     what a forged header claims) must still deny, because the real
-    connection IP (127.0.0.1) doesn't match; the forged header is never
+    connection IP (127.0.0.1) doesn't match. The forged header is never
     consulted at all."""
     email = unique_email("spoof-deny")
     policy_name = await _create_network_gated_policy(allowed_ip="203.0.113.99")

@@ -8,7 +8,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 // Test files live at ../tests/frontend, outside this project's root, per
 // the repository's top-level tests/backend + tests/frontend layout. Node's
 // (and Vite's) module resolution for bare specifiers walks *up* from the
-// importing file's own directory looking for a node_modules folder; since
+// importing file's own directory looking for a node_modules folder. Since
 // tests/frontend is a sibling of frontend/, not a descendant, that walk
 // never reaches frontend/node_modules and bare imports (axios-mock-adapter,
 // @testing-library/*, etc.) fail to resolve. The dependencies must stay
@@ -25,7 +25,7 @@ const externalTestsDir = path.resolve(dirname, '../tests/frontend').replace(/\\/
  * resolution behaves identically to a normal in-project import (respects
  * package.json "exports"/"browser" fields, conditions, etc.): the only
  * difference is which directory the upward node_modules search starts
- * from. Imports from files inside frontend/ are left untouched; they
+ * from. Imports from files inside frontend/ are left untouched. They
  * already resolve correctly through Vite's default pipeline.
  */
 function resolveExternalTestImports(): Plugin {
@@ -69,7 +69,7 @@ function resolveExternalTestImports(): Plugin {
 }
 
 export default defineConfig({
-  // VITE_* vars live in the repo root .env/.env.example, not frontend/.env —
+  // VITE_* vars live in the repo root .env/.env.example, not frontend/.env -
   // matches vite.config.ts's own envDir, so tests see the same
   // VITE_API_BASE_URL the dev server and production build use instead of
   // an undefined one.
@@ -92,7 +92,7 @@ export default defineConfig({
 
   server: {
     // Vite's dev server restricts filesystem access to the project root by
-    // default; without this, the test runner can't even read files under
+    // default. Without this, the test runner can't even read files under
     // ../tests.
     fs: {
       allow: ['..'],
@@ -118,12 +118,12 @@ export default defineConfig({
         'json',
         'html',
       ],
-      // Current coverage is ~89%/82%/84%/90% (statements/branches/functions/
-      // lines, see docs/mystic_auth/testing/overview.md); thresholds sit a few points
+      // Current coverage is ~90%/84%/84%/91% (statements/branches/functions/
+      // lines, see docs/mystic_auth/testing/overview.md). Thresholds sit a few points
       // below that as a regression alarm, not a strict target, so
       // incidental coverage drift doesn't flap CI red. Only enforced when
       // coverage is actually collected (`vitest run --coverage`, i.e. the
-      // `test:coverage` script CI runs); plain `test` never evaluates
+      // `test:coverage` script CI runs). Plain `test` never evaluates
       // these.
       thresholds: {
         statements: 85,

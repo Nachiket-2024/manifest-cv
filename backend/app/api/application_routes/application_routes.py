@@ -32,9 +32,8 @@ async def create_application(
 ):
     """
     Saves a tracked application, snapshotting the finalized resume's
-    content/template/PDF at this moment in time —
-    see ApplicationRecord's docstring for why this copies rather than
-    references its source.
+    content/template/PDF at this moment in time. See ApplicationRecord's
+    docstring for why this copies rather than references its source.
     """
     user_id = await _current_user_id(current_user, db)
 
@@ -63,7 +62,7 @@ async def list_my_applications(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
-    """Newest first, paginated — see docs/app/applications/overview.md#pagination."""
+    """Newest first, paginated. See docs/app/applications/overview.md#pagination."""
     user_id = await _current_user_id(current_user, db)
     return await application_repository.list_by_user(user_id, db, limit=limit, offset=offset)
 
@@ -106,7 +105,7 @@ async def update_my_application(
 ):
     """
     Updates tracking fields only (company/date/time/status) as an
-    application progresses — the resume snapshot itself is immutable, see
+    application progresses. The resume snapshot itself is immutable, see
     ApplicationRecord's docstring.
     """
     user_id = await _current_user_id(current_user, db)

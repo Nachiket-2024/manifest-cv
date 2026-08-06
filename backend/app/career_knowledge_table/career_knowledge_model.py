@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 
 if TYPE_CHECKING:
     # mypy can't follow the dynamic import below, so it gets a normal,
-    # statically-resolvable import instead — never executed at runtime,
+    # statically-resolvable import instead. Never executed at runtime,
     # since TYPE_CHECKING is always False when the module actually runs.
     from mystic_auth.database.base import Base
 else:
@@ -21,7 +21,7 @@ class CareerKnowledgeBase(Base):
     """
     One row per user: their single-source-of-truth career knowledge base.
     `raw_input` is the text dump the user pastes in (resume text, LinkedIn,
-    GitHub, projects, experience, achievements, skills, notes); `content`
+    GitHub, projects, experience, achievements, skills, notes). `content`
     is the well-structured Markdown knowledge base built from it by AI,
     and always directly user-editable afterward.
 
@@ -34,7 +34,7 @@ class CareerKnowledgeBase(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # One knowledge base per user; cascades on account deletion since this
+    # One knowledge base per user. Cascades on account deletion since this
     # data has no meaning without its owning account.
     user_id = Column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True

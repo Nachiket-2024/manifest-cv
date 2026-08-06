@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
     Badge,
+    Box,
     Button,
     Heading,
     HStack,
@@ -18,6 +19,7 @@ import {
     Card,
     LoadingState,
     FormAlert,
+    StyledSelect,
     toaster,
     useUnsavedChangesWarning,
 } from "../app_sdk";
@@ -35,6 +37,7 @@ import {
 } from "./resumeMutations";
 import { resumeDocumentDownloadUrl } from "../api/document_api";
 import { useCreateApplicationMutation } from "../applications/applicationMutations";
+import { BRAND_SOLID_HOVER_PROPS, SECONDARY_BUTTON_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
 
 const APPLICATION_STATUS_OPTIONS = ["applied", "interviewing", "offered", "rejected"] as const;
 
@@ -52,8 +55,8 @@ const ResumeEditorPage: React.FC = () => {
     const navigate = useNavigate();
 
     const { data: draft, isLoading, isError } = useResumeDraftQuery(draftId);
-    // Two independent mutation instances against the same PUT endpoint —
-    // save and refine are triggered by separate buttons/forms, so each needs
+    // Two independent mutation instances against the same PUT endpoint.
+    // Save and refine are triggered by separate buttons/forms, so each needs
     // its own `isPending`/`isError` state rather than one clicking making
     // the other's button spin or show the wrong error.
     const updateMutation = useUpdateResumeDraftMutation(draftId);
@@ -88,7 +91,7 @@ const ResumeEditorPage: React.FC = () => {
     const [applicationStatus, setApplicationStatus] = useState<string>("applied");
 
     // Hands the <iframe> a `blob:` object URL instead of the backend's own
-    // cross-origin URL — see fetchResumeTemplatePreviewBlob's own docstring
+    // cross-origin URL. See fetchResumeTemplatePreviewBlob's own docstring
     // for why a direct src no longer renders (mystic-auth's
     // SecurityHeadersMiddleware always sends X-Frame-Options: DENY now, with
     // no per-route opt-out). The object URL is a side effect of rendering
@@ -100,7 +103,7 @@ const ResumeEditorPage: React.FC = () => {
         [previewQuery.data]
     );
     useEffect(() => {
-        // Revocation only — no setState here, so this never fights React's
+        // Revocation only. No setState here, so this never fights React's
         // effect-ordering guidance the way setting loading/data state
         // directly in an effect body would (see resumeQueries.ts's
         // useResumeTemplatePreviewQuery for where that state now lives).
@@ -226,7 +229,7 @@ const ResumeEditorPage: React.FC = () => {
                             rows={20}
                             fontFamily="mono"
                             // Disabled during a refine call too, not just a
-                            // save — content is about to be overwritten by
+                            // save. Content is about to be overwritten by
                             // the AI's response, so editing it mid-flight
                             // would just be silently discarded when that
                             // response lands.
@@ -240,6 +243,7 @@ const ResumeEditorPage: React.FC = () => {
                                 alignSelf="flex-start"
                                 loading={updateMutation.isPending}
                                 disabled={!isDirty || !content.trim()}
+                                {...BRAND_SOLID_HOVER_PROPS}
                             >
                                 Save changes
                             </Button>
@@ -268,7 +272,7 @@ const ResumeEditorPage: React.FC = () => {
                             <HStack>
                                 <Button
                                     type="submit"
-                                    variant="outline"
+                                    {...SECONDARY_BUTTON_PROPS}
                                     loading={refineMutation.isPending}
                                     loadingText="Refining..."
                                     disabled={!refinementPrompt.trim() || isDirty}
@@ -282,6 +286,7 @@ const ResumeEditorPage: React.FC = () => {
                                     loading={approveMutation.isPending}
                                     disabled={!content.trim() || isDirty}
                                     title={isDirty ? "Save your changes before approving" : undefined}
+                                    {...BRAND_SOLID_HOVER_PROPS}
                                 >
                                     Approve resume
                                 </Button>
@@ -307,30 +312,43 @@ const ResumeEditorPage: React.FC = () => {
 
                         {templatesQuery.data && (
                             <Stack gap={4}>
-                                <NativeSelect.Root w="200px">
-                                    <NativeSelect.Field
-                                        value={selectedTemplateId ?? ""}
-                                        onChange={(e) => setSelectedTemplateOverride(e.target.value)}
-                                    >
-                                        {templatesQuery.data.map((t) => (
-                                            <option key={t.id} value={t.id}>
-                                                {t.label}
-                                            </option>
-                                        ))}
-                                    </NativeSelect.Field>
-                                    <NativeSelect.Indicator />
-                                </NativeSelect.Root>
+                                <StyledSelect
+                                    ariaLabel="Template"
+                                    w="200px"
+                                    value={selectedTemplateId ?? ""}
+                                    onChange={(value) => setSelectedTemplateOverride(value)}
+                                    options={templatesQuery.data.map((t) => ({ label: t.label, value: t.id }))}
+                                />
 
                                 {selectedTemplateId && previewQuery.isFetching && (
                                     <LoadingState message="Compiling preview..." />
                                 )}
 
                                 {selectedTemplateId && !previewQuery.isFetching && previewBlobUrl && (
-                                    <iframe
-                                        title="Resume preview"
-                                        src={previewBlobUrl}
-                                        style={{ width: "100%", height: "600px", border: "1px solid var(--chakra-colors-border-default)" }}
-                                    />
+                                    // The preview itself is a printable document, always a
+                                    // white page regardless of app theme, so a thin border
+                                    // pulled from border.default (gray.700 on dark mode's
+                                    // gray.800 Card, only one step apart) barely separated it
+                                    // from the Card behind it. A visibly stronger border plus a
+                                    // shadow instead, so the "page" reads as a distinct object
+                                    // sitting on the surface in both modes, the same "raised
+                                    // control" idiom SECONDARY_BUTTON_PROPS/TableActionButton
+                                    // use for buttons.
+                                    <Box
+                                        borderWidth="1px"
+                                        borderColor="gray.300"
+                                        borderRadius="md"
+                                        overflow="hidden"
+                                        bg="white"
+                                        boxShadow="md"
+                                        _dark={{ borderColor: "gray.500", boxShadow: "0 0 0 1px var(--chakra-colors-gray-500), 0 8px 24px rgba(0, 0, 0, 0.5)" }}
+                                    >
+                                        <iframe
+                                            title="Resume preview"
+                                            src={previewBlobUrl}
+                                            style={{ width: "100%", height: "600px", border: "none", display: "block" }}
+                                        />
+                                    </Box>
                                 )}
 
                                 <Button
@@ -340,6 +358,7 @@ const ResumeEditorPage: React.FC = () => {
                                     loading={finalizeMutation.isPending}
                                     loadingText="Compiling PDF..."
                                     disabled={!selectedTemplateId}
+                                    {...BRAND_SOLID_HOVER_PROPS}
                                 >
                                     Use this template
                                 </Button>
@@ -360,7 +379,7 @@ const ResumeEditorPage: React.FC = () => {
                             Final resume ready
                         </Heading>
                         <HStack mb={4}>
-                            <Button asChild variant="outline" size="sm">
+                            <Button asChild size="sm" {...SECONDARY_BUTTON_PROPS}>
                                 <a href={resumeDocumentDownloadUrl(draftId, settings.apiBaseUrl)} target="_blank" rel="noreferrer">
                                     Download PDF
                                 </a>
@@ -412,6 +431,7 @@ const ResumeEditorPage: React.FC = () => {
                                 alignSelf="flex-start"
                                 loading={createApplicationMutation.isPending}
                                 disabled={!companyName.trim()}
+                                {...BRAND_SOLID_HOVER_PROPS}
                             >
                                 Save application
                             </Button>

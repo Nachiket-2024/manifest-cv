@@ -3,13 +3,13 @@ import traceback
 from ...authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
 
 # PBAC: new users get their access via an explicit default policy assignment,
-# never via their (metadata-only) role: see claude.md's "Roles" section: "New
+# never via their (metadata-only) role: see the role-as-metadata invariant. New
 # users must receive access through default policy assignment, not default roles."
 from ...authorization.repositories.policy_repository import policy_repository
 from ...logging.logging_config import get_logger
 from ...user_crud.user_crud_collector import user_crud
 
-# Default role assigned to all new users, metadata only (display/grouping); it
+# Default role assigned to all new users, metadata only (display/grouping). It
 # grants no access. See the PBAC policy assignment below for what actually
 # authorizes a new account.
 from ...user_table.user_model import UserRole
@@ -37,7 +37,7 @@ class SignupService:
             # Hashed unconditionally, even when the email is already registered,
             # so both branches take the same expensive Argon2 hash time.
             # Returning early on the existing-email path without hashing would
-            # let an attacker distinguish registered vs. unregistered emails
+            # let an attacker distinguish registered vs. Unregistered emails
             # purely by response latency, even though the response body/status
             # is already identical (see signup_handler.handle_signup).
             hashed_password = await password_service.hash_password(password)

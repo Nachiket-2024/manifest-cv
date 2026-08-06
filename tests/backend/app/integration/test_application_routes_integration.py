@@ -3,7 +3,7 @@
 # End-to-end coverage for /applications/* against the real ASGI app, real
 # PostgreSQL, and real Redis (see tests/backend/conftest.py). Unlike
 # career_knowledge/resume routes, application_routes.py has no AI/Qdrant
-# dependency, so it's exercised as a real HTTP flow rather than mocked —
+# dependency, so it's exercised as a real HTTP flow rather than mocked -
 # the one prerequisite (an existing finalized resume) is seeded directly
 # via the repositories, the same way test_user_routes_integration.py seeds
 # policy assignments directly rather than through the API.
@@ -52,7 +52,7 @@ async def _create_verified_user(client, created_emails, email: str):
 
 async def _seed_finalized_resume(user_id: int) -> int:
     """Creates a resume draft + finalized document directly via the
-    repositories — application creation requires one to exist, and
+    repositories. Application creation requires one to exist, and
     finalization itself (document_routes.py) depends on tectonic/LaTeX
     compilation, which is out of scope for this route's own test."""
     async with database.async_session() as session:
@@ -123,10 +123,11 @@ async def test_create_list_get_update_delete_application_flow(client, created_em
 
 @pytest.mark.asyncio
 async def test_arbitrary_status_values_are_rejected(client, created_emails):
-    """ApplicationCreate/Update.status is a fixed Literal (applied/
-    interviewing/offered/rejected — see application_schema.py), matching the
-    frontend's STATUS_OPTIONS. Free-text/arbitrary status strings must be
-    rejected at the API boundary rather than silently persisted."""
+    """ApplicationCreate/Update.status is a fixed Literal
+    (applied/interviewing/offered/rejected, see application_schema.py),
+    matching the frontend's STATUS_OPTIONS. Free-text/arbitrary status
+    strings must be rejected at the API boundary rather than silently
+    persisted."""
     email = _unique_email()
     user_id = await _create_verified_user(client, created_emails, email)
     draft_id = await _seed_finalized_resume(user_id)
@@ -235,7 +236,7 @@ async def test_list_applications_is_paginated_newest_first(client, created_email
         assert create_resp.status_code == 201
         application_ids.append(create_resp.json()["id"])
 
-    # Default order is newest first — application_ids were created oldest to newest.
+    # Default order is newest first. application_ids were created oldest to newest.
     default_resp = await client.get("/applications/")
     assert [a["id"] for a in default_resp.json()] == list(reversed(application_ids))
 

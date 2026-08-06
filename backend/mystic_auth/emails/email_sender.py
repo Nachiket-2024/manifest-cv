@@ -18,7 +18,7 @@ class EmailSender(Protocol):
 
 class SMTPEmailSender:
     """Sends via SMTP with STARTTLS (host/port settings-driven, Gmail by
-    default). Raises on failure; the caller (send_email_task) is
+    default). Raises on failure. The caller (send_email_task) is
     responsible for catching and logging, matching the previous inline
     aiosmtplib.send behavior."""
 

@@ -1,6 +1,6 @@
 """
 Converts the plain, AI-structured Markdown resumes this app generates
-(headings, bullet/numbered lists, **bold**/*italic* text, and paragraphs —
+(headings, bullet/numbered lists, **bold**/*italic* text, and paragraphs,
 see ai_integration/prompts.py's resume generation prompt) into a LaTeX body
 fragment. Deliberately narrow: it targets exactly the Markdown shapes this
 app itself produces, not arbitrary Markdown.
@@ -13,8 +13,8 @@ _NUMBERED_RE = re.compile(r"^\d+\.\s+(.*)$")
 
 # Backslash must be escaped first, before the replacement text below (which
 # itself contains backslashes) gets a chance to be re-escaped. `_` and `*`
-# are deliberately excluded here — they're still needed as Markdown
-# bold/italic delimiters at this point; see _inline_to_latex.
+# are deliberately excluded here. They're still needed as Markdown
+# bold/italic delimiters at this point. See _inline_to_latex.
 _LATEX_SPECIAL_CHARS = {
     "\\": r"\textbackslash{}",
     "&": r"\&",
@@ -41,8 +41,8 @@ def _inline_to_latex(text: str) -> str:
     text = _BOLD_RE.sub(lambda m: r"\textbf{" + m.group(1) + "}", text)
     text = _ITALIC_RE.sub(lambda m: r"\textit{" + (m.group(1) or m.group(2)) + "}", text)
     # Any underscore that wasn't consumed as an italic delimiter above (e.g.
-    # inside an email address or username) is literal text, not markup —
-    # escape it now that no further Markdown parsing will run over it.
+    # inside an email address or username) is literal text, not markup.
+    # Escape it now that no further Markdown parsing will run over it.
     text = text.replace("_", r"\_")
     return text
 

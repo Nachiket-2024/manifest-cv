@@ -3,7 +3,7 @@
 # End-to-end coverage for /career-knowledge/* against the real ASGI app,
 # real PostgreSQL, and real Redis (see tests/backend/conftest.py). The
 # AI (Gemini) and vector-retrieval (Qdrant) calls are mocked at the route
-# module's import site — this suite verifies HTTP/ownership/DB behavior,
+# module's import site. This suite verifies HTTP/ownership/DB behavior,
 # not Gemini/Qdrant themselves (there's no real API key in test envs, and
 # AI/retrieval correctness belongs to ai_integration/retrieval's own tests).
 import uuid
@@ -80,7 +80,7 @@ async def test_create_get_update_delete_flow(client, created_emails, _mock_ai_an
     _mock_ai_and_retrieval["structure"].assert_awaited_once_with("Raw resume text dump.")
     _mock_ai_and_retrieval["index"].assert_awaited_once()
 
-    # Only one knowledge base per user — a second create is a conflict.
+    # Only one knowledge base per user. A second create is a conflict.
     second_create_resp = await client.post("/career-knowledge/", json={"raw_input": "More text."})
     assert second_create_resp.status_code == 409
 
@@ -155,8 +155,8 @@ async def test_indexing_failure_is_best_effort_and_does_not_fail_create_update_d
 ):
     """
     index_knowledge_base/delete_knowledge_base failures must never fail the
-    request that triggers them — the Postgres write is the source of truth
-    and has already committed by the time indexing runs; a Qdrant outage
+    request that triggers them. The Postgres write is the source of truth
+    and has already committed by the time indexing runs. A Qdrant outage
     should degrade to "search is stale" (see career_knowledge_routes.py's
     _reindex_best_effort/_delete_index_best_effort), never a 500 on a save
     that actually succeeded.

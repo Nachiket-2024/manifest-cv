@@ -13,7 +13,7 @@ export function useCareerKnowledgeBaseQuery() {
                 return (await getMyCareerKnowledgeBaseApi()).data;
             } catch (error) {
                 // No knowledge base yet is an expected state before the
-                // user's first POST, not a fetch failure — surfaced as
+                // user's first POST, not a fetch failure. Surfaced as
                 // `data: null` rather than `isError`, so the page shows the
                 // "get started" form instead of an error banner.
                 if (axios.isAxiosError(error) && error.response?.status === 404) {

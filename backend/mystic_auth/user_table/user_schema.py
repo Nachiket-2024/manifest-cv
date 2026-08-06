@@ -51,6 +51,18 @@ class UserUpdate(BaseModel):
     current_password: str | None = Field(default=None, max_length=128)
 
 
+class UserStatsRead(BaseModel):
+    """Aggregate counts backing the Users page's summary card. Independent
+    of whatever page/filters the caller currently has applied to the main
+    list - always reflects the whole table, so the card doesn't shift
+    numbers around as an admin pages/filters through the list below it."""
+
+    total: int
+    verified: int
+    unverified: int
+    inactive: int
+
+
 class UserRoleUpdate(BaseModel):
     """Schema used exclusively by admin endpoints to change a user's role.
     Kept separate from UserUpdate to make privilege escalation explicit."""
@@ -64,7 +76,7 @@ class UserRead(UserBase):
 
     id: int
 
-    # Display/grouping metadata only; None for an account with no role at all
+    # Display/grouping metadata only. None for an account with no role at all
     # (see user_model.py's Role note).
     role: UserRole | None
 
@@ -78,7 +90,7 @@ class UserRead(UserBase):
     deleted_at: datetime | None = None
 
     # Pulled in from the ORM object (from_attributes) purely to derive
-    # has_password below; excluded from the response so the hash itself is
+    # has_password below. Excluded from the response so the hash itself is
     # never serialized.
     hashed_password: str | None = Field(default=None, exclude=True)
 

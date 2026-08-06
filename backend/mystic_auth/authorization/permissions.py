@@ -8,10 +8,10 @@ class Permission(str, enum.Enum):
     via authorization.dependencies.authorization_dependency.require_authorization
     or authorization.services.authorization_service.authorize/require.
 
-    Per claude.md: "Permissions represent possible actions only. ...
+    "Permissions represent possible actions only. ...
     Access is granted only when a policy evaluation allows the action."
     This enum is that action vocabulary : nothing more. It carries no
-    role -> action mapping (that concept has been removed entirely); the
+    role -> action mapping (that concept has been removed entirely). The
     only thing that ever grants an action to a user is an assigned,
     active Policy whose `actions` include it (see
     authorization/evaluators/policy_evaluator.py).
@@ -40,7 +40,7 @@ class Permission(str, enum.Enum):
     USERS_REACTIVATE = "users:reactivate"
 
     # Assigning the system role itself is a separate, more sensitive action
-    # from USERS_ASSIGN_ROLE; granting one does not imply the other.
+    # from USERS_ASSIGN_ROLE. Granting one does not imply the other.
     USERS_ASSIGN_SYSTEM_ROLE = "users:assign_system_role"
 
     # Permanently, irreversibly removing an account and its rows: a
@@ -52,8 +52,8 @@ class Permission(str, enum.Enum):
 
     # Fine-grained actions for managing the authorization system itself
     # (policies and their assignment to users), see
-    # api/pbac_routes/policy_shared.py. Previously a single coarse
-    # "policies:manage" action; split so e.g. a support role could be
+    # api/pbac_routes/policy_permissions.py. Previously a single coarse
+    # "policies:manage" action. Split so e.g. A support role could be
     # granted policies:read (to inspect/audit) without also being able to
     # create, edit, delete, or (re)assign policies.
     POLICIES_READ = "policies:read"

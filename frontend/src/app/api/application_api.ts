@@ -45,7 +45,7 @@ export const updateApplicationApi = (applicationId: number, payload: Application
 export const deleteApplicationApi = (applicationId: number) => api.delete(`/applications/${applicationId}`);
 
 // A missing VITE_API_BASE_URL at build time would otherwise silently
-// produce a literal "undefined/applications/.../pdf" URL — fail loudly here
+// produce a literal "undefined/applications/.../pdf" URL. Fail loudly here
 // instead, at the point the URL is actually needed.
 export const applicationPdfDownloadUrl = (applicationId: number, apiBaseUrl: string) => {
     if (!apiBaseUrl) {

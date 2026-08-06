@@ -52,11 +52,11 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""                            # Optional. Sentry-protocol error-monitoring DSN (works with Sentry itself, or a self-hosted Sentry-SDK-compatible server like Bugsink; see docs/mystic_auth/error-monitoring/overview.md). Empty (default) = error monitoring disabled entirely, no SDK call is ever made.
     SENTRY_ENVIRONMENT: str = ""                    # Optional. Tag reported alongside every event (e.g. "production", "staging"). Falls back to ENVIRONMENT if unset.
 
-    # ManifestCV — AI structuring (Gemini) + vector retrieval (Qdrant). Owned by
+    # ManifestCV. AI structuring (Gemini) + vector retrieval (Qdrant). Owned by
     # backend/app/ai_integration/ and backend/app/retrieval/, never read by
     # mystic-auth-owned code. Added directly to this file rather than routed
     # around it, per docs/mystic_auth/template-usage.md's own guidance
-    # ("Configuration... add new settings there") — this is the one vendored
+    # ("Configuration... Add new settings there"). This is the one vendored
     # file downstream products are expected to extend in place.
     GEMINI_API_KEY: str                             # API key for Google's Gemini API (https://aistudio.google.com/apikey)
     GEMINI_MODEL: str = "gemini-flash-latest"        # Text generation model used to structure raw career input into Markdown (self-updating alias, avoids pinning to a version Google later deprecates)
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     # `env_file:` directive, which also passes it to infra-only services
     # (e.g. REDIS_PASSWORD for redis-server, BUGSINK_* for the optional
     # monitoring service, see docs/mystic_auth/error-monitoring/overview.md) that
-    # have no corresponding Settings field. pydantic-settings defaults to
+    # have no corresponding Settings field. Pydantic-settings defaults to
     # extra="forbid", which only actually bites when Settings' own
     # env_file resolves to a real file, true when running from the repo
     # root (e.g. tests, which need cwd=/repo to import `backend.app...`),
@@ -82,8 +82,8 @@ class Settings(BaseSettings):
     @classmethod
     def _secret_key_minimum_strength(cls, value: str) -> str:
         # A short/low-entropy SECRET_KEY would otherwise go undetected until
-        # someone forges a token against it; fail fast at startup instead.
-        # 32 chars is a floor, not a real entropy guarantee; it only catches
+        # someone forges a token against it. Fail fast at startup instead.
+        # 32 chars is a floor, not a real entropy guarantee. It only catches
         # placeholder/example values like "changeme" or "secret".
         if len(value) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters long")

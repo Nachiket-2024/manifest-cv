@@ -23,7 +23,7 @@ const DRAFT: import('@app/api/resume_api').ResumeDraftRead = {
 
 function renderEditor() {
   // Uses the app's own singleton queryClient (not a fresh per-test
-  // instance) — resumeMutations.ts imports its `queryClient` from
+  // instance). ResumeMutations.ts imports its `queryClient` from
   // core/queryClient.ts directly (see that module's own docstring on why:
   // code outside the React tree needs to reach it too), so a mutation's
   // onSuccess writes into that singleton specifically. A fresh
@@ -68,9 +68,9 @@ describe('ResumeEditorPage', () => {
   // editable while the mutation was in flight. Its onSuccess handler
   // (useUpdateResumeDraftMutation) calls setQueryData with the server's
   // new content, which the page's own draft->content sync effect then
-  // force-writes into the textarea — silently overwriting anything the
+  // force-writes into the textarea, silently overwriting anything the
   // user typed in the meantime. Disabling the textarea while the mutation
-  // is pending closes that race entirely; this test locks that in.
+  // is pending closes that race entirely. This test locks that in.
   it('disables the content textarea while a refine/save mutation is in flight, preventing edits from being silently clobbered', async () => {
     let resolveUpdate: (() => void) | undefined;
     mock.onPut('/resumes/1').reply(() => {
@@ -90,7 +90,7 @@ describe('ResumeEditorPage', () => {
     await waitFor(() => expect(textarea).toBeDisabled());
 
     // Simulates the user typing more while the AI call is still in
-    // flight — this must not reach the DOM value while disabled.
+    // flight. This must not reach the DOM value while disabled.
     expect(textarea).toHaveValue('Original resume content');
 
     resolveUpdate?.();
@@ -160,7 +160,7 @@ describe('ResumeEditorPage', () => {
 
   // Regression test for a UX bug: the template preview iframe only appeared
   // once fetchResumeTemplatePreviewBlob resolved, with nothing shown while
-  // it was in flight — server-side PDF compilation isn't instant, so the
+  // it was in flight. Server-side PDF compilation isn't instant, so the
   // preview area just looked blank/broken rather than loading.
   it('shows a loading indicator while the template preview compiles, then the preview iframe', async () => {
     mock.onGet('/resumes/1').reply(200, { ...DRAFT, status: 'approved' });
@@ -177,9 +177,9 @@ describe('ResumeEditorPage', () => {
     renderEditor();
 
     expect(await screen.findByText(/compiling preview/i)).toBeInTheDocument();
-    // .not.toBeInTheDocument() doesn't type-check here — see
-    // docs/mystic_auth/testing/overview.md's ".not chaining" note — toBeNull() on
-    // queryByTitle's result is the positive-assertion equivalent.
+    // .not.toBeInTheDocument() doesn't type-check here. See
+    // docs/mystic_auth/testing/overview.md's ".not chaining" note. toBeNull()
+    // on queryByTitle's result is the positive-assertion equivalent.
     expect(screen.queryByTitle('Resume preview')).toBeNull();
 
     resolvePreview?.();

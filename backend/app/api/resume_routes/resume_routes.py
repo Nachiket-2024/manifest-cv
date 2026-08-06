@@ -10,12 +10,12 @@ from ...retrieval.exceptions import RetrievalError
 from ...retrieval.knowledge_retrieval_service import search_knowledge_base
 from ...sdk import database, get_current_user, get_or_404
 
-# Self-service only, one user's own resume drafts — no PBAC permission
+# Self-service only, one user's own resume drafts. No PBAC permission
 # required, same reasoning as career_knowledge_routes.py: ownership is
 # enforced server-side by user_id-scoped queries, never a caller-supplied id.
 router = APIRouter(prefix="/resumes", tags=["Resumes"])
 
-# How many knowledge base excerpts to retrieve per generation/refinement —
+# How many knowledge base excerpts to retrieve per generation/refinement,
 # enough for a full resume's worth of sections without flooding the prompt.
 _RETRIEVAL_TOP_K = 8
 
@@ -42,7 +42,7 @@ async def _matching_chunks(user_id: int, query: str) -> list[str]:
 
 
 @router.post("/", response_model=ResumeDraftRead, status_code=status.HTTP_201_CREATED)
-# Retrieval + generation is a real-cost Gemini call per request — same
+# Retrieval + generation is a real-cost Gemini call per request. Same
 # rate-limiting protection as career_knowledge_routes.py's AI-triggering
 # routes, keyed per-account. See docs/app/concerns/README.md's now-fixed "No
 # rate limiting on AI-backed routes" entry.
@@ -78,7 +78,7 @@ async def list_my_resume_drafts(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
-    """Newest first, paginated — see docs/app/resumes/overview.md#pagination."""
+    """Newest first, paginated. See docs/app/resumes/overview.md#pagination."""
     user_id = await _current_user_id(current_user, db)
     return await resume_repository.list_by_user(user_id, db, limit=limit, offset=offset)
 
@@ -96,7 +96,7 @@ async def get_my_resume_draft(
 
 
 @router.put("/{draft_id}", response_model=ResumeDraftRead)
-# Rate-limited the same as create above — `content`-only edits are cheap,
+# Rate-limited the same as create above. `content`-only edits are cheap,
 # but PUT is the same endpoint the `refinement_prompt` AI-regeneration path
 # uses, so the whole route is protected uniformly.
 @rate_limiter_service.rate_limited(
@@ -111,9 +111,9 @@ async def update_my_resume_draft(
 ):
     """
     Two edit paths (see ResumeDraftUpdate's docstring): `refinement_prompt`
-    re-matches the knowledge base and regenerates via AI; bare `content`
-    is a direct manual edit, no AI call. Locked once approved — content
-    can't change after approval.
+    re-matches the knowledge base and regenerates via AI. Bare `content`
+    is a direct manual edit, no AI call. Content can't change once the
+    draft is approved.
     """
     user_id = await _current_user_id(current_user, db)
     draft = await get_or_404(
@@ -150,8 +150,8 @@ async def approve_my_resume_draft(
     db: AsyncSession = Depends(database.get_session),
 ):
     """
-    Locks a draft's content — from here on, only template
-    selection/finalization may proceed; content edits are rejected by the
+    Locks a draft's content. From here on, only template
+    selection/finalization may proceed. Content edits are rejected by the
     PUT endpoint above.
     """
     user_id = await _current_user_id(current_user, db)

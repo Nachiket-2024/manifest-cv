@@ -17,7 +17,7 @@ REQUEST_ID_HEADER = "X-Request-ID"
 
 # Upstream-supplied IDs are persisted into the audit log and structured logs
 # verbatim, so they're constrained to a safe, bounded charset before being
-# trusted; anything else (oversized, control characters, etc.) is replaced
+# trusted. Anything else (oversized, control characters, etc.) is replaced
 # with a freshly generated ID instead of being propagated.
 _VALID_REQUEST_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 

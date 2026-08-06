@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { listApplicationsApi, getApplicationApi, type ApplicationRead, type ApplicationDetailRead } from "../api/application_api";
 
 export const APPLICATIONS_QUERY_KEY = ["applications"] as const;
-// "list" disambiguates this from applicationQueryKey(applicationId) below —
-// see resumeQueries.ts's identical comment for why.
+// "list" disambiguates this from applicationQueryKey(applicationId) below.
+// See resumeQueries.ts's identical comment for why.
 export const applicationsListQueryKey = (limit: number, offset: number) =>
     ["applications", "list", limit, offset] as const;
 export const applicationQueryKey = (applicationId: number) => ["applications", applicationId] as const;

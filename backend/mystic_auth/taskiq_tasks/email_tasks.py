@@ -40,7 +40,7 @@ class ResilientRedisStreamBroker(RedisStreamBroker):
 # to a task's own `max_retries` label when the task raises : it does NOT
 # add a scheduler-based delay the way SmartRetryMiddleware's docs suggest,
 # since that requires a TaskiqScheduler/schedule_source this project doesn't
-# run; an immediate retry is the correct, simple fit for the one task here.
+# run. An immediate retry is the correct, simple fit for the one task here.
 broker: AsyncBroker = ResilientRedisStreamBroker(
     url=settings.REDIS_URL,
 ).with_result_backend(result_backend).with_middlewares(

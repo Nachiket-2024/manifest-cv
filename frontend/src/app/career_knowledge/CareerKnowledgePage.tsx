@@ -10,6 +10,8 @@ import {
     toaster,
     useUnsavedChangesWarning,
 } from "../app_sdk";
+import { BRAND_SOLID_HOVER_PROPS, SECONDARY_BUTTON_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
+import { DESTRUCTIVE_OUTLINE_HOVER_PROPS } from "../ui/buttonStyles";
 import { useCareerKnowledgeBaseQuery } from "./careerKnowledgeQueries";
 import {
     useCreateCareerKnowledgeBaseMutation,
@@ -23,9 +25,9 @@ import {
  * The caller's single career knowledge base (backend: /career-knowledge).
  * A user with no knowledge base yet sees a "get started" text dump form;
  * submitting it calls Gemini server-side to reorganize the raw dump into
- * structured Markdown before returning it — the create request briefly
+ * structured Markdown before returning it. The create request briefly
  * takes a few seconds for that reason. Once a knowledge base exists, the
- * structured content is directly editable; the original raw text stays
+ * structured content is directly editable. The original raw text stays
  * visible (collapsed) alongside it so the user can always verify nothing
  * was added that they didn't write themselves.
  */
@@ -132,6 +134,7 @@ const CareerKnowledgePage: React.FC = () => {
                                 loading={createMutation.isPending}
                                 loadingText="Structuring with AI..."
                                 disabled={!rawInput.trim()}
+                                {...BRAND_SOLID_HOVER_PROPS}
                             >
                                 Create knowledge base
                             </Button>
@@ -164,10 +167,16 @@ const CareerKnowledgePage: React.FC = () => {
                                     loading={updateMutation.isPending}
                                     loadingText="Saving..."
                                     disabled={!isDirty || !content.trim()}
+                                    {...BRAND_SOLID_HOVER_PROPS}
                                 >
                                     Save changes
                                 </Button>
-                                <Button variant="outline" colorPalette="red" onClick={() => setDeleteConfirmOpen(true)}>
+                                <Button
+                                    variant="outline"
+                                    colorPalette="red"
+                                    onClick={() => setDeleteConfirmOpen(true)}
+                                    {...DESTRUCTIVE_OUTLINE_HOVER_PROPS}
+                                >
                                     Start over
                                 </Button>
                             </Stack>
@@ -175,10 +184,10 @@ const CareerKnowledgePage: React.FC = () => {
 
                         <Stack gap={2} mt={6} pt={4} borderTopWidth="1px" borderColor="border.default">
                             <Button
-                                variant="ghost"
                                 size="sm"
                                 alignSelf="flex-start"
                                 onClick={() => setShowOriginalInput((v) => !v)}
+                                {...SECONDARY_BUTTON_PROPS}
                             >
                                 {showOriginalInput ? "Hide" : "Show"} original text you pasted in
                             </Button>

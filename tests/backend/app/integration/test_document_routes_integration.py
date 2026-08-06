@@ -3,7 +3,7 @@
 # End-to-end coverage for /resumes/{draft_id}/templates, .../finalize, and
 # .../finalize/download against the real ASGI app, real PostgreSQL, and
 # real Redis (see tests/backend/conftest.py). render_resume_pdf (the actual
-# tectonic/LaTeX compilation) is mocked in most tests here — this suite
+# tectonic/LaTeX compilation) is mocked in most tests here. This suite
 # verifies the approval gate, ownership, and persistence around it, not
 # LaTeX compilation itself. The two `test_real_tectonic_*` tests at the
 # bottom are the exception: they skip the mock entirely and exercise the
@@ -13,7 +13,7 @@
 # surfacing in production. Skipped automatically wherever the `tectonic`
 # binary isn't on PATH (any host running tests outside
 # docker/backend.Dockerfile, which is the only image tectonic is installed
-# in — see docker/overview.md).
+# in; see docker/overview.md).
 import shutil
 import uuid
 from unittest.mock import AsyncMock
@@ -128,13 +128,13 @@ async def test_preview_compiles_on_the_fly_without_persisting(client, created_em
     assert response.content == b"%PDF-1.4 fake pdf bytes"
     _mock_pdf_rendering.assert_awaited_once_with("# My approved resume", "classic")
 
-    # Nothing was persisted — a preview is compile-and-return only.
+    # Nothing was persisted. A preview is compile-and-return only.
     not_found_resp = await client.get(f"/resumes/{draft_id}/finalize")
     assert not_found_resp.status_code == 404
 
     # mystic-auth's SecurityHeadersMiddleware sends X-Frame-Options: DENY /
     # CSP frame-ancestors 'none' unconditionally, with no per-route
-    # opt-out (see security_headers_middleware.py) — this route is no
+    # opt-out (see security_headers_middleware.py). This route is no
     # exception. The frontend embeds this PDF by fetching it as a blob and
     # handing the <iframe> a same-origin `blob:` object URL instead of this
     # response's own cross-origin URL, which sidesteps framing headers
@@ -176,7 +176,7 @@ async def test_finalize_persists_and_can_be_fetched_and_downloaded(client, creat
     download_resp = await client.get(f"/resumes/{draft_id}/finalize/download")
     assert download_resp.status_code == 200
     # The download route (as opposed to the preview route above) is not
-    # meant to be framed — it's a direct file download, so it keeps the
+    # meant to be framed. It's a direct file download, so it keeps the
     # API-wide DENY default.
     assert download_resp.headers["X-Frame-Options"] == "DENY"
     assert download_resp.headers["content-type"] == "application/pdf"
@@ -191,14 +191,14 @@ async def test_finalize_persists_and_can_be_fetched_and_downloaded(client, creat
 
 # Deliberately includes LaTeX-special characters (%, &, #, $, _, {, }) that
 # a resume plausibly contains (compensation figures, C#, email addresses,
-# LaTeX-reserved punctuation in job titles) — markdown_to_latex.py must
+# LaTeX-reserved punctuation in job titles). markdown_to_latex.py must
 # escape these correctly or tectonic fails to compile outright, exactly the
 # class of bug the mocked tests above can't catch.
 _REAL_RESUME_MARKDOWN = """# Jane Doe
 
 ## Summary
 Backend engineer with 5+ years building APIs in C# & Python. Increased
-throughput by 40% at a previous role; salary expectations $120k-$150k.
+throughput by 40% at a previous role. salary expectations $120k-$150k.
 
 ## Skills
 * REST APIs, GraphQL, gRPC
@@ -206,8 +206,8 @@ throughput by 40% at a previous role; salary expectations $120k-$150k.
 * jane.doe@example.com | github.com/janedoe
 
 ## Experience
-### Senior Engineer — Acme_Corp (2021-2024)
-* Led a team of 3; #1 performer two years running.
+### Senior Engineer. Acme_Corp (2021-2024)
+* Led a team of 3. #1 performer two years running.
 * Reduced p99 latency by ~30% (measured under 100% load).
 """
 
@@ -231,8 +231,8 @@ async def test_real_tectonic_finalize_produces_a_valid_pdf(client, created_email
     download_resp = await client.get(f"/resumes/{draft.id}/finalize/download")
     assert download_resp.status_code == 200
     assert download_resp.headers["content-type"] == "application/pdf"
-    # A real tectonic-compiled PDF, not the mock's fixed placeholder bytes —
-    # %PDF is the format's own magic number; a substantial byte count rules
+    # A real tectonic-compiled PDF, not the mock's fixed placeholder bytes -
+    # %PDF is the format's own magic number. A substantial byte count rules
     # out an empty/truncated document.
     assert download_resp.content.startswith(b"%PDF")
     assert len(download_resp.content) > 1000

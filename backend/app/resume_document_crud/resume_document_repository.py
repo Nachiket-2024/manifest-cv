@@ -10,7 +10,7 @@ class ResumeDocumentRepository:
     """
     Persistence layer for finalized resume PDFs. Scoped to callers already
     holding a resume_draft_id they've verified belongs to the requesting
-    user (see api/document_routes/document_routes.py) — this repository
+    user (see api/document_routes/document_routes.py). This repository
     itself has no user_id column to filter by, since ownership flows
     through the parent resume_drafts row.
     """
@@ -26,7 +26,7 @@ class ResumeDocumentRepository:
         resume_draft_id: int, template_id: str, tex_source: str, pdf_bytes: bytes, db: AsyncSession
     ) -> ResumeDocument:
         # Atomic INSERT ... ON CONFLICT DO UPDATE rather than a check-then-act
-        # SELECT+INSERT/UPDATE — resume_draft_id is unique, so two concurrent
+        # SELECT+INSERT/UPDATE. resume_draft_id is unique, so two concurrent
         # finalize calls for the same draft would otherwise both see "no
         # existing row" and race an unhandled IntegrityError on the second
         # INSERT instead of both landing cleanly.
@@ -37,8 +37,8 @@ class ResumeDocumentRepository:
             pdf_bytes=pdf_bytes,
         )
         # on_conflict_do_update narrows the return type to ReturningInsert,
-        # which mypy sees as incompatible with stmt's inferred Insert type —
-        # correct and expected at runtime, just a fluent-API typing gap.
+        # which mypy sees as incompatible with stmt's inferred Insert type.
+        # Correct and expected at runtime, just a fluent-API typing gap.
         stmt = stmt.on_conflict_do_update(  # type: ignore[assignment]
             index_elements=[ResumeDocument.resume_draft_id],
             set_={

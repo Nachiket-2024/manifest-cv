@@ -16,8 +16,8 @@ from ...authorization.schemas.policy_schema import AuthorizationCheckRequest, Au
 from ...authorization.services.authorization_service import authorization_service
 from ...database.connection import database
 from ...user_crud.user_crud_collector import user_crud
-from ..route_helpers import get_or_404
-from .policy_shared import READ_DEPENDENCY
+from ..get_or_404 import get_or_404
+from .policy_permissions import READ_DEPENDENCY
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
 
@@ -34,12 +34,12 @@ async def check_user_authorization(
     (not GET+query params) because check.resource/context are arbitrary
     nested JSON, needed to evaluate ownership/resource-attribute/context
     conditions (e.g. "would this user be allowed to publish *this specific*
-    draft document?"), not just a resource-type-level check.
+    draft document-"), not just a resource-type-level check.
 
     Runs the exact same decision logic the app itself would use for this
     user/action/resource/context (via AuthorizationService.authorize_detailed
     : no separate/duplicated evaluation logic), returning both the outcome
-    and which policies were candidates vs. which actually granted it.
+    and which policies were candidates vs. Which actually granted it.
 
     This endpoint deliberately accepts check.context as caller-supplied :
     unlike every real protected route (which builds context itself via

@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 
 # Actions this app itself defines and knows to be sensitive (identity and
 # authorization-management actions, see permissions.py). Only these are
-# subject to the privilege-escalation guard below; see that method's
+# subject to the privilege-escalation guard below. See that method's
 # docstring for why arbitrary other action strings are deliberately exempt.
 _KNOWN_SENSITIVE_ACTIONS = frozenset(permission.value for permission in Permission)
 
@@ -34,7 +34,7 @@ class AuthorizationService:
         Request -> Authentication -> Authorization Service
                 -> Policy Evaluation Engine -> Allow / Deny
 
-    Routes and services never decide authorization themselves; they call
+    Routes and services never decide authorization themselves. They call
     authorize()/require() here with (user, action, resource, context), and
     this service owns fetching the user's policies and asking the
     evaluation engine for a decision. Nothing above this layer (routes,
@@ -55,7 +55,7 @@ class AuthorizationService:
         True if `user_email` is authorized for `action` on `resource_type`
         (optionally scoped to a specific `resource`/`context`), False
         otherwise. `user_email` is the acting user's identity, never their
-        role; role must never drive an authorization decision here.
+        role. Role must never drive an authorization decision here.
 
         Delegates entirely to authorize_with_decision (computes the
         decision and logs it) and returns just `.allowed`, a thin bool
@@ -83,7 +83,7 @@ class AuthorizationService:
         Same inputs as authorize(), but returns the full
         AuthorizationDecision instead of a bare bool, used wherever a real
         (not hypothetical) authorization decision needs its explanation
-        too, e.g. the batch-check endpoint reporting a per-item
+        too, e.g. The batch-check endpoint reporting a per-item
         denial_reason. Unlike authorize_detailed (below), this always logs
         an audit entry: it represents a real decision something is about
         to act on, exactly like authorize() does, because authorize() is
@@ -153,7 +153,7 @@ class AuthorizationService:
         reuses that list for every check below, avoiding repeated policy
         database queries within one batch request. That's the only
         difference from calling authorize_with_decision N times (which
-        would re-fetch on every call); the evaluation logic itself is the
+        would re-fetch on every call). The evaluation logic itself is the
         identical PolicyEvaluationEngine.evaluate_detailed call
         authorize_detailed also makes, so a batch-of-one check always
         agrees with a single authorize() call for the same input. Each
@@ -165,7 +165,7 @@ class AuthorizationService:
         denial_reason "evaluation_error" rather than crashing the rest of
         the batch or defaulting to allowed.
 
-        Returns one decision per input check, in the same order; the
+        Returns one decision per input check, in the same order. The
         route layer decides how much of each to expose (see
         api/pbac_routes/authorization_check_routes.py, which deliberately surfaces only
         allowed/denial_reason, never matched/rejected/failed_conditions,
@@ -222,7 +222,7 @@ class AuthorizationService:
         """
         Persists an audit log row for a real decision: `decision` is the
         full explanation to record, capturing not just the bare allow/deny
-        but which policies matched vs. were rejected and exactly which
+        but which policies matched vs. Were rejected and exactly which
         condition(s) failed on the rejected ones, so "why was this denied"
         is answerable from the audit trail alone, without re-running the
         evaluation.
@@ -272,7 +272,7 @@ class AuthorizationService:
     ) -> None:
         """
         Same inputs as authorize(), but raises HTTP 403 instead of
-        returning False; the form routes actually call (directly, or via
+        returning False. The form routes actually call (directly, or via
         dependencies.authorization_dependency.require_authorization).
         """
         allowed = await AuthorizationService.authorize(
@@ -316,7 +316,7 @@ class AuthorizationService:
         Deliberately scoped to Permission's fixed vocabulary rather than
         every action string: PBAC policies in this template are meant to
         freely grant whatever actions a downstream application defines for
-        its own business resources; policies:create/assign is a
+        its own business resources. Policies:create/assign is a
         general-purpose policy-authoring capability, not itself the
         resource being protected. Only this app's built-in identity/
         authorization actions are sensitive enough to guard here. Called

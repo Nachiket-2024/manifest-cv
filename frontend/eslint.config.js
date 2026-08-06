@@ -25,7 +25,7 @@ export default tseslint.config([
       globals: globals.browser,
     },
     rules: {
-      // Standard convention for "intentionally unused" (e.g. a function
+      // Standard convention for "intentionally unused" (e.g. A function
       // parameter kept for a stable API shape but not used in this
       // implementation) instead of silencing the rule file-wide.
       '@typescript-eslint/no-unused-vars': [

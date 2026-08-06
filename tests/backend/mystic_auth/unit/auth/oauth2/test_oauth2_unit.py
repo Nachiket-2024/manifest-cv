@@ -156,7 +156,7 @@ async def test_oauth2_login_initiate_embeds_state_and_pkce_challenge_in_url_and_
 # ---------------------------- handle_oauth2_callback: cancellation / provider errors ----------------------------
 # Regression guard: code/state used to be required route params with no
 # default, so a cancelled Google consent screen (which redirects back with
-# only ?error=access_denied and no code) previously hit FastAPI's own 422
+# only -error=access_denied and no code) previously hit FastAPI's own 422
 # validation error before ever reaching this handler, instead of a clean
 # redirect to the frontend login page.
 

@@ -5,8 +5,7 @@ from dataclasses import dataclass, field
 class AuthorizationDecision:
     """
     The full explanation behind one authorization decision, produced by
-    PolicyEvaluationEngine.evaluate_detailed, per claude.md's Authorization
-    Decision Explainability architecture:
+    PolicyEvaluationEngine.evaluate_detailed:
 
         AuthorizationService -> PolicyEvaluationEngine -> AuthorizationDecision
 
@@ -14,7 +13,7 @@ class AuthorizationDecision:
     re-tracing policies/conditions: the answer is already computed, right
     here, every time a detailed evaluation is requested (admin inspection,
     audit logging, tests). The engine still exposes a bare-bool `evaluate()`
-    for the hot path (every real authorize() call); this richer object is
+    for the hot path (every real authorize() call). This richer object is
     for the "detailed" mode requirements ask for, not a replacement for it.
 
     Fields:

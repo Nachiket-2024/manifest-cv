@@ -11,7 +11,7 @@ from ...database.base import Base
 class PolicyHistory(Base):
     """
     One immutable row per policy mutation (create/update/delete/rollback),
-    per claude.md's "Policy Versioning and Change History": policy changes
+    per policy versioning and change history: policy changes
     must be fully traceable and reversible, and rollback must create a new
     version, never overwrite history. Written by PolicyRepository's
     create/update/delete (the only places policies are ever mutated), so no
@@ -50,7 +50,7 @@ class PolicyHistory(Base):
     # is no resulting state).
     new_definition: Mapped[dict | None] = mapped_column(JSONB)
 
-    # Which definition fields actually differed (e.g. ["actions"]); null
+    # Which definition fields actually differed (e.g. ["actions"]). Null
     # for "created"/"deleted", where the entire definition is the change.
     changed_fields: Mapped[list[str] | None] = mapped_column(ARRAY(String))
 

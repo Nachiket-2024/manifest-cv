@@ -6,7 +6,7 @@ Create Date: 2026-07-14 00:00:01.000000
 
 Schema + data migration:
 1. Adds users.deleted_at (nullable timestamp): the soft-delete marker.
-   NULL means never deleted; set on soft delete, cleared on reactivation.
+   NULL means never deleted. Set on soft delete, cleared on reactivation.
 2. Grants the two new lifecycle permissions (users:purge, users:reactivate,
    see authorization/permissions.py) to the seeded system_superuser
    policy, following the same process docs/mystic_auth/authorization/adding-permissions.md

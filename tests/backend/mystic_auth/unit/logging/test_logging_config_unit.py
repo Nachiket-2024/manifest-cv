@@ -55,7 +55,7 @@ def test_get_startup_logger_has_no_file_handler():
 
 
 def test_get_startup_logger_uses_a_plain_console_formatter_in_dev(mocker):
-    # A human is watching this terminal live in dev (e.g. ./scripts/dev-up.sh),
+    # A human is watching this terminal live in dev, for example through ./scripts/docker/dev-up.sh.
     # so JSON there only costs readability, since nobody's querying their own
     # local terminal. See _make_stream_formatter's docstring.
     mocker.patch(f"{MODULE}.settings.ENVIRONMENT", "development")

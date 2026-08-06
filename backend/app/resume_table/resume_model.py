@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 
 if TYPE_CHECKING:
     # mypy can't follow the dynamic import below, so it gets a normal,
-    # statically-resolvable import instead — never executed at runtime,
+    # statically-resolvable import instead. Never executed at runtime,
     # since TYPE_CHECKING is always False when the module actually runs.
     from mystic_auth.database.base import Base
 else:
@@ -19,14 +19,14 @@ else:
 
 class ResumeDraft(Base):
     """
-    A tailored resume in progress for one job description. Many per user —
-    unlike CareerKnowledgeBase, which is a single source of truth, a user
+    A tailored resume in progress for one job description. Many per user,
+    unlike CareerKnowledgeBase, which is a single source of truth: a user
     tailors a separate resume per job they're applying to.
 
     `resume_content` starts null until the first AI generation and is then
     either directly edited or regenerated via `refinement_prompt` until the
     user approves (`status` -> "approved"). Approved drafts are
-    content-locked (see resume_routes.py) — only template
+    content-locked (see resume_routes.py); only template
     selection/finalization may proceed from there.
     """
 
@@ -34,14 +34,14 @@ class ResumeDraft(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Many drafts per user — cascades on account deletion since a draft has
+    # Many drafts per user. Cascades on account deletion since a draft has
     # no meaning without its owning account.
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     job_description = Column(Text, nullable=False)
     resume_content = Column(Text, nullable=True)
 
-    # "draft" | "approved" — plain string rather than a DB enum, matching
+    # "draft" | "approved". Plain string rather than a DB enum, matching
     # this codebase's existing preference for permissive string status
     # columns (e.g. application status in this same feature) over a rigid
     # DB-level enum that needs a migration to extend.

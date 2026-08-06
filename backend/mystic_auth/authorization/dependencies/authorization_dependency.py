@@ -1,3 +1,5 @@
+from collections.abc import Awaitable, Callable
+
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,7 +9,7 @@ from ..context.request_context_builder import build_authorization_context
 from ..services.authorization_service import authorization_service
 
 
-def require_authorization(action: str, resource_type: str):
+def require_authorization(action: str, resource_type: str) -> Callable[..., Awaitable[dict]]:
     """
     Returns a FastAPI dependency usable as
     `Depends(require_authorization("users:list_all", "users"))` that
@@ -19,7 +21,7 @@ def require_authorization(action: str, resource_type: str):
 
     This is the PBAC replacement for the RBAC-era
     authorization.permission_checker.require_permission (removed): routes
-    declare *what action on what resource* they need; the authorization
+    declare *what action on what resource* they need. The authorization
     service and policy evaluation engine behind it decide *who currently
     has that*, based entirely on assigned policies. No role ever enters
     this decision, and this dependency itself never inspects

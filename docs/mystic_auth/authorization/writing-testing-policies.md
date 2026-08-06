@@ -10,7 +10,7 @@ flowchart TD
     D --> E["5. Verify<br/><small>POST /authorization/users/{email}/authorization-check<br/>requires policies:read</small>"]
 ```
 
-1. **Decide the action(s) and resource type.** Use an existing `Permission` value if this is about users/policies themselves ([Adding New Permissions](adding-permissions.md)); otherwise any action string works for a downstream application's own resources.
+1. **Decide the action(s) and resource type.** Use an existing `Permission` value if this is about users/policies themselves ([Adding New Permissions](adding-permissions.md)). Otherwise any action string works for a downstream application's own resources.
 2. **Decide conditions, if any.** See the [Condition Schema Reference](condition-schema-reference.md): omit `conditions` entirely for an unconditional grant.
 3. **Create it** via `POST /authorization/policies` (requires `policies:create`, and you must already hold every action you're granting: see [Architecture](architecture.md#authorization-service)):
 
@@ -56,8 +56,10 @@ flowchart TD
 Every create/update/delete stages an immutable row in `policy_history` in the same transaction as the mutation:
 
 - `GET /authorization/policies/{name}/history`: every recorded change to this policy, newest first. Works even after the policy itself has been deleted (history is keyed by name, not a live foreign key).
-- `GET /authorization/policies/{name}/history/compare?from_id=X&to_id=Y`: field-by-field diff between two versions.
-- `POST /authorization/policies/{name}/history/{history_id}/rollback` (requires `policies:update`): restores that version's definition. This creates a **new** `"rolled_back"`-labeled history entry; it never overwrites or deletes the entry being rolled back to. Goes through the exact same guards as a direct `PUT`: a malformed `conditions` block in the restored definition is rejected, a baseline policy can't be rolled back into a renamed/deactivated state, and: since a historical revision can hold actions the policy no longer grants today: the caller must already hold every action the *restored* definition would grant, not just the policy's current ones.
+- `GET /authorization/policies/{name}/history/compare-from_id=X&to_id=Y`: field-by-field diff between two versions.
+- `POST /authorization/policies/{name}/history/{history_id}/rollback` (requires `policies:update`): restores that version's definition. This creates a **new** `"rolled_back"`-labeled history entry. It never overwrites or deletes the entry being rolled back to. Goes through the exact same guards as a direct `PUT`: a malformed `conditions` block in the restored definition is rejected, a baseline policy can't be rolled back into a renamed/deactivated state, and: since a historical revision can hold actions the policy no longer grants today: the caller must already hold every action the *restored* definition would grant, not just the policy's current ones.
+
+---
 
 ## Local testing approach
 
@@ -78,7 +80,7 @@ def test_my_new_policy_shape_grants_the_right_action():
     assert decision.allowed is True
 ```
 
-**Against a real database** (via `docker compose exec --user root -w /repo backend pytest tests/backend/mystic_auth/integration/`: `--user root` needed on native Linux, see [Troubleshooting](troubleshooting.md): or from the host once `docker compose up -d postgres redis`): create a real user, assign the real policy, log in, and hit a real protected route:
+**Against a real database** (via `scripts/docker/backend-exec.sh pytest tests/backend/mystic_auth/integration/`, see [Troubleshooting](troubleshooting.md): or from the host once `docker compose up -d postgres redis`): create a real user, assign the real policy, log in, and hit a real protected route:
 
 ```python
 @pytest.mark.asyncio
@@ -91,7 +93,9 @@ async def test_assigning_report_viewers_actually_grants_access(client, created_e
     assert resp.status_code == 200
 ```
 
-See `tests/backend/mystic_auth/integration/test_authorization_routes_integration.py` for the full fixture pattern (`_create_verified_user`, `_create_system_user`, `_create_user_with_custom_policy_actions`) and `tests/backend/mystic_auth/security/conftest.py` for the shared reusable version of the same helpers.
+See `tests/backend/mystic_auth/integration/authorization_test_accounts.py` for the full fixture pattern (`create_verified_user`, `create_system_user`, `create_user_with_custom_policy_actions`) and `tests/backend/mystic_auth/security/conftest.py` for the shared reusable version of the same helpers.
+
+---
 
 ## Unit test examples for policies
 

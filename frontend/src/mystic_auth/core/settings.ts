@@ -1,6 +1,6 @@
 /**
  * Single source of truth for the product name shown in the UI (navbar,
- * auth pages, document title); change it here once rather than hunting
+ * auth pages, document title). Change it here once rather than hunting
  * down every hardcoded occurrence.
  */
 export const APP_NAME = import.meta.env.VITE_APP_NAME;

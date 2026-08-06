@@ -51,7 +51,7 @@ def test_send_email_task_is_labeled_to_retry_on_error():
 
 def test_broker_uses_mkstream_for_deterministic_group_creation():
     """taskiq spawns multiple worker processes (default: 2), each independently
-    calling broker.startup() on a fresh Redis instance. mkstream=True makes the
+    calling broker.startup() on a fresh Redis instance. Mkstream=True makes the
     stream + consumer group creation a single atomic XGROUP CREATE ... MKSTREAM,
     so there's no window where the stream exists but the group doesn't (or vice
     versa) for a concurrent XREADGROUP to race against."""
@@ -62,7 +62,7 @@ def test_broker_uses_mkstream_for_deterministic_group_creation():
 async def test_broker_startup_survives_concurrent_group_creation_race():
     """Regression guard for the fresh-Redis startup race previously documented
     in docs/mystic_auth/concerns/README.md. Every worker process calls
-    broker.startup() -> XGROUP CREATE ... MKSTREAM independently; Redis raises
+    broker.startup() -> XGROUP CREATE ... MKSTREAM independently. Redis raises
     BUSYGROUP for whichever process loses that race. The broker must swallow
     it (not propagate) so a losing process doesn't crash-loop."""
     with patch("taskiq_redis.redis_broker.Redis") as redis_cls:

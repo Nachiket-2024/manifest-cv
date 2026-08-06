@@ -10,8 +10,10 @@ import {
     type DataTableColumn,
     FormAlert,
     ConfirmDialog,
+    TableActionButton,
     toaster,
 } from "../app_sdk";
+import { BRAND_SOLID_HOVER_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
 import { useResumeDraftsQuery, RESUME_DRAFTS_PAGE_SIZE } from "./resumeQueries";
 import { useCreateResumeDraftMutation, useDeleteResumeDraftMutation } from "./resumeMutations";
 import type { ResumeDraftRead } from "../api/resume_api";
@@ -20,10 +22,10 @@ import type { ResumeDraftRead } from "../api/resume_api";
  * ResumeDraftsPage
  * ----------------------------
  * Paste a job description, which immediately triggers server-side
- * retrieval + AI generation — the create call takes a few seconds for
+ * retrieval + AI generation. The create call takes a few seconds for
  * that reason, same shape as CareerKnowledgePage's create flow. Existing
- * drafts link through to ResumeEditorPage for
- * editing/refinement/approval/finalization.
+ * drafts link through to ResumeEditorPage for editing, refinement,
+ * approval, and finalization.
  */
 const ResumeDraftsPage: React.FC = () => {
     const navigate = useNavigate();
@@ -52,7 +54,7 @@ const ResumeDraftsPage: React.FC = () => {
     const handleDeleteConfirm = () => {
         if (!deletingDraft) return;
         // Deleting the only row on a page beyond the first would otherwise
-        // leave the pager stuck on a now-empty page — step back one page
+        // leave the pager stuck on a now-empty page. Step back one page
         // instead, same as ApplicationsPage's identical handling.
         const isLastRowOnThisPage = drafts?.length === 1 && offset > 0;
         deleteMutation.mutate(deletingDraft.id, {
@@ -95,12 +97,12 @@ const ResumeDraftsPage: React.FC = () => {
             align: "end",
             render: (d) => (
                 <HStack justify="flex-end" gap={2}>
-                    <Button size="xs" variant="outline" onClick={() => navigate(`/resumes/${d.id}`)}>
+                    <TableActionButton onClick={() => navigate(`/resumes/${d.id}`)}>
                         Open
-                    </Button>
-                    <Button size="xs" variant="outline" colorPalette="red" onClick={() => setDeletingDraft(d)}>
+                    </TableActionButton>
+                    <TableActionButton colorPalette="red" onClick={() => setDeletingDraft(d)}>
                         Delete
-                    </Button>
+                    </TableActionButton>
                 </HStack>
             ),
         },
@@ -131,6 +133,7 @@ const ResumeDraftsPage: React.FC = () => {
                         loading={createMutation.isPending}
                         loadingText="Generating resume..."
                         disabled={!jobDescription.trim()}
+                        {...BRAND_SOLID_HOVER_PROPS}
                     >
                         Generate resume
                     </Button>

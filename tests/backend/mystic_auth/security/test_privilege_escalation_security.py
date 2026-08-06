@@ -1,11 +1,11 @@
 # tests/backend/mystic_auth/security/test_privilege_escalation_security.py
 #
 # Real-DB proof of AuthorizationService.assert_authorized_to_grant
-# (claude.md's privilege-escalation protection): a caller holding only
+# (the privilege-escalation protection): a caller holding only
 # policies:create/update/assign (never system_superuser itself) must never
 # be able to mint, edit, or hand out one of this app's own sensitive
 # actions (Permission's vocabulary) that they don't already hold. Unit
-# tests already cover this with mocks; these hit the real API + real DB.
+# tests already cover this with mocks. These hit the real API + real DB.
 import pytest
 from backend.mystic_auth.authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
 
@@ -121,7 +121,7 @@ async def test_policies_update_only_cannot_rollback_to_a_revision_holding_an_unh
 @pytest.mark.asyncio
 async def test_system_superuser_can_still_perform_all_of_the_above(client, created_emails):
     """Negative-control: a genuine system_superuser holder is NOT blocked
-    by the same guard; this proves it's a privilege check, not a broken
+    by the same guard. This proves it's a privilege check, not a broken
     endpoint."""
     system_email = unique_email("system")
     await create_system_user(client, created_emails, system_email)

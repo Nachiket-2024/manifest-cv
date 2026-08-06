@@ -15,7 +15,7 @@ from ...resume_document_table.resume_document_schema import (
 )
 from ...sdk import database, get_current_user, get_or_404
 
-# Nested under /resumes/{draft_id} — document generation always operates on
+# Nested under /resumes/{draft_id}. Document generation always operates on
 # one specific resume draft, never independently of it.
 router = APIRouter(prefix="/resumes/{draft_id}", tags=["Resume Documents"])
 
@@ -32,8 +32,8 @@ async def _current_user_id(current_user: dict, db: AsyncSession) -> int:
 async def _owned_approved_draft(draft_id: int, user_id: int, db: AsyncSession):
     """
     Fetches a draft owned by the caller and enforces that template
-    preview/finalization only happens after the resume is approved —
-    content is locked from that point on, so it's safe to compile.
+    preview/finalization only happens after the resume is approved.
+    Content is locked from that point on, so it's safe to compile.
     """
     draft = await get_or_404(
         resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found"
@@ -57,7 +57,7 @@ async def list_resume_templates(
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(database.get_session),
 ):
-    """Available visual styles — static catalog, no compilation."""
+    """Available visual styles. Static catalog, no compilation."""
     user_id = await _current_user_id(current_user, db)
     await _owned_approved_draft(draft_id, user_id, db)
     return list_templates()
@@ -65,7 +65,7 @@ async def list_resume_templates(
 
 @router.get("/templates/{template_id}/preview")
 # Each call shells out to tectonic for a real LaTeX compile (up to ~60s of
-# CPU/wall time) — the same AI-route-grade rate limiting as career knowledge/
+# CPU/wall time). The same AI-route-grade rate limiting as career knowledge/
 # resume generation applies here so a caller can't exhaust backend compute
 # by hammering this endpoint. See docs/app/concerns/README.md.
 @rate_limiter_service.rate_limited(
@@ -80,7 +80,7 @@ async def preview_resume_template(
 ):
     """
     Compiles the approved resume with one template on the fly and returns
-    the PDF directly, without persisting anything — lets the user compare
+    the PDF directly, without persisting anything. Lets the user compare
     styles (step 15) before committing to one via POST .../finalize.
     """
     user_id = await _current_user_id(current_user, db)
@@ -91,7 +91,7 @@ async def preview_resume_template(
         _, pdf_bytes = await render_resume_pdf(draft.resume_content, template_id)
     except LatexCompilationError as exc:
         # Tectonic's raw stderr/stdout can include internal file paths/tool
-        # diagnostics — logged in full for debugging, but never returned to
+        # diagnostics. Logged in full for debugging, but never returned to
         # the caller verbatim (matches main.py's generic-500 policy for
         # unexpected failures elsewhere in the app).
         logger.warning("Template preview compilation failed for draft_id=%s: %s", draft_id, exc)
@@ -103,7 +103,7 @@ async def preview_resume_template(
 
 
 @router.post("/finalize", response_model=ResumeDocumentRead)
-# Same rate limiting as the preview route above — this is the persisting
+# Same rate limiting as the preview route above. This is the persisting
 # variant of the identical compile-on-demand operation.
 @rate_limiter_service.rate_limited(
     "resume_document_finalize", account_key_func=lambda kwargs: kwargs["current_user"]["email"]

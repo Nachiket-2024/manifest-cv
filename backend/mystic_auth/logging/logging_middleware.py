@@ -16,7 +16,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         logger.info(f"Incoming request: {request.method} {request.url}")
 
-        # Exceptions are intentionally NOT caught here; they're left to
+        # Exceptions are intentionally NOT caught here. They're left to
         # propagate to the single global exception handler in main.py, which
         # logs the full traceback and returns the 500 response. Catching them
         # here too previously meant this middleware's own plain

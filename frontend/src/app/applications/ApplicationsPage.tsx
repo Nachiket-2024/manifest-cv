@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Badge, Button, HStack, NativeSelect, Text } from "@chakra-ui/react";
+import { Badge, HStack, NativeSelect, Text } from "@chakra-ui/react";
 
 import Pager from "../ui/Pager";
 import { settings } from "../sdk";
@@ -8,6 +8,7 @@ import {
     DataTable,
     type DataTableColumn,
     ConfirmDialog,
+    TableActionButton,
     toaster,
 } from "../app_sdk";
 import { useApplicationsQuery, APPLICATIONS_PAGE_SIZE } from "./applicationQueries";
@@ -19,10 +20,10 @@ const STATUS_OPTIONS = ["applied", "interviewing", "offered", "rejected"] as con
 /**
  * ApplicationsPage
  * ----------------------------
- * Tracked applications — each row is a read-only snapshot of the resume
- * actually sent (content + PDF), except
- * for status, which is expected to change over time as an application
- * progresses (see ApplicationRecord's docstring).
+ * Tracked applications. Each row is a read-only snapshot of the resume
+ * actually sent (content + PDF), except for status, which is expected to
+ * change over time as an application progresses (see ApplicationRecord's
+ * docstring).
  */
 const ApplicationsPage: React.FC = () => {
     const [offset, setOffset] = useState(0);
@@ -46,14 +47,14 @@ const ApplicationsPage: React.FC = () => {
             align: "end",
             render: (a) => (
                 <HStack justify="flex-end" gap={2}>
-                    <Button asChild size="xs" variant="outline">
+                    <TableActionButton asChild>
                         <a href={applicationPdfDownloadUrl(a.id, settings.apiBaseUrl)} target="_blank" rel="noreferrer">
                             PDF
                         </a>
-                    </Button>
-                    <Button size="xs" variant="outline" colorPalette="red" onClick={() => setDeletingApp(a)}>
+                    </TableActionButton>
+                    <TableActionButton colorPalette="red" onClick={() => setDeletingApp(a)}>
                         Delete
-                    </Button>
+                    </TableActionButton>
                 </HStack>
             ),
         },
@@ -104,7 +105,7 @@ const StatusCell: React.FC<{ application: ApplicationRead }> = ({ application })
     const updateMutation = useUpdateApplicationMutation(application.id);
     // A native <select> immediately shows whatever the user picks, in the
     // browser's own DOM, regardless of whether the mutation it triggers
-    // ever succeeds — React only rewrites that DOM value when the `value`
+    // ever succeeds. React only rewrites that DOM value when the `value`
     // prop it's given actually changes between renders. Binding straight to
     // `application.status` (server data) meant a failed update left the
     // dropdown showing the rejected value indefinitely, since the server
@@ -115,7 +116,7 @@ const StatusCell: React.FC<{ application: ApplicationRead }> = ({ application })
 
     // Same render-time sync pattern ResumeEditorPage uses for its content
     // field, not an effect: adopt the server's status when it actually
-    // changes (a successful update landing, a background refetch) — but
+    // changes (a successful update landing, a background refetch). But
     // never while a mutation this cell itself started is still in flight.
     if (application.status !== prevServerStatus && !updateMutation.isPending) {
         setPrevServerStatus(application.status);

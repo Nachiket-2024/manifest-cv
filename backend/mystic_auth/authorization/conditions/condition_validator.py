@@ -47,13 +47,13 @@ def validate_conditions(conditions: dict | None) -> None:
         problem found across the whole block, not just the first.
 
     Called from api/pbac_routes/policy_crud_routes.py's create_policy and update_policy
-    *before* any database write (claude.md: "Must happen before database
+    *before* any database write ("Must happen before database
     writes"): an invalid conditions block must never be persisted. This
     is a write-time complement to ConditionEvaluationService's own
     fail-safe deny-on-unknown-key behavior at *evaluation* time (defense in
     depth): that runtime fail-safe protects against conditions that
-    somehow got into the database another way (e.g. a direct migration/DB
-    write); this validator's job is to stop bad data from ever reaching
+    somehow got into the database another way (e.g. A direct migration/DB
+    write). This validator's job is to stop bad data from ever reaching
     that point via the management API, with a clear error explaining why,
     rather than a policy silently never granting anything.
     """
@@ -126,7 +126,7 @@ def _validate_date_range(value) -> list[str]:
     # Canonical, only-supported field names are "start"/"end" (matching
     # the "time" condition's own start/end naming), mirrored exactly by
     # DateRangeCondition.evaluate. No aliases (e.g. "start_date"/"end_date")
-    # are recognized; a dict using them fails the "requires at least one
+    # are recognized. A dict using them fails the "requires at least one
     # of" check below the same as an empty dict would.
     if not isinstance(value, dict):
         return ["'date_range' must be an object"]

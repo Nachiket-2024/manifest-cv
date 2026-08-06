@@ -4,10 +4,9 @@ Revision ID: b7d3a1c9e4f2
 Revises: f2754349a6c7
 Create Date: 2026-07-13 00:00:00.000000
 
-Introduces the real Policy-Based Access Control (PBAC) schema per
-claude.md's target architecture, replacing the role -> permission mapping
-that previously lived in application code (authorization/role_permissions.py,
-now removed):
+Introduces the real Policy-Based Access Control (PBAC) schema, replacing
+the role -> permission mapping that previously lived in application code
+(authorization/role_permissions.py, now removed):
 
   - policies: the primary authorization unit (identity, description,
     granted actions, resource type, optional conditions, audit fields).
@@ -133,8 +132,8 @@ def upgrade() -> None:
 
     # ---------------------------- Bridge existing users: role -> policy assignment ----------------------------
     # One-time data migration so upgrading never changes anyone's effective
-    # access: every existing user gets self_service; admin/system also get
-    # user_administration; system also gets system_superuser. From here on,
+    # access: every existing user gets self_service. Admin/system also get
+    # user_administration. System also gets system_superuser. From here on,
     # the `role` column is never read to make this decision again.
     users_table = sa.table(
         'users',

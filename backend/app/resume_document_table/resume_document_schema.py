@@ -12,7 +12,7 @@ class ResumeDocumentFinalize(BaseModel):
 class ResumeDocumentRead(BaseModel):
     """
     Metadata for a finalized document. `pdf_bytes`/`tex_source` are
-    deliberately excluded — fetched separately via the download endpoint so
+    deliberately excluded. Fetched separately via the download endpoint so
     this stays cheap to return alongside a resume draft.
     """
 

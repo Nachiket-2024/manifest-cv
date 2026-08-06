@@ -79,7 +79,7 @@ async def test_reset_password_succeeds_and_consumes_token(mocker):
     set_mock.assert_not_called()
     # A successful reset must invalidate any session an attacker who stole
     # the account may already hold.
-    revoke_all_mock.assert_awaited_once_with("user@example.com")
+    revoke_all_mock.assert_awaited_once_with("user@example.com", None)
 
 
 @pytest.mark.asyncio
@@ -118,7 +118,7 @@ async def test_reset_password_concurrent_replay_only_lets_one_request_through(mo
         f"{MODULE}.password_service.verify_reset_token",
         return_value={"email": "user@example.com", "exp": FUTURE_EXP},
     )
-    # First caller wins the atomic fetch-and-delete; a second, concurrent
+    # First caller wins the atomic fetch-and-delete. A second, concurrent
     # caller racing it finds the key already gone.
     mocker.patch(f"{MODULE}.redis_client.getdel", new_callable=AsyncMock, side_effect=["1", None])
     mocker.patch(f"{MODULE}.password_service.validate_password_strength", return_value=True)

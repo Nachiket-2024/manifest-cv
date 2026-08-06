@@ -4,14 +4,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 # The only statuses the frontend's status selector (ApplicationsPage.tsx's
-# STATUS_OPTIONS) ever sends — constraining the backend to the same fixed
+# STATUS_OPTIONS) ever sends. Constraining the backend to the same fixed
 # set closes an input-validation gap (arbitrary free text was previously
 # accepted and stored) without dropping any behavior the UI actually uses.
 # Extending this set to add a new status (e.g. "withdrawn") means updating
 # both this Literal and STATUS_OPTIONS together.
 ApplicationStatus = Literal["applied", "interviewing", "offered", "rejected"]
 
-# A short, human-typed field — a bound here is purely a sanity cap against a
+# A short, human-typed field. A bound here is purely a sanity cap against a
 # malformed/abusive request, not a real-world usage constraint.
 _MAX_COMPANY_NAME_LENGTH = 200
 
@@ -19,8 +19,8 @@ _MAX_COMPANY_NAME_LENGTH = 200
 class ApplicationCreate(BaseModel):
     """
     Saves a tracked application from an already-finalized resume document.
-    `resume_draft_id` identifies which finalized document to snapshot —
-    the actual content/PDF are copied server-side, never supplied
+    `resume_draft_id` identifies which finalized document to snapshot.
+    The actual content/PDF are copied server-side, never supplied
     directly by the client.
     """
 
@@ -33,9 +33,9 @@ class ApplicationCreate(BaseModel):
 
 class ApplicationUpdate(BaseModel):
     """
-    Partial update. Deliberately excludes the resume content/PDF snapshot —
-    those are read-only once saved (see ApplicationRecord's docstring);
-    only the tracking fields (company/date/time/status) can change as an
+    Partial update. Deliberately excludes the resume content/PDF snapshot,
+    read-only once saved (see ApplicationRecord's docstring). Only the
+    tracking fields (company/date/time/status) can change as an
     application progresses.
     """
 
@@ -46,7 +46,7 @@ class ApplicationUpdate(BaseModel):
 
 
 class ApplicationRead(BaseModel):
-    """Summary schema for list views — excludes the resume content/PDF snapshot to stay lightweight."""
+    """Summary schema for list views. Excludes the resume content/PDF snapshot to stay lightweight."""
 
     id: int
     company_name: str
@@ -61,6 +61,6 @@ class ApplicationRead(BaseModel):
 
 
 class ApplicationDetailRead(ApplicationRead):
-    """Full schema for a single application — includes the resume Markdown snapshot (not the PDF bytes)."""
+    """Full schema for a single application. Includes the resume Markdown snapshot (not the PDF bytes)."""
 
     resume_content_snapshot: str

@@ -19,7 +19,7 @@ from ...retrieval.knowledge_retrieval_service import (
 )
 from ...sdk import capture_exception, database, get_current_user, get_or_404
 
-# Self-service only, one knowledge base per authenticated user — no PBAC
+# Self-service only, one knowledge base per authenticated user. No PBAC
 # permission is required (same reasoning as audit_log_routes.py's
 # /security-log/me: reading/editing one's own private data isn't a
 # privileged operation, and ownership is enforced server-side by
@@ -46,13 +46,13 @@ async def _structure_or_502(raw_input: str) -> str:
 async def _reindex_best_effort(user_id: int, content: str) -> None:
     """
     The Postgres write this always runs after is the source of truth and
-    has already committed by the time this is called — a Qdrant failure
+    has already committed by the time this is called. A Qdrant failure
     here doesn't mean the caller's save failed, just that search over this
     knowledge base is stale until the next successful save. Reported to
     error monitoring so it's visible to an operator, but deliberately never
     raised: turning this into a 502 would tell the caller their save failed
     when it didn't, and (for the create route specifically) leave them
-    unable to usefully retry — a second POST would just 409, since the row
+    unable to usefully retry. A second POST would just 409, since the row
     already exists.
     """
     try:
@@ -63,7 +63,7 @@ async def _reindex_best_effort(user_id: int, content: str) -> None:
 
 
 async def _delete_index_best_effort(user_id: int) -> None:
-    """Same reasoning as _reindex_best_effort — the DB row is already gone."""
+    """Same reasoning as _reindex_best_effort. The DB row is already gone."""
     try:
         await delete_knowledge_base(user_id)
     except (AIIntegrationError, RetrievalError) as exc:
@@ -72,8 +72,8 @@ async def _delete_index_best_effort(user_id: int) -> None:
 
 
 @router.post("/", response_model=CareerKnowledgeBaseRead, status_code=status.HTTP_201_CREATED)
-# Every call here triggers a Gemini structuring call plus a Qdrant index —
-# both real cost/latency, unlike a plain CRUD write — so this gets the same
+# Every call here triggers a Gemini structuring call plus a Qdrant index,
+# both real cost/latency, unlike a plain CRUD write. So this gets the same
 # rate-limiting protection as auth's expensive endpoints (signup/login),
 # keyed per-account so one caller can't drive up AI spend by hammering
 # their own account from many IPs. See docs/app/concerns/README.md's now-fixed
@@ -120,7 +120,7 @@ async def get_my_career_knowledge_base(
 
 
 @router.put("/", response_model=CareerKnowledgeBaseRead)
-# Rate-limited the same as the create route above — a bare `content` edit
+# Rate-limited the same as the create route above. A bare `content` edit
 # (no AI call) is cheap, but PUT is the same endpoint the `raw_input`
 # AI-restructuring path uses, so the whole route is protected uniformly
 # rather than only when the request happens to include `raw_input`.
@@ -136,7 +136,7 @@ async def update_my_career_knowledge_base(
     """
     Two distinct edit paths sharing one endpoint (see
     CareerKnowledgeBaseUpdate's docstring): a fresh `raw_input` re-dump
-    regenerates `content` via AI from scratch; a bare `content` edit is the
+    regenerates `content` via AI from scratch. A bare `content` edit is the
     user directly editing their Markdown (step 5), no AI involved. Either
     way, the resulting content is always re-indexed in Qdrant so search
     stays in sync with what's actually stored.
@@ -172,7 +172,7 @@ async def delete_my_career_knowledge_base(
 
 @router.get("/search", response_model=list[CareerKnowledgeSearchResult])
 # Every call embeds `query` via a real Gemini call, same cost profile as the
-# create/update routes above — rate-limited the same way rather than left
+# create/update routes above. Rate-limited the same way rather than left
 # open just because it's a GET. See docs/app/concerns/README.md.
 @rate_limiter_service.rate_limited(
     "career_knowledge_search", account_key_func=lambda kwargs: kwargs["current_user"]["email"]

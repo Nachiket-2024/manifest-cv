@@ -1,8 +1,8 @@
 """
 Prompt templates for the knowledge-base structuring, resume generation, and
-refinement steps. Kept separate from gemini_client.py so the prompt itself
-— the actual enforcement of the invent-nothing constraint — can be
-reviewed/edited without touching API call plumbing.
+refinement steps. Kept separate from gemini_client.py, which enforces the
+invent-nothing constraint, so prompts can be reviewed and edited without
+touching API call plumbing.
 """
 
 STRUCTURE_KNOWLEDGE_BASE_SYSTEM_PROMPT = """\

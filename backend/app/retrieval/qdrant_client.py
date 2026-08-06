@@ -6,7 +6,7 @@ from ..sdk import settings
 
 # One shared collection for every user's career knowledge chunks, isolated
 # per-user via a payload filter (see knowledge_retrieval_service.py) rather
-# than one collection per user — Qdrant collections are a heavier unit than
+# than one collection per user. Qdrant collections are a heavier unit than
 # that, and per-user filtering scales fine at this data size.
 COLLECTION_NAME = "career_knowledge_chunks"
 
@@ -23,7 +23,7 @@ def get_client() -> AsyncQdrantClient:
 async def ensure_collection() -> None:
     """
     Creates the shared collection if it doesn't already exist. Called once
-    at app startup (see main.py's lifespan) — idempotent, safe on every
+    at app startup (see main.py's lifespan). Idempotent, safe on every
     restart.
     """
     client = get_client()

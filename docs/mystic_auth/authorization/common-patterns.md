@@ -6,7 +6,7 @@ Unlike [Policy JSON Examples](policy-examples.md) (what a condition type's JSON 
 
 **The need:** "this user can see every project under division X": projects/teams/companies form a tree, not a flat list.
 
-**Why it doesn't fit directly:** [`resource_attributes`](condition-schema-reference.md#resource_attributes) only ever does flat equality on a field of the resource: there's no built-in "any descendant of X" traversal, and there isn't meant to be; PBAC's condition set is intentionally small and generic rather than growing a bespoke operator for every domain shape.
+**Why it doesn't fit directly:** [`resource_attributes`](condition-schema-reference.md#resource_attributes) only ever does flat equality on a field of the resource: there's no built-in "any descendant of X" traversal, and there isn't meant to be. PBAC's condition set is intentionally small and generic rather than growing a bespoke operator for every domain shape.
 
 **The pattern:** the fix is a modeling choice on *your own* resource table, one level below PBAC entirely. Alongside whatever self-referential `parent_id` column your table already has for the real tree structure, add a second, denormalized column that's always the top-most ancestor's id (equal to its own id for a root row), maintained by a small helper on insert/update. A policy then scopes on *that* column with plain flat equality: no traversal needed at authorization time, because the traversal already happened once, at write time, instead of on every check.
 

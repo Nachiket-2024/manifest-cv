@@ -25,7 +25,6 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
     op.create_table(
         'career_knowledge_bases',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
@@ -38,5 +37,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
     op.drop_table('career_knowledge_bases')

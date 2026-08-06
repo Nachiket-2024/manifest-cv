@@ -4,7 +4,7 @@ Revision ID: e2b6c8a4f1d5
 Revises: d9a1e5c7f3b8
 Create Date: 2026-07-15 00:00:00.000000
 
-Per claude.md's Remaining PBAC Work item #1: the single coarse
+The single coarse
 "policies:manage" action is replaced with fine-grained actions
 (policies:read/create/update/delete/assign/revoke) so a caller could, in
 future, be granted e.g. only policies:read (to inspect/audit) without also
@@ -14,7 +14,7 @@ This is a pure data migration: it updates the existing seeded
 `system_superuser` policy row's `actions` array in place (no schema
 change). Every route that previously required "policies:manage" now
 requires one of the fine-grained actions instead (see
-authorization/routes/policy_routes.py); updating this one policy row is
+authorization/routes/policy_routes.py). Updating this one policy row is
 what keeps the system superuser able to do all of them, exactly as before.
 """
 from collections.abc import Sequence

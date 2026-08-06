@@ -14,7 +14,7 @@ interface OAuth2ButtonProps {
 // callback server-side and redirects back with the session cookie already
 // set. `error`/`isAuthenticated`/`user` below are static empty values
 // because nothing in the frontend populates them (there is no frontend
-// OAuth2 callback route); only `globalAuth`, the real shared session
+// OAuth2 callback route). Only `globalAuth`, the real shared session
 // status, carries live data.
 const OAuth2LoginButton: React.FC<OAuth2ButtonProps> = ({ onAttempt }) => {
     const globalAuth = useAuthStore((s) => !!s.isAuthenticated);
