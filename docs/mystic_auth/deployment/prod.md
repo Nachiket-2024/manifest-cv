@@ -8,8 +8,8 @@ terminates TLS with automatic Let's Encrypt certificates. Use this instead of
 rather than route from your own machine through Cloudflare Tunnel. If you do
 not have a public server, see [Local-Prod Deployment](local-prod.md) instead.
 
-Not sure this is the mode you want- See the
-[dev vs. Local-prod vs. Prod comparison](guide.md#at-a-glance) in the
+Not sure this is the mode you want? See the
+[dev vs. local-prod vs. prod comparison](guide.md#at-a-glance) in the
 Deployment Guide.
 
 ---
@@ -122,7 +122,7 @@ for the full explanation of each.
 
 ## What's different from dev / local-prod
 
-See [Docker Overview: dev vs. Production compose](../docker/overview.md#dev-vs-production-compose)
+See [Docker Overview: dev vs. production compose](../docker/overview.md#dev-vs-production-compose)
 for the full table. Same production image/runtime shape as local-prod (no
 bind mounts, no reload, `alembic` gates startup), but Caddy replaces
 Cloudflare Tunnel as the public entrypoint and TLS terminator.

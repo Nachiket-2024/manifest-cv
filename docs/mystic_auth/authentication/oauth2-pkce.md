@@ -71,9 +71,9 @@ A random `state = secrets.token_urlsafe(32)` is generated alongside the PKCE pai
 
 - **Redirect URI is server-side fixed** (`settings.GOOGLE_REDIRECT_URI`), never influenced by the client, ruling out an open-redirect-via-OAuth attack.
 - **`email_verified` is load-bearing**: a callback where Google's own `email_verified` is falsy (or missing) is rejected outright, since this is the only proof of email ownership the flow trusts. See `oauth2_login_handler.py`'s callback handler.
-- **First-time login** creates a user with `role=UserRole.user` (display-only), `is_verified=True`, `hashed_password=None`, and assigns the `self_service` policy, mirroring `signup_service.py`'s policy assignment exactly (role never grants access. See [PBAC Architecture](../authorization/architecture.md)).
+- **First-time login** creates a user with `role=UserRole.user` (display-only), `is_verified=True`, `hashed_password=None`, and assigns the `self_service` policy, mirroring `signup_service.py`'s policy assignment exactly (role never grants access; see [PBAC Architecture](../authorization/architecture.md)).
 - **Pre-registration hijack guard**: if an email was already registered via password signup but never verified, and the real owner later authenticates via Google with that address, the existing account's `hashed_password` is cleared at that moment. This closes the window where an attacker's pre-chosen password would otherwise remain valid on an account Google has now confirmed belongs to someone else. An already-verified account's password is left untouched. See `oauth2_service.py::login_or_create_user`'s docstring for the full walkthrough.
-- **System account is blocked from OAuth2 login entirely**: `role == UserRole.system` short-circuits before any user creation/update logic, forcing the reserved system account through password login only (`scripts/create_system_user.py`). See [System Superuser: Bootstrapping and Promotion](system-superuser.md) for why this script won't promote a Google-only account (no password at all) in place. It offers to delete and recreate it instead, and it promotes any other existing account by setting its `role` to `system` as part of the promotion, deliberately cutting off its own Google login going forward.
+- **System account is blocked from OAuth2 login entirely**: `role == UserRole.system` short-circuits before any user creation/update logic, forcing the reserved system account through password login only (`scripts/create_system_user.py`). See [System Superuser: Bootstrapping and Promotion](system-superuser.md) for why this script won't promote a Google-only account (no password at all) in place; it offers to delete and recreate it instead, and it promotes any other existing account by setting its `role` to `system` as part of the promotion, deliberately cutting off its own Google login going forward.
 - **`access_type`/`prompt` are intentionally omitted** from the Google authorization URL, since this app never stores or uses Google's own refresh token, so there's no reason to force an offline-access grant or a full re-consent prompt on every login.
 - Every step (missing code, provider error, state/cookie mismatch, expired state, failed token exchange, missing/unverified email, rejected `login_or_create_user`) redirects back to `{FRONTEND_BASE_URL}/login` rather than surfacing an API error. The frontend has no OAuth-specific error UI, so a failed OAuth2 attempt looks identical to landing on the login page fresh.
 
@@ -81,7 +81,7 @@ A random `state = secrets.token_urlsafe(32)` is generated alongside the PKCE pai
 
 ## Frontend integration
 
-`OAuth2LoginButtonComponent` is a plain anchor/redirect to `GET {BACKEND_BASE_URL}/auth/oauth2/login/google`. No `@react-oauth/google` or similar client SDK is used. The entire flow is server-driven redirects. On success, the backend redirects to `{FRONTEND_BASE_URL}/dashboard` with the session cookies already set, so the frontend's normal `GET /auth/me` bootstrap (via `useAuthSession`) picks up the new session exactly as it would after a password login.
+`OAuth2LoginButtonComponent` is a plain anchor/redirect to `GET {BACKEND_BASE_URL}/auth/oauth2/login/google`. No `@react-oauth/google` or similar client SDK is used; the entire flow is server-driven redirects. On success, the backend redirects to `{FRONTEND_BASE_URL}/dashboard` with the session cookies already set, so the frontend's normal `GET /auth/me` bootstrap (via `useAuthSession`) picks up the new session exactly as it would after a password login.
 
 ---
 
@@ -122,7 +122,7 @@ See [Security Decisions: OAuth2 CSRF and account-hijacking protections](../secur
 
 `tests/backend/mystic_auth/unit/` covers `oauth2_login_handler` and
 `oauth2_service` with Google HTTP calls mocked.
-`tests/backend/mystic_auth/integration/test_oauth_integration.py` exercises the
+`tests/backend/mystic_auth/integration/auth/test_oauth_integration.py` exercises the
 initiate-to-callback flow against a real Redis instance. See
 [Testing Overview](../testing/overview.md).
 

@@ -1,6 +1,6 @@
 # System Superuser: Bootstrapping and Promotion
 
-`backend/mystic_auth/scripts/create_system_user.py` is the only way the reserved system account is ever created or granted. There is no API endpoint for either, by design (see [OAuth2 / PKCE: system account is blocked from OAuth2 login entirely](oauth2-pkce.md)).
+`backend/mystic_auth/scripts/create_system_user.py` is the only way the reserved system account is ever created or granted; there is no API endpoint for either, by design (see [OAuth2 / PKCE: system account is blocked from OAuth2 login entirely](oauth2-pkce.md)).
 
 Run it after the stack is started and migrations have completed. Pick the command for the mode you are running.
 
@@ -78,8 +78,8 @@ Set a new password for this account:
 ```
 
 What actually happens, and why:
-- **Assigns every missing baseline policy**: this is the actual source of the account's system-superuser access. PBAC never grants access via `role` (see [PBAC Architecture](../authorization/architecture.md)).
-- **Also sets `role` to `system`**: not strictly required for access, but keeps the account's shape consistent with one created fresh, and is what actually disables future Google login for it (`role == UserRole.system` is checked explicitly in the OAuth2 flow. See [OAuth2 / PKCE](oauth2-pkce.md)).
+- **Assigns every missing baseline policy**: this is the actual source of the account's system-superuser access; PBAC never grants access via `role` (see [PBAC Architecture](../authorization/architecture.md)).
+- **Also sets `role` to `system`**: not strictly required for access, but keeps the account's shape consistent with one created fresh, and is what actually disables future Google login for it (`role == UserRole.system` is checked explicitly in the OAuth2 flow; see [OAuth2 / PKCE](oauth2-pkce.md)).
 - **Requires setting a new password**, since the operator running this script may not be the one who originally set the existing one, and a system-level account shouldn't rely on a password nobody currently running this can verify.
 - **Never touched otherwise**: name, email, audit history, and anything else about the account stays exactly as it was.
 

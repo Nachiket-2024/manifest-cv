@@ -47,9 +47,9 @@ class SessionService:
             ip_address = get_client_ip(request) if request is not None else None
             await session_repository.create(db, user_id, jti, chain_id, _to_datetime(exp), user_agent, ip_address)
             # Real-time nudge for any tab already open on this account (see
-            # publish_session_created's own docstring). Email is optional
+            # publish_session_created's own docstring). email is optional
             # only because a couple of tests call create_session directly
-            # without it. Both real login paths (login_service.py,
+            # without it; both real login paths (login_service.py,
             # oauth2_service.py) always pass it.
             if email:
                 await publish_session_created(email)

@@ -10,7 +10,7 @@ flowchart TD
     D --> E["5. Verify<br/><small>POST /authorization/users/{email}/authorization-check<br/>requires policies:read</small>"]
 ```
 
-1. **Decide the action(s) and resource type.** Use an existing `Permission` value if this is about users/policies themselves ([Adding New Permissions](adding-permissions.md)). Otherwise any action string works for a downstream application's own resources.
+1. **Decide the action(s) and resource type.** Use an existing `Permission` value if this is about users/policies themselves ([Adding New Permissions](adding-permissions.md)); otherwise any action string works for a downstream application's own resources.
 2. **Decide conditions, if any.** See the [Condition Schema Reference](condition-schema-reference.md): omit `conditions` entirely for an unconditional grant.
 3. **Create it** via `POST /authorization/policies` (requires `policies:create`, and you must already hold every action you're granting: see [Architecture](architecture.md#authorization-service)):
 
@@ -56,14 +56,14 @@ flowchart TD
 Every create/update/delete stages an immutable row in `policy_history` in the same transaction as the mutation:
 
 - `GET /authorization/policies/{name}/history`: every recorded change to this policy, newest first. Works even after the policy itself has been deleted (history is keyed by name, not a live foreign key).
-- `GET /authorization/policies/{name}/history/compare-from_id=X&to_id=Y`: field-by-field diff between two versions.
-- `POST /authorization/policies/{name}/history/{history_id}/rollback` (requires `policies:update`): restores that version's definition. This creates a **new** `"rolled_back"`-labeled history entry. It never overwrites or deletes the entry being rolled back to. Goes through the exact same guards as a direct `PUT`: a malformed `conditions` block in the restored definition is rejected, a baseline policy can't be rolled back into a renamed/deactivated state, and: since a historical revision can hold actions the policy no longer grants today: the caller must already hold every action the *restored* definition would grant, not just the policy's current ones.
+- `GET /authorization/policies/{name}/history/compare?from_id=X&to_id=Y`: field-by-field diff between two versions.
+- `POST /authorization/policies/{name}/history/{history_id}/rollback` (requires `policies:update`): restores that version's definition. This creates a **new** `"rolled_back"`-labeled history entry; it never overwrites or deletes the entry being rolled back to. Goes through the exact same guards as a direct `PUT`: a malformed `conditions` block in the restored definition is rejected, a baseline policy can't be rolled back into a renamed/deactivated state, and: since a historical revision can hold actions the policy no longer grants today: the caller must already hold every action the *restored* definition would grant, not just the policy's current ones.
 
 ---
 
 ## Local testing approach
 
-**Fastest feedback: unit tests with mocked policies** (no DB needed): see `tests/backend/mystic_auth/unit/authorization/test_policy_evaluator_unit.py` and `authorization/test_authorization_decision_unit.py`. Build a `Policy(...)` instance directly (it's a plain SQLAlchemy model, freely instantiable without a session) and call `PolicyEvaluationEngine.evaluate_detailed` directly:
+**Fastest feedback: unit tests with mocked policies** (no DB needed): see `tests/backend/mystic_auth/unit/authorization/evaluators/test_policy_evaluator_unit.py` and `evaluators/test_authorization_decision_unit.py`. Build a `Policy(...)` instance directly (it's a plain SQLAlchemy model, freely instantiable without a session) and call `PolicyEvaluationEngine.evaluate_detailed` directly:
 
 ```python
 from backend.mystic_auth.authorization.models.policy_model import Policy

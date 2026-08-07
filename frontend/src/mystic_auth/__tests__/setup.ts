@@ -9,7 +9,7 @@ import "@testing-library/jest-dom/vitest";
 // renders the app tree while authenticated needs a global stand-in for it
 // to exist at all, or the resulting ReferenceError crashes the render.
 // Tests that care about its actual message/error/reconnect behavior mock
-// it more specifically themselves. This is just enough surface for
+// it more specifically themselves; this is just enough surface for
 // "authenticated app renders without throwing."
 class MockEventSource {
     onmessage: ((event: MessageEvent) => void) | null = null;

@@ -5,18 +5,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # keys, wrong types, invalid timezones/IPs/dates must fail at write time, not
 # surface later as a silent always-deny at evaluation time.
 from ...authorization.conditions.condition_validator import ConditionValidationError, validate_conditions
-from ...authorization.repositories.policy_repository import policy_repository
-from ...authorization.schemas.policy_schema import PolicyCreate, PolicyRead, PolicyUpdate
-from ...authorization.services.authorization_service import authorization_service
-from ...database.connection import database
-from ..get_or_404 import get_or_404
-from .policy_permissions import (
+from ...authorization.dependencies.policy_route_dependencies import (
     CREATE_DEPENDENCY,
     DELETE_DEPENDENCY,
     PROTECTED_POLICY_NAMES,
     READ_DEPENDENCY,
     UPDATE_DEPENDENCY,
 )
+from ...authorization.repositories.policy_repository import policy_repository
+from ...authorization.schemas.policy_schema import PolicyCreate, PolicyRead, PolicyUpdate
+from ...authorization.services.authorization_service import authorization_service
+from ...database.connection import database
+from ..get_or_404.get_or_404 import get_or_404
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
 
@@ -126,7 +126,7 @@ async def update_policy(
 
     # Reject a rename that collides with another existing policy up front
     # with a clear 409, rather than letting the database's unique
-    # constraint raise an opaque 500. Mirrors the same check in create_policy.
+    # constraint raise an opaque 500; mirrors the same check in create_policy.
     if "name" in fields and fields["name"] != policy.name:
         existing = await policy_repository.get_by_name(fields["name"], db)
         if existing:
@@ -141,10 +141,11 @@ async def update_policy(
             detail=f"Baseline policy '{policy.name}' cannot be deactivated",
         )
 
-    if "actions" in fields:
+    if "actions" in fields or "resource_type" in fields:
+        target_actions = fields.get("actions", policy.actions)
         target_resource_type = fields.get("resource_type", policy.resource_type)
         await authorization_service.assert_authorized_to_grant(
-            current_user["email"], fields["actions"], target_resource_type, db
+            current_user["email"], target_actions, target_resource_type, db
         )
 
     return await policy_repository.update(

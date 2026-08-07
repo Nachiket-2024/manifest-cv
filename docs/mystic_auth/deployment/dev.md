@@ -4,8 +4,8 @@ Local development: hot reload on both backend and frontend, source
 bind-mounted from the host, no TLS. This is the mode you use day to day
 while writing code. Start here if you're new to the repo.
 
-Not sure this is the mode you want- See the
-[dev vs. Local-prod vs. Prod comparison](guide.md#at-a-glance) in the
+Not sure this is the mode you want? See the
+[dev vs. local-prod vs. prod comparison](guide.md#at-a-glance) in the
 Deployment Guide.
 
 ---
@@ -129,7 +129,7 @@ All published to `localhost` for direct access:
 - No Cloudflare Tunnel, no Caddy: everything is `localhost`-only, no public
   entrypoint.
 
-See [Docker Overview: dev vs. Production compose](../docker/overview.md#dev-vs-production-compose)
+See [Docker Overview: dev vs. production compose](../docker/overview.md#dev-vs-production-compose)
 for the full service-by-service comparison across all three Compose files.
 
 ---

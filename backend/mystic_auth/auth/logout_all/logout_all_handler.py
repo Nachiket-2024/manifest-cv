@@ -28,7 +28,7 @@ class LogoutAllHandler:
                 )
 
             # decode_payload, not verify_token: an already-revoked refresh
-            # token (e.g. This device's own session, killed moments ago by a
+            # token (e.g. this device's own session, killed moments ago by a
             # password change that revokes every refresh token for the
             # account) must still resolve to its owning email so the rest of
             # that account's sessions can be revoked and cookies cleared,

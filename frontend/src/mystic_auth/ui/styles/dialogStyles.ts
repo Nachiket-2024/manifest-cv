@@ -15,7 +15,7 @@ export const DIALOG_BACKDROP_PROPS = {
 // dialog. Two 64px margins is over a fifth of a 600px-tall laptop viewport
 // gone before a single field renders, so a modestly tall form
 // (PolicyFormDialog's 5 fields) ends up needing the positioner's own
-// scroll (scrollBehavior defaults to "outside", i.e. The whole
+// scroll (scrollBehavior defaults to "outside", i.e. the whole
 // backdrop+dialog scrolls, not just the dialog body) even though the form
 // itself isn't that long. Overriding `my` down to a few rem reclaims that
 // space directly instead of adding still more offset on top of it.

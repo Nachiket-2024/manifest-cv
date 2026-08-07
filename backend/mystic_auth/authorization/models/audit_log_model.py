@@ -53,7 +53,7 @@ class AuthorizationAuditLog(Base):
     resource_type: Mapped[str]
 
     # Best-effort identifier for the specific resource instance involved
-    # (e.g. A target user's email), since "resource" can be an arbitrary
+    # (e.g. a target user's email), since "resource" can be an arbitrary
     # dict, not every check has (or needs) one.
     resource_identifier: Mapped[str | None]
 

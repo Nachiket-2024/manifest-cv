@@ -1,6 +1,6 @@
 // Solid variant's default hover is only colorPalette.solid at 90% opacity -
 // too subtle a shift to read as a hover state (originally fixed one-off on
-// LoginForm's/PasswordResetRequestForm's own Login/submit buttons. Extracted
+// LoginForm's/PasswordResetRequestForm's own Login/submit buttons; extracted
 // here so every other colorPalette="brand" solid button - Create Policy,
 // Save changes, Assign, Verify Account, Signup, etc. - gets the identical
 // fix instead of each needing its own copy of this override).
@@ -28,7 +28,7 @@ export const DESTRUCTIVE_SOLID_HOVER_PROPS = {
     _hover: { bg: "red.700" },
 };
 
-// Dialog secondary actions (Cancel/Close). Variant="ghost" (no border, no
+// Dialog secondary actions (Cancel/Close). variant="ghost" (no border, no
 // background) reads as plain text next to a solid primary action, and its
 // hover is too faint to register as a real button - same class of issue
 // TableActionButton.tsx and Pagination.tsx's identical fixes address for
@@ -36,7 +36,7 @@ export const DESTRUCTIVE_SOLID_HOVER_PROPS = {
 // shade) with a contrasting text color, the same "fills up" treatment
 // TableActionButton.tsx's red palette (Delete/Purge) already had - light
 // and dark solid fills sit at opposite ends of the gray scale, so each
-// needs its own contrasting hover text (white vs. Gray.900).
+// needs its own contrasting hover text (white vs. gray.900).
 export const SECONDARY_BUTTON_PROPS = {
     variant: "plain" as const,
     borderWidth: "1px",

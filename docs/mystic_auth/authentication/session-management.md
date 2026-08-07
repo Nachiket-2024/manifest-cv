@@ -11,8 +11,8 @@ This doc covers the Manage Sessions feature across backend, frontend, database, 
 | Persistence mirror | `backend/mystic_auth/user_session/` | Stores one row per visible login session, updates the row when refresh tokens rotate, marks rows revoked |
 | Token authority | `backend/mystic_auth/auth/token_logic/jwt_service.py` and `auth/refresh_token_logic/refresh_token_service.py` | Redis-backed version counters (`account_ver`, `chain_ver`), single-use rotation claim, reuse detection |
 | Frontend | `frontend/src/mystic_auth/dashboard/manage_sessions/` | Dashboard card that lists sessions, formats device metadata, and revokes another active session |
-| Real-time push | `backend/mystic_auth/user_session/session_events.py`, `GET /auth/session-events`, `frontend/src/mystic_auth/auth/useSessionEventsStream.ts` | Server-Sent Events + Redis Pub/Sub nudge every open tab/device the instant a session is revoked. See "Real-time push" below |
-| Tests | `tests/backend/mystic_auth/integration/test_manage_sessions_integration.py` and matching unit suites | End-to-end and handler/service coverage for list, revoke, self-revoke, foreign session, logout, logout-all, and rotation behavior |
+| Real-time push | `backend/mystic_auth/user_session/session_events.py`, `GET /auth/session-events`, `frontend/src/mystic_auth/auth/session_lifecycle/useSessionEventsStream.ts` | Server-Sent Events + Redis Pub/Sub nudge every open tab/device the instant a session is revoked. See "Real-time push" below |
+| Tests | `tests/backend/mystic_auth/integration/user_session/test_manage_sessions_integration.py` and matching unit suites | End-to-end and handler/service coverage for list, revoke, self-revoke, foreign session, logout, logout-all, and rotation behavior |
 
 ---
 
@@ -30,7 +30,7 @@ Refresh-token rotation is additionally single-use, a narrower and orthogonal con
 The `user_sessions` table is a best-effort mirror for user experience, independent of the Redis versions that actually govern validity:
 
 - `id` is the stable identifier returned to the frontend and used for targeted revoke.
-- `current_jti` points at the refresh token that currently represents that session. `chain_id` is the stable identity across every rotation of it (what a targeted revoke actually bumps in Redis, and what `is_current`/self-revoke comparisons use, since a row's `current_jti` can be momentarily stale mid-rotation while `chain_id` never changes).
+- `current_jti` points at the refresh token that currently represents that session; `chain_id` is the stable identity across every rotation of it (what a targeted revoke actually bumps in Redis, and what `is_current`/self-revoke comparisons use, since a row's `current_jti` can be momentarily stale mid-rotation while `chain_id` never changes).
 - `created_at` is the first login time for that session.
 - `last_used_at` is updated when the session is created or its refresh token rotates.
 - `expires_at` mirrors the current refresh token expiry, for display only.
@@ -60,7 +60,7 @@ When a refresh token is presented whose `jti` was already claimed (see "Source o
 
 This scoping only applies to `chain_ver`. `account_ver` still gets bumped account-wide for the true whole-account actions (logout-all, password change, deactivation/purge), and access tokens (which carry both numbers, but have no per-device identity beyond their chain) die the instant either their account or chain version goes stale, the same as refresh tokens.
 
-A token minted before chain tracking shipped carries no `chain` claim. Reuse of one of those falls back to the original, maximally-safe response (`revoke_all_tokens_for_user`, bumping `account_ver`), since there is no lineage to scope to.
+A token minted before chain tracking shipped carries no `chain` claim; reuse of one of those falls back to the original, maximally-safe response (`revoke_all_tokens_for_user`, bumping `account_ver`), since there is no lineage to scope to.
 
 ---
 
@@ -99,7 +99,7 @@ The response never exposes `current_jti`, `chain_id`, raw JWTs, token expiry int
 `DELETE /auth/sessions/{session_id}` ends another active session owned by the current user:
 
 - Missing, already-revoked, or foreign sessions return `404`.
-- The caller's current session returns `400`. The UI should use the normal Logout action for the current device.
+- The caller's current session returns `400`; the UI should use the normal Logout action for the current device.
 - A successful revoke marks the row `revoked_at`, bumps that session's `chain_ver` in Redis (`jwt_service.bump_chain_version`), and records a security audit event.
 
 The ownership check happens before the version bump, so a caller cannot use guessed ids to revoke another user's session.
@@ -114,11 +114,11 @@ The ownership check happens before the version bump, so a caller cannot use gues
 
 ## Frontend behavior
 
-`ManageSessionsCard.tsx` lives in `frontend/src/mystic_auth/dashboard/manage_sessions/`, alongside the page that's its only consumer, rather than a separate top-level folder: it owns its own API query and mutation, but nothing else in the app renders it. Device labels come from `parseUserAgent.ts`. Failure and empty states are rendered locally by the card.
+`ManageSessionsCard.tsx` lives in `frontend/src/mystic_auth/dashboard/manage_sessions/`, alongside the page that's its only consumer, rather than a separate top-level folder: it owns its own API query and mutation, but nothing else in the app renders it. Device labels come from `parseUserAgent.ts`; failure and empty states are rendered locally by the card.
 
 The current session is displayed but not offered as a targeted revoke action. That keeps the user flow unambiguous: use Logout for this device, use Revoke for other devices.
 
-None of the "me"-scoped TanStack Query caches (sessions, policy assignments, own audit history, last login) are keyed by email, so a stale response from whoever was previously logged in in this same browser tab could otherwise flash for the next account before its own refetch lands. `useLogoutMutation`, `useLogoutAllMutation`, and `setupAuthInterceptor.ts`'s session-expiry handler all `removeQueries` (not just invalidate) these keys on the way out. `useLoginMutation` also invalidates them on the way in, as a second layer, since a login can happen without an explicit prior logout in this same tab (e.g. after a silent session expiry elsewhere).
+None of the "me"-scoped TanStack Query caches (sessions, policy assignments, own audit history, last login) are keyed by email, so a stale response from whoever was previously logged in in this same browser tab could otherwise flash for the next account before its own refetch lands. `useLogoutMutation`, `useLogoutAllMutation`, and `setupAuthInterceptor.ts`'s session-expiry handler all `removeQueries` (not just invalidate) these keys on the way out; `useLoginMutation` also invalidates them on the way in, as a second layer, since a login can happen without an explicit prior logout in this same tab (e.g. after a silent session expiry elsewhere).
 
 ---
 

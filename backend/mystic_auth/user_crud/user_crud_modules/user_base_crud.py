@@ -38,8 +38,8 @@ class UserBaseCRUD:
 
     def _status_filter(self, status: UserStatus | None):
         """Status is a UI-level label derived from two real columns, not a
-        column of its own: "deleted" is deleted_at IS NOT NULL. "inactive"
-        is is_active=False while NOT deleted. "active" is is_active=True
+        column of its own: "deleted" is deleted_at IS NOT NULL; "inactive"
+        is is_active=False while NOT deleted; "active" is is_active=True
         while NOT deleted (mirrors UsersPage.tsx's own badge logic:
         deleted_at wins over is_active when both would otherwise apply)."""
         if status == "deleted":
@@ -92,7 +92,7 @@ class UserBaseCRUD:
         sort_dir: str = "asc",
     ):
         # Capped : every other list endpoint in the app (audit log, policy
-        # history) bounds its query the same way. This one previously read
+        # history) bounds its query the same way; this one previously read
         # the whole table unconditionally.
         stmt = self._apply_filters(select(self.model), search, role, is_verified, status)
         stmt = stmt.order_by(*self._order_by(sort_by, sort_dir)).limit(limit).offset(offset)

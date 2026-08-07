@@ -33,7 +33,7 @@ class LoginProtectionService:
             # SET and INCR, a redundant Redis round-trip on every failed attempt.
             new_count = await redis_client.incr(key)
 
-            # Set expiration only the first time the key is created. Re-applying
+            # Set expiration only the first time the key is created; re-applying
             # it on every later failure would keep sliding the lockout window
             # forward instead of it expiring after the first failure as intended.
             if new_count == 1:
@@ -69,13 +69,13 @@ class LoginProtectionService:
         lockout_time: int = LOGIN_LOCKOUT_TIME,
     ) -> bool:
         """
-        The is_locked check here vs. A caller's own pre-check (e.g.
+        The is_locked check here vs. a caller's own pre-check (e.g.
         login_handler.py checks is_locked itself before attempting
         authentication, to skip the password hash comparison entirely for an
         already-locked account) are not redundant despite calling the same
-        function. The caller's pre-check answers "should we even try-" before
-        any expensive work. This one answers "is the account still unlocked
-        right now, after that work finished-", closing the race where a
+        function. The caller's pre-check answers "should we even try?" before
+        any expensive work; this one answers "is the account still unlocked
+        right now, after that work finished?", closing the race where a
         concurrent request locks the account in between. Removing either one
         changes behavior: dropping the caller's pre-check means every attempt
         against a locked account still pays for a full password hash

@@ -1,15 +1,15 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { getUserStatsApi, listUsersApi } from "../api/users_api";
-import type { AdminUserRead } from "../api/users_api";
+import type { ManagedUserRead } from "../api/users_api";
 import type { SortDirection } from "../ui/hooks/useSortState";
 
 export const USERS_QUERY_KEY = ["users"] as const;
 export const USER_STATS_QUERY_KEY = ["users", "stats"] as const;
 
 export interface UsersPage {
-    users: AdminUserRead[];
-    /** From the X-Total-Count response header. 0 if the header is somehow
+    users: ManagedUserRead[];
+    /** From the X-Total-Count response header; 0 if the header is somehow
      * missing rather than throwing, so a transient proxy/CORS misconfig
      * degrades to "no pages" instead of crashing the page. */
     total: number;
@@ -38,7 +38,7 @@ export function useUsersQuery(page: number, pageSize: number, filters: UsersFilt
             return { users: res.data, total: Number.isFinite(total) ? total : 0 };
         },
         // Keeps the current page's rows on screen while a different page
-        // loads in, same reasoning as the audit-log query hooks' identical option:
+        // loads in, same reasoning as auditQueries.ts's identical option:
         // without it, switching pages would flash the table's loading
         // skeleton and could shift the page's height mid-navigation.
         placeholderData: keepPreviousData,

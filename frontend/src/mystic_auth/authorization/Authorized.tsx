@@ -5,7 +5,7 @@ import { useCan } from "./useCan";
 
 interface AuthorizedProps {
     permission: string;
-    // Passed through to useCan. See useAuthorization.ts's `can` for why this doesn't currently
+    // Passed through to useCan; see useAuthorization.ts's `can` for why this doesn't currently
     // narrow the check: the cached permissions list has no resource-type dimension of its own.
     resourceType?: string;
     fallback?: ReactNode;

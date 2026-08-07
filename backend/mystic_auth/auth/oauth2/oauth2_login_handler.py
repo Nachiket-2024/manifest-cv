@@ -22,7 +22,7 @@ class OAuth2LoginHandler:
 
     @staticmethod
     def _redirect_to_login_clearing_state() -> RedirectResponse:
-        # Every rejection branch below issues this same redirect. Clearing the
+        # Every rejection branch below issues this same redirect; clearing the
         # short-lived oauth_state cookie here (not just on the success path)
         # keeps a cancelled/failed login from leaving it in the browser until
         # its own max_age expiry.
@@ -82,9 +82,9 @@ class OAuth2LoginHandler:
         request: Request | None = None,
     ) -> RedirectResponse:
         """
-        code/state come from Google's redirect query params. Error is Google's
+        code/state come from Google's redirect query params; error is Google's
         error code (e.g. "access_denied" when the user cancels the consent
-        screen). Oauth_state_cookie is the state value stored in the short-lived
+        screen). oauth_state_cookie is the state value stored in the short-lived
         cookie set during login initiation, compared against state to guard
         against CSRF/session fixation.
         """

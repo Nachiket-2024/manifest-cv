@@ -28,15 +28,15 @@ You don't need a different mechanism for this. This template doesn't ship a sepa
 
    Create either via `POST /authorization/policies` (see [Writing and Testing Policies](writing-testing-policies.md#policy-creation-workflow)), the `/policies` UI, or the CLI script below.
 
-2. **Assign it** to whichever users should hold that role, via `POST /authorization/users/{email}/policies` (or the UI). A user can hold more than one role-policy at once. PBAC evaluates every held policy, so someone with both `role_editor` and `role_viewer` simply has the union of both action lists.
+2. **Assign it** to whichever users should hold that role, via `POST /authorization/users/{email}/policies` (or the UI). A user can hold more than one role-policy at once; PBAC evaluates every held policy, so someone with both `role_editor` and `role_viewer` simply has the union of both action lists.
 
-3. **Routes stay identical either way.** `require_authorization("documents:edit", "documents")` doesn't know or care whether the policy that ends up granting it has conditions or not. See [Adding New Permissions](adding-permissions.md) for the route side, which is unaffected by which policy *shape* you choose.
+3. **Routes stay identical either way.** `require_authorization("documents:edit", "documents")` doesn't know or care whether the policy that ends up granting it has conditions or not; see [Adding New Permissions](adding-permissions.md) for the route side, which is unaffected by which policy *shape* you choose.
 
 ---
 
 ## `users.role` still doesn't grant anything
 
-This pattern doesn't change the one rule the rest of this template's authorization docs already state repeatedly: `users.role` is display/grouping metadata only, never read by the authorization service, evaluator, or condition handlers (see [Adding New Permissions: Roles vs. Policies](adding-permissions.md#roles-vs-policies)). "RBAC-shaped" here describes the *policy's* shape (unconditioned, one per role), not a return to role-column checks anywhere in the request path. If you want the UI to visually group users by their intended role, that's exactly what `users.role` remains useful for (e.g. showing "Editor" next to a name). It's just never consulted to decide whether a request is allowed.
+This pattern doesn't change the one rule the rest of this template's authorization docs already state repeatedly: `users.role` is display/grouping metadata only, never read by the authorization service, evaluator, or condition handlers (see [Adding New Permissions: Roles vs. policies](adding-permissions.md#roles-vs-policies)). "RBAC-shaped" here describes the *policy's* shape (unconditioned, one per role), not a return to role-column checks anywhere in the request path. If you want the UI to visually group users by their intended role, that's exactly what `users.role` remains useful for (e.g. showing "Editor" next to a name); it's just never consulted to decide whether a request is allowed.
 
 ---
 

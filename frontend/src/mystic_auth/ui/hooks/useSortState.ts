@@ -9,7 +9,7 @@ export interface SortState {
 
 /**
  * Excel-style column sort: clicking a column not currently sorted sorts it
- * ascending. Clicking the SAME column again flips to descending. Clicking a
+ * ascending; clicking the SAME column again flips to descending; clicking a
  * DIFFERENT column starts that one fresh at ascending, same as spreadsheet
  * software's own convention.
  */

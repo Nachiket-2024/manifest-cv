@@ -32,10 +32,10 @@ const PolicyStatsCard: React.FC<PolicyStatsCardProps> = ({ policies, isLoading }
     return (
         <Card p={4} w={{ base: "full", md: "280px" }}>
             <SimpleGrid columns={2} gap={4}>
-                <StatTile label="Total policies" value={totalPolicies} isLoading={isLoading} />
+                <StatTile label="Total policies" value={totalPolicies} isLoading={isLoading} color="blue.500" />
                 <StatTile label="Active" value={activePolicies} isLoading={isLoading} color="green.500" />
-                <StatTile label="Distinct actions" value={totalActions} isLoading={isLoading} color="brand.fg" />
-                <StatTile label="Resource types" value={resourceTypes} isLoading={isLoading} color="brand.fg" />
+                <StatTile label="Distinct actions" value={totalActions} isLoading={isLoading} color="purple.500" />
+                <StatTile label="Resource types" value={resourceTypes} isLoading={isLoading} color="orange.500" />
             </SimpleGrid>
         </Card>
     );

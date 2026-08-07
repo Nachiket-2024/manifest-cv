@@ -195,6 +195,8 @@ Once the services are running:
 
 See [Docker Overview](docs/app/docker/overview.md) for the full service breakdown and [Deployment Guide](docs/app/deployment/guide.md) for production Compose usage and free/low-cost hosting options.
 
+> The two paths below cover local development. Self-hosting behind a Cloudflare Tunnel (`docker-compose.local-prod.yml`) or running on your own internet-facing server (`docker-compose.prod.yml`) are separate modes with their own `docker compose -f <file> up -d --build` commands, env templates, and tradeoffs, covered in full in the [Deployment Guide](docs/app/deployment/guide.md#choosing-the-right-env-template). They're mentioned again below under [Creating the System Superuser](#-first-time-setup-creating-the-system-superuser), which has commands for all four run modes (dev Docker, local-prod Docker, prod Docker, and no-Docker local).
+
 ---
 
 ### Path 2. Running Locally

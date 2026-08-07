@@ -1,6 +1,6 @@
 # System Architecture
 
-High-level overview of the whole stack. For the PBAC authorization pipeline specifically, see [../authorization/architecture.md](../authorization/architecture.md). For deployment/runtime topology, see [../deployment/guide.md](../deployment/guide.md).
+High-level overview of the whole stack. For the PBAC authorization pipeline specifically, see [../authorization/architecture.md](../authorization/architecture.md); for deployment/runtime topology, see [../deployment/guide.md](../deployment/guide.md).
 
 ## Components
 
@@ -33,7 +33,7 @@ flowchart TD
 
 ## Why this split
 
-- **Redis vs. Postgres**: everything in Redis is either a cache, a rate/lockout counter, or a single-use token: losing it on a restart degrades gracefully (a user re-requests a password reset. A rate limit resets) rather than corrupting state. Nothing that needs to survive indefinitely (users, policies, audit history) lives there.
+- **Redis vs. Postgres**: everything in Redis is either a cache, a rate/lockout counter, or a single-use token: losing it on a restart degrades gracefully (a user re-requests a password reset; a rate limit resets) rather than corrupting state. Nothing that needs to survive indefinitely (users, policies, audit history) lives there.
 - **Queued email**: email delivery is the one slow, failure-prone I/O call in the auth flows. Queuing it means signup and password-reset requests are not held open waiting on SMTP. Taskiq fits this stack because Redis and a worker already run in Docker and self-hosted deployments.
 - **One backend image, three roles**: `backend`, `taskiq_worker`, and `alembic` all run from `docker/backend.Dockerfile` with different commands, rather than three separate images: keeps dependency versions/code identical across all three by construction, at the cost of the worker/alembic containers also containing an unused `uvicorn` entrypoint they never run.
 
@@ -68,7 +68,7 @@ sequenceDiagram
 1. Browser sends a request with `access_token`/`refresh_token` httpOnly cookies (never accessible to frontend JS: see [Authentication Flows](../authentication/overview.md)).
 2. `SecurityHeadersMiddleware` and `CorrelationIdMiddleware`/`LoggingMiddleware` wrap every request (see `backend/app/main.py`, `backend/mystic_auth/auth/security/`, `backend/mystic_auth/logging/`).
 3. `Depends(get_current_user)` (or, for a specific action, `Depends(require_authorization(action, resource_type))`) verifies the JWT, re-queries the user row (so a since-deactivated/deleted account is rejected even with a still-valid, unexpired token: see [Security Decisions](../security/decisions.md#why-current-user-lookups-re-query-the-database-every-time)), and resolves the caller's current PBAC permissions from their assigned policies.
-4. On a 401 specifically, `frontend/src/mystic_auth/auth/setupAuthInterceptor.ts` attempts one silent refresh-and-retry before giving up and marking the session invalid: see [Authentication Flows](../authentication/overview.md#refresh-token-rotation).
+4. On a 401 specifically, `frontend/src/mystic_auth/auth/session_lifecycle/setupAuthInterceptor.ts` attempts one silent refresh-and-retry before giving up and marking the session invalid: see [Authentication Flows](../authentication/overview.md#refresh-token-rotation).
 5. The route handler runs, using `authorization_service.authorize()`/`.require()` for any access decision beyond "is there a valid session": every such call also writes an audit log row (allow or deny).
 
 ---

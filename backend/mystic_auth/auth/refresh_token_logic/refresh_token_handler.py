@@ -39,7 +39,7 @@ class RefreshTokenHandler:
 
             # These must live in distinct key namespaces: rate_limiter_service
             # and login_protection_service each maintain their own independent
-            # counter/TTL semantics (a sliding request count vs. A failure
+            # counter/TTL semantics (a sliding request count vs. a failure
             # count), and sharing one key made every refresh call, successful or
             # not, count towards the 5-attempt lockout threshold: a handful of
             # legitimate token rotations from one IP could trip "too many failed

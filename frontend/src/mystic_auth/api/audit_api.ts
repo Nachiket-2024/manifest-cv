@@ -33,7 +33,7 @@ interface BaseListParams {
      * endpoints below - each /me endpoint is already scoped to the
      * caller's own single email. */
     search?: string;
-    /** Column to sort by. Must be one of the backend's own allowlisted
+    /** Column to sort by; must be one of the backend's own allowlisted
      * sortable columns for that log type (see the two audit log
      * repositories' `_SORTABLE_COLUMNS`) - any other value is ignored
      * server-side and falls back to created_at. */

@@ -4,14 +4,14 @@ A policy's fields (see `authorization/models/policy_model.py` / `authorization/s
 
 | Field | Type | Notes |
 |---|---|---|
-| `name` | string | Unique, looked up by name everywhere. No `get_by_id`. |
+| `name` | string | Unique, looked up by name everywhere; no `get_by_id`. |
 | `description` | string, optional | Human-readable, for audit/inspection only, never evaluated. |
 | `actions` | list[string] | Action identifiers this policy grants, e.g. `"users:read_own"`. |
 | `resource_type` | string | The resource type this policy applies to, or `"*"` for resource-agnostic. |
 | `conditions` | object, optional | See [Condition Schema Reference](condition-schema-reference.md). `null`/omitted = unconditional grant. |
 | `is_active` | bool | Inactive policies are never evaluated as granting access. |
 
-All examples below are the request body for `POST /authorization/policies` (requires `policies:create`, and the caller must already hold every action being granted. See [Architecture: Authorization Service](architecture.md#authorization-service)).
+All examples below are the request body for `POST /authorization/policies` (requires `policies:create`, and the caller must already hold every action being granted; see [Architecture: Authorization Service](architecture.md#authorization-service)).
 
 ## Basic allow policy (unconditional)
 
@@ -86,7 +86,7 @@ Grants access to a resource only when the caller owns it: the resource's `email`
 }
 ```
 
-> This is the actual seeded `self_service` policy's shape shown for illustration. The real seeded row has no `conditions` at all, because the "own-ness" is already enforced structurally (the `/users/me` routes only ever fetch the caller's own record by their own email. See `api/user_routes/user_self_service_routes.py`). Use `self_only` when a route passes an arbitrary target resource and needs the *policy* to enforce ownership instead.
+> This is the actual seeded `self_service` policy's shape shown for illustration. The real seeded row has no `conditions` at all, because the "own-ness" is already enforced structurally (the `/users/me` routes only ever fetch the caller's own record by their own email; see `api/user_routes/user_self_service_routes.py`). Use `self_only` when a route passes an arbitrary target resource and needs the *policy* to enforce ownership instead.
 
 ---
 

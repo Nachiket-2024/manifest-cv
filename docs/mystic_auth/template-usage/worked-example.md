@@ -1,6 +1,6 @@
 # Worked Example: Adding a New Domain, End to End
 
-[Using This Repository as a Template](overview.md) describes the pieces (ownership tiers, `sdk.py`/`sdk.ts`, PBAC usage, shared-chrome extension points) individually. This page wires them together for one fake domain (`projects`) so you have something to copy and rename rather than assemble from scratch. None of this is upstream code to run as-is. It's a template for the shape your own feature takes.
+[Using This Repository as a Template](overview.md) describes the pieces (ownership tiers, `sdk.py`/`sdk.ts`, PBAC usage, shared-chrome extension points) individually. This page wires them together for one fake domain (`projects`) so you have something to copy and rename rather than assemble from scratch. None of this is upstream code to run as-is; it's a template for the shape your own feature takes.
 
 ## 1. Backend: model, schema, router
 
@@ -30,7 +30,7 @@ async def list_all_projects(
     return await project_crud.get_all(db)
 ```
 
-`resource_type`/`action` don't need to be `Permission` enum values. Any string works, granted via a policy (see [Writing and Testing Policies](../authorization/writing-testing-policies.md#policy-creation-workflow)). Only add a `Permission` enum member if the action is sensitive enough to need the privilege-escalation guard (see [Adding New Permissions](../authorization/adding-permissions.md)).
+`resource_type`/`action` don't need to be `Permission` enum values; any string works, granted via a policy (see [Writing and Testing Policies](../authorization/writing-testing-policies.md#policy-creation-workflow)). Only add a `Permission` enum member if the action is sensitive enough to need the privilege-escalation guard (see [Adding New Permissions](../authorization/adding-permissions.md)).
 
 ---
 

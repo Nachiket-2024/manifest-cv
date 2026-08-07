@@ -27,7 +27,7 @@ class ConditionEvaluationService:
     ) -> bool:
         """
         `conditions` is a policy's whole conditions block, e.g.
-        {"self_only": True, "time": {...}}. None/empty means an
+        {"self_only": True, "time": {...}}; None/empty means an
         unconditional grant. Thin wrapper over evaluate_detailed (mirrors
         PolicyEvaluationEngine.evaluate's relationship to its own
         evaluate_detailed): one evaluation code path, not two.
@@ -50,7 +50,7 @@ class ConditionEvaluationService:
 
         Every key is checked (not short-circuited on the first failure) so
         every failing key is reported. An unrecognized key (no registered
-        handler, e.g. A typo, or an unsupported condition type) fails
+        handler, e.g. a typo, or an unsupported condition type) fails
         safe: it counts as a failed key rather than being silently
         ignored.
 

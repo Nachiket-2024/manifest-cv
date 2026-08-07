@@ -33,7 +33,7 @@ def init_sentry() -> None:
     starts serving requests (see main.py).
 
     Works against Sentry itself or any self-hosted server that speaks the
-    same protocol (e.g. Bugsink : see docs/mystic_auth/error-monitoring/overview.md). Nothing
+    same protocol (e.g. Bugsink : see docs/mystic_auth/error-monitoring/overview.md); nothing
     here is Sentry-the-company-specific beyond the SDK package name.
 
     Deliberately never lets a bad SENTRY_DSN take the whole app down.
@@ -155,7 +155,7 @@ async def capture_exception(exc: Exception, request: Request | None = None) -> N
     exception handler itself, outside any specific route's own dependency
     chain, so there's no already-resolved current_user available to reuse.
     A cookie that's missing, expired, or otherwise fails to verify simply
-    means no user context is attached. It never blocks the capture itself.
+    means no user context is attached; it never blocks the capture itself.
     """
     email = await _resolve_caller_email(request) if request is not None else None
 

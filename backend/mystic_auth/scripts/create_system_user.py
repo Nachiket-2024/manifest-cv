@@ -15,7 +15,7 @@ from ..database.connection import database
 from ..logging.logging_config import get_logger
 from ..user_crud.user_crud_collector import user_crud
 
-# UserRole is kept as display/grouping metadata for the system account. It no
+# UserRole is kept as display/grouping metadata for the system account; it no
 # longer grants any access itself (see PBAC policy assignment below).
 from ..user_table.user_model import UserRole
 

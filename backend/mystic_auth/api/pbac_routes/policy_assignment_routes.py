@@ -7,14 +7,18 @@ from ...audit_log.audit_log_service import POLICY_ASSIGNED, POLICY_REVOKED, log_
 # /users/me/policies, where a user inspects their own assignments regardless
 # of whether they hold policies:read.
 from ...auth.current_user.current_user_dependency import get_current_user
+from ...authorization.dependencies.policy_route_dependencies import (
+    ASSIGN_DEPENDENCY,
+    READ_DEPENDENCY,
+    REVOKE_DEPENDENCY,
+)
 from ...authorization.policies.default_policies import SYSTEM_SUPERUSER_POLICY_NAME
 from ...authorization.repositories.policy_repository import policy_repository
 from ...authorization.schemas.policy_schema import PolicyAssignmentRequest, PolicyRead, UserPoliciesRead
 from ...authorization.services.authorization_service import authorization_service
 from ...database.connection import database
 from ...user_crud.user_crud_collector import user_crud
-from ..get_or_404 import get_or_404
-from .policy_permissions import ASSIGN_DEPENDENCY, READ_DEPENDENCY, REVOKE_DEPENDENCY
+from ..get_or_404.get_or_404 import get_or_404
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
 
@@ -32,7 +36,7 @@ async def assign_policy_to_user(
     no-op). The caller must already hold every action this policy grants :
     otherwise policies:assign alone (without system_superuser itself) would
     let a caller hand out (to themselves or anyone else) a pre-existing
-    policy more powerful than what they hold. Policies:assign is the one
+    policy more powerful than what they hold. policies:assign is the one
     action that can escalate access without policies:create/update at all,
     so this guard is what actually enforces that policy assignments cannot
     exceed the caller's own permissions.
@@ -56,9 +60,9 @@ async def assign_policy_to_user(
     # This is the actual mechanism by which an account gains capability
     # (see this function's own docstring) - including, potentially,
     # system_superuser itself - so an unrecorded grant here is a real gap
-    # in the security audit trail, not just a nice-to-have. User_email is
+    # in the security audit trail, not just a nice-to-have. user_email is
     # the RECEIVING user (consistent with every other audit entry here
-    # being keyed on whose account was affected). The granting admin is
+    # being keyed on whose account was affected); the granting user is
     # in metadata, mirroring delete_any_user's assigned_by/deleted_by shape.
     await log_security_event(
         POLICY_ASSIGNED,
@@ -117,7 +121,7 @@ async def remove_policy_from_user(
 
 # Registered BEFORE /users/{user_email}/policies below : FastAPI/Starlette
 # matches routes in registration order, and a parameterized path segment
-# happily matches the literal string "me" too. This specific route must
+# happily matches the literal string "me" too; this specific route must
 # come first or /users/{user_email}/policies (which requires policies:read)
 # would shadow it.
 @router.get("/users/me/policies", response_model=UserPoliciesRead)
@@ -130,11 +134,11 @@ async def list_my_policies(
     not : for inspection, not an authorization decision). No policies:read
     required : a user inspecting their own assignments is not privileged
     information, mirroring GET /audit-log/me's own self-service rationale.
-    Same response shape as the admin GET /users/{email}/policies below,
+    Same response shape as the management GET /users/{email}/policies below,
     scoped to the caller.
     """
     policies = await policy_repository.get_policies_for_user(current_user["email"], db)
-    # Explicit ORM -> schema conversion (unlike the response_model=... Routes
+    # Explicit ORM -> schema conversion (unlike the response_model=... routes
     # in policy_crud_routes.py, which get this for free from FastAPI's own
     # serialization step) since UserPoliciesRead is constructed directly here.
     return UserPoliciesRead(

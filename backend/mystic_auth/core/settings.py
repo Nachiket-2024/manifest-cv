@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     # `env_file:` directive, which also passes it to infra-only services
     # (e.g. REDIS_PASSWORD for redis-server, BUGSINK_* for the optional
     # monitoring service, see docs/mystic_auth/error-monitoring/overview.md) that
-    # have no corresponding Settings field. Pydantic-settings defaults to
+    # have no corresponding Settings field. pydantic-settings defaults to
     # extra="forbid", which only actually bites when Settings' own
     # env_file resolves to a real file, true when running from the repo
     # root (e.g. tests, which need cwd=/repo to import `backend.app...`),
@@ -82,8 +82,8 @@ class Settings(BaseSettings):
     @classmethod
     def _secret_key_minimum_strength(cls, value: str) -> str:
         # A short/low-entropy SECRET_KEY would otherwise go undetected until
-        # someone forges a token against it. Fail fast at startup instead.
-        # 32 chars is a floor, not a real entropy guarantee. It only catches
+        # someone forges a token against it; fail fast at startup instead.
+        # 32 chars is a floor, not a real entropy guarantee; it only catches
         # placeholder/example values like "changeme" or "secret".
         if len(value) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters long")

@@ -35,7 +35,7 @@ const INACTIVE_PAGE_PROPS = {
     },
 };
 
-// Active page: brand.solid already has plenty of contrast on its own. This
+// Active page: brand.solid already has plenty of contrast on its own; this
 // only adds a matching border so it doesn't look like a different kind of
 // control next to its plain-styled siblings, plus the same hover fix every
 // other colorPalette="brand" solid button uses (BRAND_SOLID_HOVER_PROPS) -

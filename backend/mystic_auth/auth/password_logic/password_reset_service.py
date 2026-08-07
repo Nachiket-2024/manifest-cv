@@ -24,7 +24,7 @@ class PasswordResetService:
                 logger.warning("Password reset requested for non-existent email: %s", email)
                 return False
 
-            # Token carries only email. Role is no longer needed for reset flow.
+            # Token carries only email; role is no longer needed for reset flow.
             reset_token = await password_service.create_reset_token(email)
 
             expires_minutes = settings.RESET_TOKEN_EXPIRE_MINUTES

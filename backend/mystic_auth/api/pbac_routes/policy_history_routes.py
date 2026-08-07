@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...authorization.conditions.condition_validator import ConditionValidationError, validate_conditions
+from ...authorization.dependencies.policy_route_dependencies import (
+    PROTECTED_POLICY_NAMES,
+    READ_DEPENDENCY,
+    UPDATE_DEPENDENCY,
+)
 from ...authorization.repositories.policy_history_repository import policy_history_repository
 from ...authorization.repositories.policy_repository import policy_repository
 from ...authorization.schemas.policy_history_schema import (
@@ -12,8 +17,7 @@ from ...authorization.schemas.policy_history_schema import (
 from ...authorization.schemas.policy_schema import PolicyRead
 from ...authorization.services.authorization_service import authorization_service
 from ...database.connection import database
-from ..get_or_404 import get_or_404
-from .policy_permissions import PROTECTED_POLICY_NAMES, READ_DEPENDENCY, UPDATE_DEPENDENCY
+from ..get_or_404.get_or_404 import get_or_404
 
 router = APIRouter(prefix="/authorization", tags=["Authorization"])
 
@@ -102,7 +106,7 @@ async def rollback_policy(
 ):
     """
     Restores a policy to a prior recorded definition. The policy must still
-    exist: restoring a deleted policy isn't supported here. Recreate it via
+    exist: restoring a deleted policy isn't supported here; recreate it via
     POST /policies instead. Every history entry resolves to a restorable
     definition, including "deleted" entries (their previous_definition is
     their pre-deletion state, see _definition_for_entry), so rolling back

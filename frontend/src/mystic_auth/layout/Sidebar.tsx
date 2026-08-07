@@ -22,11 +22,11 @@ interface SidebarProps {
 }
 
 /**
- * Primary app navigation. Permanently visible on md+ screens. On smaller
+ * Primary app navigation. Permanently visible on md+ screens; on smaller
  * screens it's an off-canvas panel toggled by Navbar's menu button (slides
  * in via transform so it stays in the DOM, avoiding remounting nav state).
  * Each permission-gated link is wrapped in IfCan so a caller who lacks that
- * permission never sees it. The route itself is still independently
+ * permission never sees it; the route itself is still independently
  * enforced by ProtectedRoute.
  */
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onNavigate, extraItems }) => {

@@ -21,7 +21,7 @@ class Policy(Base):
         "users:read_own", the same vocabulary as authorization/permissions.py)
       - affected resources: resource_type ("users", or "*" for any resource)
       - conditions: conditions (JSON, e.g. {"self_only": true} for an
-        ownership-scoped grant. See evaluators/policy_evaluator.py for how
+        ownership-scoped grant; see evaluators/policy_evaluator.py for how
         these are interpreted)
       - audit information: created_at/updated_at/created_by
       - inheritance/composition: deliberately NOT modeled as policy-to-policy
@@ -62,7 +62,7 @@ class Policy(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    # Email of the admin who created this policy, or "system" for the
+    # Email of the user who created this policy, or "system" for the
     # baseline policies seeded by migration, nullable since not every
     # historical row necessarily has one.
     created_by: Mapped[str | None]
@@ -97,7 +97,7 @@ class UserPolicy(Base):
     policy_id: Mapped[int] = mapped_column(ForeignKey("policies.id", ondelete="CASCADE"), index=True)
 
     assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    # Email of the admin who made this assignment, or "system" for
+    # Email of the user who made this assignment, or "system" for
     # migration-seeded / signup-time default assignments
     assigned_by: Mapped[str | None]
 

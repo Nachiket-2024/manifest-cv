@@ -21,11 +21,18 @@ class PasswordResetRequestHandler:
         self, email: str, db: AsyncSession | None = None, request: Request | None = None
     ) -> JSONResponse:
         try:
-            # Service internally checks if user exists. Returns False if not found.
+            # Service internally checks if user exists; returns False if not found.
             email_sent = await self.password_reset_service.send_reset_email(email, db)
 
             if not email_sent:
                 logger.info("Password reset requested for non-existing email: %s", email)
+                # user_email intentionally omitted (unattributed row, see
+                # audit_log_model's support for user_email=NULL): recording
+                # which specific address was probed would defeat the same
+                # anti-enumeration reasoning this endpoint's response already
+                # protects, but the probe itself must still show up in the
+                # Security Log, otherwise this flow is invisible to review.
+                await log_security_event(PASSWORD_RESET_REQUESTED, db, success=False, request=request)
             else:
                 # Only audit-log a real request, matching signup_handler's
                 # anti-enumeration reasoning (never persist a signal that would

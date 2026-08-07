@@ -47,7 +47,7 @@ def _apply_filters(
     """Shared by get_all/get_for_user (row fetch) and count/count_for_user
     (X-Total-Count), so a filtered page's total always matches what's
     actually being paged through. `search` (user_email) and `ip_address` are
-    substring matches on free-text fields. `event_type`/`success` are exact
+    substring matches on free-text fields; `event_type`/`success` are exact
     matches against fixed vocabularies (this module's own event_type
     constants, and a bool)."""
     if search:
@@ -71,7 +71,7 @@ def _apply_filters(
 class AuditLogRepository:
     """
     Persistence layer for the security audit log. Append-only: entries are
-    created by audit_log_service.log_security_event and never updated. Only
+    created by audit_log_service.log_security_event and never updated; only
     queried back for inspection.
     """
 
@@ -96,7 +96,7 @@ class AuditLogRepository:
         sort_dir: str = "desc",
     ) -> list[AuditLog]:
         """Fetch entries across all users. `search` is a case-insensitive
-        substring match on user_email. Unattributable rows (user_email is
+        substring match on user_email; unattributable rows (user_email is
         NULL, see audit_log_service.py) never match a non-empty search, same
         as they'd never match a literal email typed into a search box.
         `sort_by`/`sort_dir` default to newest-first by created_at, same as

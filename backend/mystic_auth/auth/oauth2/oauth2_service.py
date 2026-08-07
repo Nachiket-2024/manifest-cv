@@ -74,8 +74,8 @@ class OAuth2Service:
             return None
 
         # Atomically fetch-and-delete so the same state (and its paired
-        # code_verifier) can never be redeemed twice. Redis-py's stub types
-        # getdel() for both raw-bytes and decoded-str responses. This client
+        # code_verifier) can never be redeemed twice. redis-py's stub types
+        # getdel() for both raw-bytes and decoded-str responses; this client
         # is constructed with decode_responses=True (see redis/client.py),
         # so the result is always str | None here.
         return cast("str | None", await redis_client.getdel(f"oauth_state:{state}"))
@@ -86,7 +86,7 @@ class OAuth2Service:
     ) -> dict | None:
         """
         code_verifier is the PKCE verifier matching the code_challenge sent in the
-        original authorization request. Google rejects the exchange if it doesn't
+        original authorization request; Google rejects the exchange if it doesn't
         match, proving this callback belongs to the same party that started the flow.
         """
         try:
@@ -132,12 +132,12 @@ class OAuth2Service:
 
         Token validity/multi-device revocation is handled entirely inside
         jwt_service.create_refresh_token (the account_ver/chain_ver counters
-        used by logout-all and reuse detection). The best-effort Manage
+        used by logout-all and reuse detection); the best-effort Manage
         Sessions row (device/IP/last-seen) is recorded separately below via
         session_service, keyed off the same chain_id. An earlier version
         additionally wrote each token pair into a
         separate `user_tokens:{email}` Redis list, but nothing ever read that
-        list. It was pure dead weight that grew forever (no TTL) and needlessly
+        list; it was pure dead weight that grew forever (no TTL) and needlessly
         held raw, cleartext bearer tokens in Redis on top of the version counters.
 
         Pre-hijacking note: an unverified account is not proof that whoever
@@ -173,7 +173,7 @@ class OAuth2Service:
             # OAuth2 login trusts Google's email_verified alone: there is no
             # password check at all, so without this guard, anyone who controls a
             # Google account matching whatever email the operator chose for the
-            # system account (an arbitrary, operator-picked address. Nothing stops
+            # system account (an arbitrary, operator-picked address; nothing stops
             # it from being a real, Google-verifiable one) could sign in as the
             # system superuser entirely bypassing its password.
             if user and user.role == UserRole.system:
@@ -218,7 +218,7 @@ class OAuth2Service:
                     email, {"is_verified": True, "hashed_password": None}, db
                 )
                 # Keep the already-fetched user object if the update raced with a
-                # deletion. Role/email are unaffected either way.
+                # deletion; role/email are unaffected either way.
                 if updated_user:
                     user = updated_user
 

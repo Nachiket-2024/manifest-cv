@@ -12,7 +12,7 @@
 #
 # Action identifiers (defined in the migration, not here) match
 # authorization/permissions.py's Permission enum values. That enum remains the
-# action vocabulary. Only the old role-permission mapping was RBAC and has been
+# action vocabulary; only the old role-permission mapping was RBAC and has been
 # removed.
 
 SELF_SERVICE_POLICY_NAME = "self_service"

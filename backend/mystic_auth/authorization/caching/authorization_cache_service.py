@@ -141,7 +141,7 @@ class AuthorizationCacheService:
     async def set_user_policies(user_email: str, policies: list[Policy]) -> None:
         """Best-effort populate: a write failure here must never surface
         to the caller (the database query it's caching already
-        succeeded. This is purely a subsequent-request optimization)."""
+        succeeded; this is purely a subsequent-request optimization)."""
         try:
             payload = json.dumps([_serialize_policy(policy) for policy in policies])
             await redis_client.set(_user_policies_key(user_email), payload, ex=_USER_POLICIES_TTL_SECONDS)

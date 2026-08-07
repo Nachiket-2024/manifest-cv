@@ -1,8 +1,8 @@
 import React from "react";
-import { Box, Skeleton, Table, EmptyState, HStack } from "@chakra-ui/react";
-import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Box, Skeleton, Table, EmptyState } from "@chakra-ui/react";
 
 import FormAlert from "./FormAlert";
+import { ariaSortFor, renderHeaderCell } from "./DataTableSortableHeader";
 import type { SortState } from "./hooks/useSortState";
 
 export interface DataTableColumn<T> {
@@ -22,7 +22,7 @@ export interface DataTableColumn<T> {
      * (a shorter name, an empty IP, a different badge set) reflows every
      * column width on every render - distracting movement that has nothing
      * to do with the data itself. Give a fixed width to any column whose
-     * content varies a lot in length. Columns left unset share the
+     * content varies a lot in length; columns left unset share the
      * remaining space evenly. */
     width?: string;
     /** Clips this column's content to one line with a trailing ellipsis
@@ -30,7 +30,7 @@ export interface DataTableColumn<T> {
      * long unbroken string (an email, a UA string, an audit "action" id)
      * that has nowhere to wrap once its column has a fixed width. Set this
      * on any column whose content is free-form text of unpredictable
-     * length. Leave it off for columns that already manage their own
+     * length; leave it off for columns that already manage their own
      * overflow (badges/buttons in an HStack/Wrap that's meant to wrap onto
      * a second line). When `render` returns a plain string, that string is
      * also used as the cell's `title` so the full value is still available
@@ -96,59 +96,16 @@ interface DataTableProps<T> {
      * by position - `startIndex + 1` for the first rendered row. Pass the
      * page offset (e.g. `(page - 1) * PAGE_SIZE`) for a server-paginated
      * table so numbers reflect the row's real position across the whole
-     * result set, not just its position on the current page. Pass `0` for
+     * result set, not just its position on the current page; pass `0` for
      * an unpaginated/client-filtered table. Omit entirely for a table where
      * row position isn't meaningful (e.g. one already keyed by a visible
      * id/name column). */
     startIndex?: number;
 }
 
-function SortableHeaderLabel({
-    label,
-    active,
-    direction,
-}: {
-    label: string;
-    active: boolean;
-    direction: "asc" | "desc";
-}) {
-    return (
-        <HStack gap={1} cursor="pointer" userSelect="none" _hover={{ color: "brand.fg" }} role="button" tabIndex={0}>
-            <span>{label}</span>
-            {active ? (
-                direction === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-            ) : (
-                <ArrowUpDown size={14} opacity={0.4} />
-            )}
-        </HStack>
-    );
-}
-
-function renderHeaderCell<T>(col: DataTableColumn<T>, sort: SortState | undefined) {
-    if (!col.sortable) return col.header;
-    return (
-        <SortableHeaderLabel
-            label={col.header}
-            active={sort?.key === col.key}
-            direction={sort?.key === col.key ? sort.direction : "asc"}
-        />
-    );
-}
-
-/** aria-sort belongs on the <th> itself (not the inner label span), so
- * screen readers announce a sortable table's current sort state the same
- * way sighted users see it from the arrow icon - "none" for every
- * unsorted sortable column, never omitted, so its presence alone also
- * tells assistive tech the column is sortable at all. */
-function ariaSortFor<T>(col: DataTableColumn<T>, sort: SortState | undefined): React.AriaAttributes["aria-sort"] {
-    if (!col.sortable) return undefined;
-    if (sort?.key !== col.key) return "none";
-    return sort.direction === "asc" ? "ascending" : "descending";
-}
-
 /**
- * Generic table with a shared loading/error/empty treatment, so every admin
- * list page (Users, Policies, Audit Log) doesn't reimplement the same three
+ * Generic table with a shared loading/error/empty treatment, so every
+ * management list page (Users, Policies, Audit Log) doesn't reimplement the same three
  * conditional branches around a bare Chakra Table.
  */
 function DataTable<T>({

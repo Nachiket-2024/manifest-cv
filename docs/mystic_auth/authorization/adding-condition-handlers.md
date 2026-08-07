@@ -15,7 +15,7 @@ Adding a new condition type **never** requires touching `PolicyEvaluationEngine`
 
 ## 1. Create the handler class
 
-Add a new file beside the other condition implementations, for example `backend/mystic_auth/authorization/conditions/condition_types/device_trust_condition.py`. Do not put condition-specific logic in `condition_registry.py`, `condition_validator.py`, or `condition_evaluation_service.py`. Those files are the framework the handlers plug into.
+Add a new file beside the other condition implementations, for example `backend/mystic_auth/authorization/conditions/condition_types/device_trust_condition.py`. Do not put condition-specific logic in `condition_registry.py`, `condition_validator.py`, or `condition_evaluation_service.py`; those files are the framework the handlers plug into.
 
 ```python
 from ..condition_handler import ConditionHandler
@@ -85,7 +85,7 @@ Also add `"device_trust"` to `_SUPPORTED_KEYS` in the same file: an unrecognized
 
 ## 4. Test the new condition handler
 
-Three levels, mirroring how every existing condition is tested (see `tests/backend/mystic_auth/unit/authorization/test_policy_conditions_unit.py`):
+Three levels, mirroring how every existing condition is tested (see `tests/backend/mystic_auth/unit/authorization/conditions/test_policy_conditions_unit.py`):
 
 **Unit test the handler in isolation** (no DB, no evaluator):
 
@@ -100,7 +100,7 @@ def test_device_trust_fails_safe_on_missing_context():
     assert handler.evaluate({"min_level": "high"}, "u@example.com", None, None) is False
 ```
 
-**Unit test the validator** (see `tests/backend/mystic_auth/unit/authorization/test_condition_validator_unit.py`'s pattern):
+**Unit test the validator** (see `tests/backend/mystic_auth/unit/authorization/conditions/test_condition_validator_unit.py`'s pattern):
 
 ```python
 def test_device_trust_rejects_invalid_min_level():
@@ -108,7 +108,7 @@ def test_device_trust_rejects_invalid_min_level():
         validate_conditions({"device_trust": {"min_level": "extreme"}})
 ```
 
-**Add a schema-consistency test** (see `tests/backend/mystic_auth/unit/authorization/test_condition_schema_consistency_unit.py`) proving the validator and the handler agree on the exact same JSON shape: this is what caught the `date_range` `start`/`end` naming as the one true canonical shape during this project's own condition-schema audit.
+**Add a schema-consistency test** (see `tests/backend/mystic_auth/unit/authorization/conditions/test_condition_schema_consistency_unit.py`) proving the validator and the handler agree on the exact same JSON shape: this is what caught the `date_range` `start`/`end` naming as the one true canonical shape during this project's own condition-schema audit.
 
 **Optionally, a real-DB integration/security test** (see `tests/backend/mystic_auth/security/test_context_spoofing_security.py` for the pattern) proving the condition is enforced end-to-end through a real route, not just the handler in isolation.
 
@@ -116,6 +116,6 @@ def test_device_trust_rejects_invalid_min_level():
 
 ## What you should never need to change
 
-- `policy_evaluator.py`: it only matches action/resource_type and delegates the whole `conditions` block. It has no per-condition-type logic.
-- `condition_evaluation_service.py`: its dispatch loop is generic. It just looks up whatever key is present.
+- `policy_evaluator.py`: it only matches action/resource_type and delegates the whole `conditions` block; it has no per-condition-type logic.
+- `condition_evaluation_service.py`: its dispatch loop is generic; it just looks up whatever key is present.
 - Any existing condition handler: they're independent of each other.

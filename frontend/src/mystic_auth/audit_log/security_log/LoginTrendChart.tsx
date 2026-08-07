@@ -19,7 +19,7 @@ function formatDayLabel(iso: string): string {
 }
 
 /** "21 Jul" - day-then-month so every axis tick is self-contained (no
- * separate "which month is this-" lookup against the subtitle range). */
+ * separate "which month is this?" lookup against the subtitle range). */
 function formatAxisLabel(iso: string): string {
     const d = new Date(`${iso}T00:00:00`);
     return `${d.getDate()} ${d.toLocaleDateString("en-US", { month: "short" })}`;
@@ -50,7 +50,7 @@ function niceMax(value: number): number {
 /**
  * LoginTrendChart
  * ----------------------------
- * Daily login success/failure counts as a stacked bar chart, so an admin
+ * Daily login success/failure counts as a stacked bar chart, so an operator
  * (or a user checking their own activity) can spot a spike - a brute-force
  * run, a lockout wave - at a glance instead of paging/filtering through
  * individual rows below. Colors match this same page's own Result badges

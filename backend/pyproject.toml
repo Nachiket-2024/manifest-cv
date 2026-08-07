@@ -20,6 +20,9 @@ known-first-party = ["app", "mystic_auth"]
 # Blocking input is intended here.
 "mystic_auth/scripts/create_system_user.py" = ["ASYNC250"]
 "mystic_auth/scripts/create_rbac_policies.py" = ["ASYNC250"]
+# Env overrides must run before the backend.* imports below them, which build
+# Settings()/engine/client singletons eagerly at import time from the process env.
+"../tests/backend/conftest.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.14"

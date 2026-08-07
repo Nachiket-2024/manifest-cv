@@ -3,13 +3,13 @@ import * as Sentry from "@sentry/react";
 const dsn = import.meta.env.VITE_SENTRY_DSN;
 
 /**
- * Initializes the Sentry SDK if VITE_SENTRY_DSN is set at build time. A
+ * Initializes the Sentry SDK if VITE_SENTRY_DSN is set at build time; a
  * complete no-op otherwise, so this template behaves identically whether
  * or not error monitoring is wired up. Call once, before the app renders
  * (see main.tsx).
  *
  * Works against Sentry itself or any self-hosted server that speaks the
- * same protocol (e.g. Bugsink, see docs/mystic_auth/error-monitoring/overview.md). Nothing
+ * same protocol (e.g. Bugsink, see docs/mystic_auth/error-monitoring/overview.md); nothing
  * here is Sentry-the-company-specific beyond the SDK package name.
  */
 export function initErrorMonitoring(): void {
@@ -34,7 +34,7 @@ export function initErrorMonitoring(): void {
  * short-circuits before touching the SDK at all, matching the backend's
  * equivalent (error_monitoring/sentry_service.py::capture_exception).
  *
- * Called from ui/ErrorBoundary.tsx for a caught render error. Also
+ * Called from ui/ErrorBoundary.tsx for a caught render error; also
  * available for your own feature code to report a caught-but-still-
  * noteworthy error the same way.
  */

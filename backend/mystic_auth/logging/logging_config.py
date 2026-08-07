@@ -48,12 +48,12 @@ def _make_access_handler(level: int, formatter: logging.Formatter) -> logging.Ha
 def _make_stream_formatter(json_fields: str, console_fields: str) -> logging.Formatter:
     """
     Human-readable console output in dev, structured JSON in production.
-    For the terminal (StreamHandler) only. File output (access_handler
+    For the terminal (StreamHandler) only; file output (access_handler
     below) stays JSON unconditionally regardless of environment.
 
-    In dev, a person watches this terminal live, for example through ./scripts/docker/dev-up.sh.
+    In dev, a person watches this terminal live (e.g. ./scripts/dev-up.sh),
     so JSON there only costs readability. In production, nobody watches the
-    terminal directly. Logs ship to a real aggregator (Loki/ELK/CloudWatch/
+    terminal directly; logs ship to a real aggregator (Loki/ELK/CloudWatch/
     etc.) that needs actual structured fields, not text to regex-guess
     apart. Standard practice (structlog's own default: ConsoleRenderer for
     dev, JSONRenderer for prod), not a new idea.

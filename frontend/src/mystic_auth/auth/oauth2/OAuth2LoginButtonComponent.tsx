@@ -27,7 +27,7 @@ const OAuth2LoginButtonComponent: React.FC<OAuth2LoginButtonComponentProps> = ({
                 w="full"
                 // Google's official "Sign in with Google" button asset comes in a light and a
                 // dark variant (branding guidelines require picking whichever fits the
-                // surrounding UI, not always the light one). Previously this always rendered the
+                // surrounding UI, not always the light one); previously this always rendered the
                 // light variant, which read as a stark white box against the rest of the app's
                 // dark-mode surfaces.
                 bg="white"

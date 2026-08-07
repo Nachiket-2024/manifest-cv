@@ -41,7 +41,9 @@ from .sdk import (  # noqa: E402
     refresh_token_router,
     security_audit_router,
     settings,
-    user_management_router,
+    user_lifecycle_router,
+    user_management_query_router,
+    user_management_update_router,
     user_self_service_router,
     watch_for_late_dsn,
 )
@@ -139,16 +141,19 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(auth_router)
 app.include_router(refresh_token_router)
 # Split from a single user_routes.py into user_self_service_routes.py (GET/PUT
-# /users/me, no admin permission) and user_management_routes.py (users:list_all/
-# update_any/delete_any/purge/reactivate/assign_role, gated accordingly), see
-# backend/mystic_auth/api/user_routes/. Registration order matters here: the
-# self-service router must come first, since user_management_router's PUT
-# /users/{user_email} would otherwise shadow PUT /users/me (Starlette matches
-# routes in registration order across the whole app, not per-router). The
-# same hazard is why policy_assignment_router's own /me-before-{email}
-# ordering below matters within a single router.
+# /users/me, no elevated permission) and, by operation type, user_management_query_routes.py
+# (users:list_all/stats), user_management_update_routes.py (update_any/assign_role),
+# and user_lifecycle_routes.py (delete_any/purge/reactivate) - all gated
+# accordingly, see backend/mystic_auth/api/user_routes/. Registration order
+# matters here: the self-service router must come first, since the management
+# routers' PUT /users/{user_email} would otherwise shadow PUT /users/me
+# (Starlette matches routes in registration order across the whole app, not
+# per-router) - the same hazard policy_assignment_router's own
+# /me-before-{email} ordering below guards against within a single router.
 app.include_router(user_self_service_router)
-app.include_router(user_management_router)
+app.include_router(user_management_query_router)
+app.include_router(user_management_update_router)
+app.include_router(user_lifecycle_router)
 # Split from a single pbac_routes/policy_routes.py into feature-based modules
 # (CRUD, history, assignment, checks, audit log), see backend/mystic_auth/api/pbac_routes/.
 # Registration order matters: policy_assignment_router defines

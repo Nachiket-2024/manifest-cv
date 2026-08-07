@@ -15,7 +15,7 @@ async function fetchLatestLoginAt(eventType: string): Promise<string | null> {
 }
 
 /** The current user's most recent successful login timestamp (ISO string),
- * or null if the audit log has no record of one (e.g. A brand-new account
+ * or null if the audit log has no record of one (e.g. a brand-new account
  * whose only session so far predates audit logging). Lives here (not
  * `dashboard/`), even though the Dashboard is its only current consumer:
  * it's an audit-log query (GET /audit/security-log/me), the same domain

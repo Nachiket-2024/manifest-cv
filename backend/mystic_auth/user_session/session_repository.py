@@ -53,7 +53,7 @@ class SessionRepository:
     @staticmethod
     async def rotate(db: AsyncSession, old_jti: str, new_jti: str, new_expires_at: datetime) -> UserSession | None:
         """Moves an existing row from its old (now-rotated-away) jti to the
-        new one minted alongside it, bumping last_used_at. Chain_id is
+        new one minted alongside it, bumping last_used_at. chain_id is
         untouched (it never changes across a rotation). Returns None (a
         no-op, never raises) if no row matched the old jti - covers
         sessions minted before this feature shipped, or any other drift

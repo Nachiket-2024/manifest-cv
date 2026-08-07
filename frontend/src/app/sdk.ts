@@ -6,12 +6,12 @@
  * directly. One file to discover what's available, and one file to reconcile
  * when pulling in upstream template updates instead of every call site.
  *
- * Everything below is a straight re-export. See the original module for the
+ * Everything below is a straight re-export; see the original module for the
  * "why" behind any given piece.
  *
  * DO NOT hand-edit this file. Treat it as a drop-in you receive from
  * upstream, not a place to add your own re-exports: this is the one file a
- * `scripts/upstream-sync/sync-upstream.sh` sync is expected to touch, and local edits
+ * `scripts/sync-upstream.sh` sync is expected to touch, and local edits
  * here are exactly what turns that sync into a manual conflict instead of
  * applying cleanly. If you need your own re-exports for your own domain
  * code, add them to app_sdk.ts instead, since it's the counterpart file kept

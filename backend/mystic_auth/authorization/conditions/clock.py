@@ -7,7 +7,7 @@ def resolve_current_datetime(context: dict | None, tz: ZoneInfo) -> datetime:
     Returns the real wall clock in `tz`, unless `context` carries a
     "current_time" override (ISO 8601 string): this is what lets the
     authorization-check inspection endpoint answer "would this be allowed
-    at <hypothetical time>-", and lets tests exercise time/date-range
+    at <hypothetical time>?", and lets tests exercise time/date-range
     conditions deterministically without patching the system clock. A
     naive override (no offset) is treated as UTC before converting.
 

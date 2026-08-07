@@ -13,7 +13,7 @@ class SecurityContextCondition(ConditionHandler):
     signal layer populates into that sub-key.
 
     Fails safe (denies) if context (or its security_context sub-key) is
-    missing entirely, or any listed key is absent from it. An unset
+    missing entirely, or any listed key is absent from it; an unset
     security signal must never be treated as satisfied by default.
     """
 

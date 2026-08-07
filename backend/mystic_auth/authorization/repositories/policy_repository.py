@@ -43,7 +43,7 @@ class PolicyRepository:
 
     Policies are looked up by name throughout the app (routes take a
     human-readable policy_name, never a numeric id), so there is no
-    get_by_id. Add one if/when a caller actually needs id-based lookup.
+    get_by_id; add one if/when a caller actually needs id-based lookup.
 
     create/update/delete each stage a policy_history row (via
     policy_history_repository.add_entry) alongside their own mutation and
@@ -84,7 +84,7 @@ class PolicyRepository:
     @staticmethod
     async def get_all(db: AsyncSession, limit: int = 1000, offset: int = 0) -> list[Policy]:
         # Capped: every other list endpoint in the app (audit log, policy
-        # history) bounds its query the same way. This one previously read
+        # history) bounds its query the same way; this one previously read
         # the whole table unconditionally.
         stmt = select(Policy).order_by(Policy.id).limit(limit).offset(offset)
         result = await db.execute(stmt)
@@ -102,9 +102,9 @@ class PolicyRepository:
         """
         `change_type` is "updated" for a normal edit, or "rolled_back" when
         this call is restoring a prior version (see
-        api/pbac_routes/policy_history_routes.py's rollback endpoint). The
+        api/pbac_routes/policy_history_routes.py's rollback endpoint); the
         only difference is how the resulting
-        history entry is labeled. The mutation logic is identical either
+        history entry is labeled; the mutation logic is identical either
         way, so rollback reuses this method rather than duplicating it.
         """
         previous_definition = _definition_snapshot(db_obj)
@@ -190,7 +190,7 @@ class PolicyRepository:
 
         Cache-aside: this is the one authorization-hot-path query cached
         by AuthorizationCacheService (see its docstring for exactly what's
-        cached and why). Checked first. On a miss (or any cache failure),
+        cached and why); checked first; on a miss (or any cache failure),
         falls through to the database and populates the cache for next
         time. A cache read failure is indistinguishable from a miss here
         by design (see AuthorizationCacheService's "fail closed" note).
@@ -251,7 +251,7 @@ class PolicyRepository:
         user_email: str | None = None,
     ) -> UserPolicy:
         """
-        `assigned_by` is the email of the admin making the assignment, or
+        `assigned_by` is the email of the user making the assignment, or
         "system" for automated assignment (e.g. default policy at signup),
         for the audit trail.
 
@@ -260,7 +260,7 @@ class PolicyRepository:
         policy set (see AuthorizationCacheService). Optional and backward
         compatible: system-side self-assignment at signup/OAuth2/system-
         user-bootstrap doesn't pass it, since a brand-new user has nothing
-        cached yet to invalidate anyway. The admin-facing assign route
+        cached yet to invalidate anyway; the management-facing assign route
         (api/pbac_routes/policy_assignment_routes.py) does pass it, since that target user may
         already have a populated cache entry.
 

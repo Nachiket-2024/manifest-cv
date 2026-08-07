@@ -186,7 +186,7 @@ class JWTService:
 
         Exists for reuse-detection: when a refresh token is presented that
         Redis already shows as revoked, we still need to know which user it
-        belonged to in order to revoke their other active sessions. Verify_token
+        belonged to in order to revoke their other active sessions. verify_token
         can't be used for that because it would correctly refuse to return a
         payload for a revoked token.
         """
@@ -243,7 +243,7 @@ class JWTService:
 
     async def get_account_version(self, email: str) -> int:
         """Current account-wide version, 0 if it has never been bumped
-        (i.e. This account has never had a whole-account revoke)."""
+        (i.e. this account has never had a whole-account revoke)."""
         try:
             raw = await redis_client.get(ACCOUNT_VERSION_KEY.format(email=email))
             return int(raw) if raw is not None else 0
@@ -253,7 +253,7 @@ class JWTService:
 
     async def get_chain_version(self, email: str, chain_id: str) -> int:
         """Current version for one chain, 0 if it has never been bumped
-        (i.e. This specific session has never been individually revoked)."""
+        (i.e. this specific session has never been individually revoked)."""
         try:
             raw = await redis_client.get(CHAIN_VERSION_KEY.format(email=email, chain_id=chain_id))
             return int(raw) if raw is not None else 0

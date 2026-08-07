@@ -2,7 +2,7 @@ import React from "react";
 import { Button, type ButtonProps } from "@chakra-ui/react";
 
 // gray/red/green cover every colorPalette this app currently passes to a
-// row-action button (Edit/Policies use none -> gray. Delete/Purge -> red;
+// row-action button (Edit/Policies use none -> gray; Delete/Purge -> red;
 // Reactivate -> green). Each carries its own filled background (not just an
 // outline on transparent) so the button reads as a raised control against a
 // striped table row in both modes, plus a border one step darker/lighter
@@ -53,7 +53,7 @@ const PALETTE_STYLES = {
  * of this app's own bg.surface/bg.canvas and a striped table's alternating
  * row color - so the button reads as plain text until you already know
  * it's clickable. These are deliberately higher-contrast, fixed values
- * instead. Variant="plain" (not "outline") side-steps the outline recipe's
+ * instead. variant="plain" (not "outline") side-steps the outline recipe's
  * own built-in _hover, which fights with any hover style set here (see
  * LoginForm's Clear button history for why).
  */

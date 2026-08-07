@@ -34,21 +34,27 @@ POLICY_REVOKED = "policy_revoked"
 USER_ROLE_CHANGED = "user_role_changed"
 
 # Case-insensitive substring denylist for metadata keys that must never be
-# persisted verbatim. Every current call site only ever passes emails/counts
-# (see call sites across auth/*, user_management_routes.py), so this is a defense-in-depth
+# persisted verbatim. Applied recursively so a nested dict value is covered
+# too. Every current call site only ever passes emails/counts (see call
+# sites across auth/*, user_routes/*), so this is a defense-in-depth
 # backstop against a future call site accidentally passing something
-# sensitive. Not a fix for an existing leak.
+# sensitive; not a fix for an existing leak.
 _SENSITIVE_METADATA_KEY_MARKERS = ("password", "hash", "token", "secret", "cookie", "jwt", "credential")
+
+
+def _redact_value(key: str, value: object) -> object:
+    if any(marker in key.lower() for marker in _SENSITIVE_METADATA_KEY_MARKERS):
+        return "[REDACTED]"
+    if isinstance(value, dict):
+        return _redact_sensitive_metadata(value)
+    return value
 
 
 def _redact_sensitive_metadata(metadata: dict | None) -> dict | None:
     if metadata is None:
         return None
 
-    return {
-        key: "[REDACTED]" if any(marker in key.lower() for marker in _SENSITIVE_METADATA_KEY_MARKERS) else value
-        for key, value in metadata.items()
-    }
+    return {key: _redact_value(key, value) for key, value in metadata.items()}
 
 
 async def log_security_event(
@@ -67,7 +73,7 @@ async def log_security_event(
 
     `db=None` is accepted (rather than requiring a real session) purely so
     unit tests can call handlers/services directly without wiring a session
-    through every mocked collaborator. A real request always supplies one via
+    through every mocked collaborator; a real request always supplies one via
     Depends(database.get_session).
     """
     if db is None:

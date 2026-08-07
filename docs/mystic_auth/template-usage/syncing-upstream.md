@@ -1,6 +1,6 @@
 # Staying in Sync with Upstream Template Updates
 
-"Upstream" just means the original mystic-auth template repo: the one you clicked **Use this template** on. Every so often it gets new fixes or features, and you can pull those into your own project whenever you want. See [Using This Repository as a Template](overview.md) for everything else about building on top of this template. This page is just the sync mechanism itself.
+"Upstream" just means the original mystic-auth template repo: the one you clicked **Use this template** on. Every so often it gets new fixes or features, and you can pull those into your own project whenever you want. See [Using This Repository as a Template](overview.md) for everything else about building on top of this template; this page is just the sync mechanism itself.
 
 **Before anything else, the thing most people worry about here: this will not fill your project's history with the template's own commits.** Your `git log` stays exactly what it's always been: your own commits, plus one extra commit for whatever you just pulled in after a sync. Upstream's own commit-by-commit history (all the work that went into building this template) never gets attached to your project at all, no matter how many times you sync over the life of your project. What follows is purely about *file changes* landing in your project, not upstream's history becoming part of it.
 
@@ -158,13 +158,13 @@ scripts/docker/backend-exec.sh python -m pytest tests/backend/mystic_auth/unit t
 
 ### Step 8: Push whenever you're happy with it
 
-At this point you just have one new, ordinary commit sitting on top of your project's history, same as any commit you'd normally make. Push it to your branch, or open your own internal pull request to have a teammate look it over first. There's no PR or step required back against the original template repo. The sync only ever pulls, it never pushes anywhere.
+At this point you just have one new, ordinary commit sitting on top of your project's history, same as any commit you'd normally make. Push it to your branch, or open your own internal pull request to have a teammate look it over first. There's no PR or step required back against the original template repo; the sync only ever pulls, it never pushes anywhere.
 
 ---
 
 ## How it stays fast and accurate even after 20+ syncs
 
-Behind the scenes, the script keeps a small tracked file, `.mystic-auth-sync-state`, containing the exact upstream commit you last synced to. It updates that file automatically every time you sync, right alongside the sync commit itself. Each new sync uses that file to look at only what changed upstream *since then*, rather than re-checking your entire codebase from scratch every time. That's what keeps the "what's new" list accurate and keeps unrelated files from ever being flagged, no matter how many releases you've already pulled in. You never read or edit this file yourself. Just don't delete it. If it ever does go missing, the next sync safely falls back to checking everything from scratch (same as a first sync) rather than breaking.
+Behind the scenes, the script keeps a small tracked file, `.mystic-auth-sync-state`, containing the exact upstream commit you last synced to. It updates that file automatically every time you sync, right alongside the sync commit itself. Each new sync uses that file to look at only what changed upstream *since then*, rather than re-checking your entire codebase from scratch every time. That's what keeps the "what's new" list accurate and keeps unrelated files from ever being flagged, no matter how many releases you've already pulled in. You never read or edit this file yourself; just don't delete it. If it ever does go missing, the next sync safely falls back to checking everything from scratch (same as a first sync) rather than breaking.
 
 `scripts/upstream-sync/sync-upstream.sh` itself is upstream-owned, same rule as [the rest of `mystic_auth/`](overview.md#the-app--mystic_auth-split): don't hand-edit it. If you're contributing a change to the sync mechanism itself, `scripts/upstream-sync/test-sync-upstream.sh` regression-tests it end-to-end against throwaway fake repos, without touching this repo's own history. Run it after any change to `sync-upstream.sh`.
 

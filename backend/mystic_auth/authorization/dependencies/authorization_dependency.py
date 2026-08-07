@@ -21,7 +21,7 @@ def require_authorization(action: str, resource_type: str) -> Callable[..., Awai
 
     This is the PBAC replacement for the RBAC-era
     authorization.permission_checker.require_permission (removed): routes
-    declare *what action on what resource* they need. The authorization
+    declare *what action on what resource* they need; the authorization
     service and policy evaluation engine behind it decide *who currently
     has that*, based entirely on assigned policies. No role ever enters
     this decision, and this dependency itself never inspects

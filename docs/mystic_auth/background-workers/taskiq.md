@@ -71,9 +71,9 @@ await send_email_task.kiq(
 | `REDIS_URL` | Broker + result backend connection |
 | `FROM_EMAIL` | SMTP "From" address, also the account authenticating to the SMTP server |
 | `GMAIL_APP_PASSWORD` | App password for the `FROM_EMAIL` account (Gmail requires a per-app password for SMTP with 2FA enabled) |
-| `SUPPORT_EMAIL` | Optional. Used as the email's `Reply-To`, falls back to `FROM_EMAIL` if unset |
-| `SMTP_HOST` / `SMTP_PORT` | Optional. Default to `smtp.gmail.com`/`587`. Override to point `SMTPEmailSender` at a different SMTP provider |
-| `APP_NAME` | Required. Product name used in the email template's branding |
+| `SUPPORT_EMAIL` | Optional; used as the email's `Reply-To`, falls back to `FROM_EMAIL` if unset |
+| `SMTP_HOST` / `SMTP_PORT` | Optional; default to `smtp.gmail.com`/`587`. Override to point `SMTPEmailSender` at a different SMTP provider |
+| `APP_NAME` | Required; product name used in the email template's branding |
 
 ---
 
@@ -107,5 +107,5 @@ Regression tests in `tests/backend/mystic_auth/unit/taskiq_tasks/test_email_task
 
 ## Troubleshooting
 
-- **Worker not picking up tasks**: confirm `taskiq_worker` can reach `REDIS_URL`: same Redis instance the `backend` container uses. `./scripts/docker/dev-up.sh`, `.\scripts\docker\dev-up.ps1`, and `scripts\docker\dev-up.cmd` now include `taskiq_worker` in their live log tail. `docker compose logs taskiq_worker` still shows only the worker.
-- **Emails not arriving**: check `GMAIL_APP_PASSWORD` is a valid App Password (not the account password) and that "Less secure app access" / App Passwords are enabled on the sending Google account. Check the dev-up log tail or `docker compose logs taskiq_worker` for the logged traceback (`send_email_task` logs every failure with `logger.error`).
+- **Worker not picking up tasks**: confirm `taskiq_worker` can reach `REDIS_URL`: same Redis instance the `backend` container uses. `./scripts/docker/dev-up.sh`, `.\scripts\docker\dev-up.ps1`, and `scripts\docker\dev-up.cmd` now include `taskiq_worker` in their live log tail; `docker compose logs taskiq_worker` still shows only the worker.
+- **Emails not arriving**: check `GMAIL_APP_PASSWORD` is a valid App Password (not the account password) and that "Less secure app access" / App Passwords are enabled on the sending Google account; check the dev-up log tail or `docker compose logs taskiq_worker` for the logged traceback (`send_email_task` logs every failure with `logger.error`).

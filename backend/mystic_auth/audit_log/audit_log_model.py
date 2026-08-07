@@ -17,7 +17,7 @@ class AuditLog(Base):
     Deliberately append-only and independent of the users table (no foreign
     key): a user row can be deleted while its audit history must remain, so
     user_email is stored as a snapshot, not a reference. Nullable, since some
-    events (e.g. A failed login for an email that was never registered) have
+    events (e.g. a failed login for an email that was never registered) have
     no corresponding user.
 
     Never store passwords, tokens, or other secrets here: only identifiers
@@ -28,7 +28,7 @@ class AuditLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # Nullable for events with no resolvable account, e.g. A login attempt
+    # Nullable for events with no resolvable account, e.g. a login attempt
     # against a nonexistent email.
     user_email = Column(String, nullable=True, index=True)
 
@@ -46,7 +46,7 @@ class AuditLog(Base):
     # Ties this row back to the structured application logs for the same request.
     request_id = Column(String, nullable=True)
 
-    # Free-form event-specific detail (e.g. {"revoked_count": 3}). Never
+    # Free-form event-specific detail (e.g. {"revoked_count": 3}); never
     # secrets/passwords/tokens.
     event_metadata = Column("metadata", JSONB, nullable=True)
 

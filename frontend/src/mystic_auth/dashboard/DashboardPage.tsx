@@ -22,7 +22,7 @@ import { SECONDARY_BUTTON_PROPS } from "../ui/styles/buttonStyles";
 interface StatItemProps {
     icon: React.ReactNode;
     label: string;
-    /** A plain string renders as one line. Last login passes a two-line
+    /** A plain string renders as one line; Last login passes a two-line
      * (date, then time) node instead - see below. */
     value: React.ReactNode;
 }
@@ -50,7 +50,7 @@ const StatItem: React.FC<StatItemProps> = ({ icon, label, value }) => (
  * Displays the current user's information. Reads the current user from the
  * shared useCurrentUserQuery cache instead of fetching independently, so it
  * stays in sync with the rest of the app. Session controls (logout, logout
- * all devices) live in the app shell (Navbar) and AccountSettingsPage too. The
+ * all devices) live in the app shell (Navbar) and AccountSettingsPage too; the
  * Logout All quick action below is a shortcut to that same flow, not a
  * separate implementation of it.
  */

@@ -11,7 +11,7 @@ interface PageContainerProps {
      * still inside the same left-hand column as those - so it stacks
      * beneath the title while staying in the same header row as `actions`.
      * Use this (rather than putting the same content in `children`) when
-     * `actions` is tall (e.g. A stats card) and this content should sit
+     * `actions` is tall (e.g. a stats card) and this content should sit
      * beside it - a search bar/filter row, for instance - instead of
      * being pushed below the actions block's full height. */
     headerExtra?: React.ReactNode;
@@ -19,7 +19,7 @@ interface PageContainerProps {
 }
 
 /**
- * Consistent heading/description/action-slot layout for every admin page
+ * Consistent heading/description/action-slot layout for every management page
  * (Users, Policies, Audit Log, Account Settings) so they share the same page-header
  * rhythm instead of each hand-rolling its own Heading + Flex.
  */

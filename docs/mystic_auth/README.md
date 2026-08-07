@@ -63,7 +63,7 @@ This is the template's own reference documentation, belonging to upstream and no
 
 ## Error Monitoring
 
-- [Error Monitoring](error-monitoring/overview.md): enabled-by-default backend/frontend error reporting via the Sentry SDK protocol. Self-hosted Bugsink quickstart and what gets reported
+- [Error Monitoring](error-monitoring/overview.md): enabled-by-default backend/frontend error reporting via the Sentry SDK protocol; self-hosted Bugsink quickstart and what gets reported
 
 ---
 
@@ -75,7 +75,7 @@ This is the template's own reference documentation, belonging to upstream and no
 
 ## Docker
 
-- [Docker Overview](docker/overview.md): services, Dockerfiles, dev vs. Prod compose, healthchecks
+- [Docker Overview](docker/overview.md): services, Dockerfiles, dev vs. prod compose, healthchecks
 - [Docker Validation History](docker/validation-history.md): live-verification passes against the running stack, covering what was run, what it found, what got fixed
 
 ---
@@ -118,7 +118,7 @@ This is the template's own reference documentation, belonging to upstream and no
 
 ## Who this is for
 
-Anyone adding a new protected endpoint, a new permission, a new condition type, or a new policy to this template. Anyone integrating a new frontend feature against the API. Anyone debugging why an authorization decision or a request came back the way it did. Or anyone new to the codebase who needs the system-wide picture before touching auth, authorization, or infrastructure code.
+Anyone adding a new protected endpoint, a new permission, a new condition type, or a new policy to this template; anyone integrating a new frontend feature against the API; anyone debugging why an authorization decision or a request came back the way it did; or anyone new to the codebase who needs the system-wide picture before touching auth, authorization, or infrastructure code.
 
 ---
 

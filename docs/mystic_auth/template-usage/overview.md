@@ -45,7 +45,7 @@ See root [`README.md`](../../../README.md#-first-time-setup--creating-the-system
 
 Every setting is documented inline in [`.env.example`](../../../.env.example): treat that file as the source of truth, not this doc. `frontend/.env.example` only matters if you run the frontend locally with `npm run dev` instead of Docker.
 
-To rename the app: set `APP_NAME` and `VITE_APP_NAME` in the root `.env`, then `docker compose up --build` (the frontend value is baked in at build time). Nothing else hardcodes a product name. CI keeps using its own placeholder `APP_NAME` regardless. That's expected, not something to sync.
+To rename the app: set `APP_NAME` and `VITE_APP_NAME` in the root `.env`, then `docker compose up --build` (the frontend value is baked in at build time). Nothing else hardcodes a product name. CI keeps using its own placeholder `APP_NAME` regardless; that's expected, not something to sync.
 
 ---
 
@@ -57,7 +57,7 @@ Both backend and frontend are split into two trees, and every file in the repo f
 |---|---|---|---|
 | **Upstream-owned: never edit** | `backend/mystic_auth/`, `backend/app/sdk.py`, `frontend/src/mystic_auth/`, `frontend/src/app/sdk.ts`, `docs/mystic_auth/`, `screenshots/mystic_auth/` | Only upstream | This is the template's actual implementation. Since you never touch it, every `scripts/upstream-sync/sync-upstream.sh` merge applies here cleanly because there's nothing of yours for it to conflict with. |
 | **Yours: upstream never touches it again** | `backend/app/app_sdk.py`, `frontend/src/app/app_sdk.ts`, `docs/app/`, `screenshots/app/`, root `README.md`, `SECURITY.md` | Only you | Upstream ships these once (`app_sdk.*` empty, the READMEs as generic starting points) and never edits them again in any future release. Since only you write to them, they never conflict either. |
-| **Shared: extend in place, expect occasional conflicts** | `backend/app/main.py`, `frontend/src/app/App.tsx`, plus root-level config neither side owns outright: `frontend/package.json`, `backend/requirements.txt`, `docker-compose.yml`, `docker-compose.local-prod.yml`, `docker-compose.prod.yml`, `.env.example` | Both, over time | These have to ship as real, working files (an entry point that mounts routers, a router that renders routes, a dependency list, a compose file), so they can't start empty the way `app_sdk.*` does. You're expected to extend them (register your own router, add your own `<Route>`, add your own dependency), and upstream may also touch the same file later (e.g. A middleware-ordering fix, or a dependency swap). This is the one tier where a sync merge can genuinely conflict, and it's a normal, expected part of syncing when it happens. |
+| **Shared: extend in place, expect occasional conflicts** | `backend/app/main.py`, `frontend/src/app/App.tsx`, plus root-level config neither side owns outright: `frontend/package.json`, `backend/requirements.txt`, `docker-compose.yml`, `docker-compose.local-prod.yml`, `docker-compose.prod.yml`, `.env.example` | Both, over time | These have to ship as real, working files (an entry point that mounts routers, a router that renders routes, a dependency list, a compose file), so they can't start empty the way `app_sdk.*` does. You're expected to extend them (register your own router, add your own `<Route>`, add your own dependency), and upstream may also touch the same file later (e.g. a middleware-ordering fix, or a dependency swap). This is the one tier where a sync merge can genuinely conflict, and it's a normal, expected part of syncing when it happens. |
 
 ```mermaid
 flowchart TB
@@ -95,7 +95,7 @@ flowchart TB
 
 Your own new feature folders (`backend/app/projects/`, `frontend/src/app/projects/`) are effectively a fourth, unlisted case: upstream has no idea they exist, so they behave like the "yours" tier automatically, with no path convention needed.
 
-The diagram above only shows code files, since it's tracing import relationships. The shared config files from the table above (`package.json`, `requirements.txt`, `docker-compose*.yml`, `.env.example`) don't import anything, but they're in the same "Shared" tier as `main.py`/`App.tsx` for the same reason: you're expected to add your own entries, and upstream may add or change its own later. See [Syncing Upstream Template Updates](syncing-upstream.md) for what a conflict in one of these actually looks like.
+The diagram above only shows code files, since it's tracing import relationships; the shared config files from the table above (`package.json`, `requirements.txt`, `docker-compose*.yml`, `.env.example`) don't import anything, but they're in the same "Shared" tier as `main.py`/`App.tsx` for the same reason: you're expected to add your own entries, and upstream may add or change its own later. See [Syncing Upstream Template Updates](syncing-upstream.md) for what a conflict in one of these actually looks like.
 
 ---
 
@@ -115,7 +115,7 @@ Some UI, like the sidebar, is rendered by mystic_auth/ but genuinely needs to re
 
 | Component | Extension prop | Shape |
 |---|---|---|
-| `AppLayout` (re-exported from `sdk.ts`) | `extraNavItems-: NavItem[]` | `NavItem` (also re-exported from `sdk.ts`): `{ label: string. To: string. Permission-: string. Order-: number }` |
+| `AppLayout` (re-exported from `sdk.ts`) | `extraNavItems?: NavItem[]` | `NavItem` (also re-exported from `sdk.ts`): `{ label: string; to: string; permission?: string; order?: number }` |
 
 Pass the same array to every `<AppLayout>` usage in your `App.tsx` (define it once, above your `<Routes>`, and reuse the reference) so the sidebar doesn't reshape as the user navigates between routes:
 
@@ -146,7 +146,7 @@ const EXTRA_NAV_ITEMS: NavItem[] = [
 
 Items sharing the same `order` (or all omitting it) keep their relative order from the array they were given in: ties never get shuffled.
 
-If a future release adds an extension point to another shared component (e.g. The top bar), it'll follow this same shape: a typed, optional, additive prop, listed in this table.
+If a future release adds an extension point to another shared component (e.g. the top bar), it'll follow this same shape: a typed, optional, additive prop, listed in this table.
 
 ---
 
@@ -181,7 +181,7 @@ async def list_all_projects(
 
 See [Worked Example: Adding a New Domain, End to End](worked-example.md) for all of the above: model, schema, router, migration, policy, frontend page, route, and nav link, wired together for one fake domain as a copy-and-rename starting point for your first feature.
 
-Don't need PBAC's full generality (conditions, per-resource scoping), just "everyone with role X gets these actions"- See [RBAC Quickstart](../authorization/rbac-quickstart.md): same policies, just unconditioned ones, no separate mechanism to learn.
+Don't need PBAC's full generality (conditions, per-resource scoping), just "everyone with role X gets these actions"? See [RBAC Quickstart](../authorization/rbac-quickstart.md): same policies, just unconditioned ones, no separate mechanism to learn.
 
 ---
 
@@ -227,12 +227,12 @@ Pulling in fixes/features from the original template once your own project has d
 
 ## Where to go next
 
-- New to the codebase- Start at [`docs/mystic_auth/README.md`](../README.md) for the full index.
-- Building a protected feature- [Adding New Permissions](../authorization/adding-permissions.md), protect the route above, then [Writing and Testing Policies](../authorization/writing-testing-policies.md).
-- Something not behaving as documented- [PBAC Troubleshooting](../authorization/troubleshooting.md).
+- New to the codebase? Start at [`docs/mystic_auth/README.md`](../README.md) for the full index.
+- Building a protected feature? [Adding New Permissions](../authorization/adding-permissions.md), protect the route above, then [Writing and Testing Policies](../authorization/writing-testing-policies.md).
+- Something not behaving as documented? [PBAC Troubleshooting](../authorization/troubleshooting.md).
 
 ---
 
 ## Getting help
 
-Search [existing Issues](https://github.com/Nachiket-2024/mystic-auth/issues) first, then open a new one with clear repro steps. PRs welcome. **Found a security vulnerability-** Don't open a public Issue: see [SECURITY.md](../../../SECURITY.md).
+Search [existing Issues](https://github.com/Nachiket-2024/mystic-auth/issues) first, then open a new one with clear repro steps. PRs welcome. **Found a security vulnerability?** Don't open a public Issue: see [SECURITY.md](../../../SECURITY.md).

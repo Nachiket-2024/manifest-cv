@@ -89,7 +89,7 @@ class AccountVerificationService:
         expires_minutes: int = settings.RESET_TOKEN_EXPIRE_MINUTES
     ) -> str:
         # type="verify": this token is only valid for email confirmation,
-        # not for accessing any protected routes. Expires_minutes must be
+        # not for accessing any protected routes. expires_minutes must be
         # forwarded so the JWT's own exp claim matches the Redis single-use
         # key's TTL and the expiry stated in the verification email above.
         return await jwt_service.create_verification_token(email=email, expires_minutes=expires_minutes)
@@ -109,7 +109,7 @@ class AccountVerificationService:
             # consumed exactly once even under concurrent requests. A separate
             # GET-then-DELETE has a TOCTOU race: two concurrent requests can
             # both pass the GET before either runs the DELETE, both treating a
-            # single-use token as valid. Password_reset_service.py already
+            # single-use token as valid. password_reset_service.py already
             # fixed this same class of bug the same way.
             exists = await redis_client.getdel(f"verify:{token}")
             if not exists:

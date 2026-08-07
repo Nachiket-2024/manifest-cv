@@ -81,8 +81,8 @@ class CurrentUserHandler:
                 await session_service.count_active_sessions(db, user.email) if include_active_sessions else 0
             )
 
-            # permissions is sorted for a stable, deterministic response. Set
-            # iteration order is not guaranteed. Has_password lets the frontend
+            # permissions is sorted for a stable, deterministic response; set
+            # iteration order is not guaranteed. has_password lets the frontend
             # tell an OAuth-only account (hashed_password is None, see
             # oauth2_service.py's login_or_create_user) apart from one with a
             # usable password credential, without exposing the hash itself.

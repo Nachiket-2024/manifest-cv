@@ -21,7 +21,7 @@ class LoginHandler:
     @staticmethod
     def _lockout_response() -> JSONResponse:
         # Both the pre-auth pre-check and the post-auth recheck can deny a login for
-        # the same reason. Defined once so the two call sites can't drift.
+        # the same reason; defined once so the two call sites can't drift.
         return JSONResponse(
             content={
                 "error": "Too many failed login attempts, account temporarily locked"

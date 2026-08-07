@@ -15,15 +15,15 @@ class DateRangeCondition(ConditionHandler):
     and "end" (ISO "YYYY-MM-DD") are this condition's one canonical, only
     supported field names (see conditions/condition_validator.py, which
     rejects anything else, e.g. "start_date"/"end_date", before a policy
-    using them is ever stored. No aliases are supported). The current date
+    using them is ever stored; no aliases are supported). The current date
     (UTC, unless overridden, see clock.resolve_current_datetime) must fall
     within [start, end], inclusive. Used for temporary/contractor access
     windows and expiring permissions.
 
     Exactly one bound may be omitted for an open-ended range (only a start
-    -> "access from this date on". Only an end -> "access until this
+    -> "access from this date on"; only an end -> "access until this
     date"). Fails safe (denies) if neither bound is present at all: a
-    "date_range" condition with no recognizable bound (e.g. A legacy/typo'd
+    "date_range" condition with no recognizable bound (e.g. a legacy/typo'd
     field name that isn't "start"/"end") must never be treated as
     unconstrained, or if a supplied bound isn't a valid ISO date.
     """

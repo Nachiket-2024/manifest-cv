@@ -52,7 +52,7 @@ class UserSession(Base):
     user_agent: Mapped[str | None]
     ip_address: Mapped[str | None]
 
-    # First-login time for this session. Never updated by rotation.
+    # First-login time for this session; never updated by rotation.
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     # Set explicitly by session_service on create/rotate, not an `onupdate`
@@ -66,6 +66,6 @@ class UserSession(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     # NULL while active. Set by logout/logout-all/reuse-detection/explicit
-    # per-session revoke. Never deleted, so a user's own session history
+    # per-session revoke; never deleted, so a user's own session history
     # remains inspectable.
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

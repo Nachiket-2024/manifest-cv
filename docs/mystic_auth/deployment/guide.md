@@ -8,7 +8,7 @@ step-by-step instructions on running a given mode, see:
   exposed via a free Cloudflare Tunnel, no public server needed
 - [Prod Deployment](prod.md): your own server with Caddy-managed TLS
 
-New to the repo- Start with [Dev Deployment](dev.md). It's the mode you'll
+New to the repo? Start with [Dev Deployment](dev.md). It's the mode you'll
 use day to day, and needs no domain, tunnel, or server.
 
 ## At a glance
@@ -23,10 +23,10 @@ use day to day, and needs no domain, tunnel, or server.
 | Public entrypoint | None (`localhost` only) | Cloudflare Tunnel (`cloudflared`) | Caddy, automatic Let's Encrypt |
 | TLS | None | Terminates at Cloudflare's edge | Caddy, on the host |
 | Hosting model | Developer machine only | Your machine through Cloudflare Tunnel | Your own server with Caddy |
-| Needs a public server- | No | No. Quick Tunnel needs no domain, Named Tunnel needs your own Cloudflare-managed domain | Yes, a server with public IP + DNS |
+| Needs a public server? | No | No. Quick Tunnel needs no domain, Named Tunnel needs your own Cloudflare-managed domain | Yes, a server with public IP + DNS |
 | Ports on host | frontend/backend/postgres/redis, all `localhost` | frontend (80) + backend (8000), for local debugging | only Caddy (80/443) |
 
-See [Docker Overview: dev vs. Production compose](../docker/overview.md#dev-vs-production-compose)
+See [Docker Overview: dev vs. production compose](../docker/overview.md#dev-vs-production-compose)
 for the fuller service-by-service breakdown across all three Compose files.
 
 ---

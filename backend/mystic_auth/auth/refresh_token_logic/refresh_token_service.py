@@ -39,7 +39,7 @@ class RefreshTokenService:
                 return None
 
             # Type is checked before the token is ever claimed/revoked below:
-            # a wrong-type token (e.g. An access token mistakenly presented
+            # a wrong-type token (e.g. an access token mistakenly presented
             # here) must be rejected without side effects, never burned as if
             # it were a real refresh token.
             if payload.get("type") != "refresh":

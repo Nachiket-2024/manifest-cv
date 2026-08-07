@@ -17,7 +17,7 @@ export interface PolicyFormValues {
 
 interface PolicyFormDialogProps {
     isOpen: boolean;
-    /** Present when editing an existing policy. Absent when creating. */
+    /** Present when editing an existing policy; absent when creating. */
     policy?: PolicyRead;
     isSaving: boolean;
     errorMessage: string | null;

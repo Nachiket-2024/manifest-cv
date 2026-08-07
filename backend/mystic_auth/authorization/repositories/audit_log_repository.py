@@ -32,10 +32,10 @@ def _apply_filters(
     """Shared by get_all/get_for_user (row fetch) and count/count_for_user
     (X-Total-Count), so a filtered page's total always matches what's
     actually being paged through. `search` is a substring match on
-    user_email (a free-text field). `action`/`resource_type`/`allowed` are
+    user_email (a free-text field); `action`/`resource_type`/`allowed` are
     exact matches against fixed, finite vocabularies (Permission's action
     strings, this app's resource types, and a bool), the same distinction
-    security_audit_log_repository.py draws for search vs. Event_type/success."""
+    security_audit_log_repository.py draws for search vs. event_type/success."""
     if search:
         stmt = stmt.where(AuthorizationAuditLog.user_email.ilike(f"%{search}%"))
     if action:
@@ -51,7 +51,7 @@ class AuditLogRepository:
     """
     Persistence layer for the authorization audit log. Append-only:
     entries are created by AuthorizationService.authorize_detailed and
-    never updated. Only queried back for inspection.
+    never updated; only queried back for inspection.
     """
 
     @staticmethod
@@ -75,7 +75,7 @@ class AuditLogRepository:
         sort_dir: str = "desc",
     ) -> list[AuthorizationAuditLog]:
         """Fetch entries across all users. `search` is a case-insensitive
-        substring match on user_email. `action`/`resource_type`/`allowed`
+        substring match on user_email; `action`/`resource_type`/`allowed`
         are exact-match filters. `sort_by`/`sort_dir` default to
         newest-first by created_at, same as before sorting existed."""
         stmt = _apply_filters(select(AuthorizationAuditLog), search, action, resource_type, allowed)
