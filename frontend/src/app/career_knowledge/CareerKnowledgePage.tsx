@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Button, Heading, Stack, Text, Textarea } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 
 import {
     PageContainer,
@@ -9,8 +10,9 @@ import {
     ConfirmDialog,
     toaster,
     useUnsavedChangesWarning,
+    BRAND_SOLID_HOVER_PROPS,
+    SECONDARY_BUTTON_PROPS,
 } from "../app_sdk";
-import { BRAND_SOLID_HOVER_PROPS, SECONDARY_BUTTON_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
 import { DESTRUCTIVE_OUTLINE_HOVER_PROPS } from "../ui/buttonStyles";
 import { useCareerKnowledgeBaseQuery } from "./careerKnowledgeQueries";
 import {
@@ -32,6 +34,7 @@ import {
  * was added that they didn't write themselves.
  */
 const CareerKnowledgePage: React.FC = () => {
+    const { t } = useTranslation("career_knowledge");
     const { data: knowledgeBase, isLoading, isError } = useCareerKnowledgeBaseQuery();
 
     const createMutation = useCreateCareerKnowledgeBaseMutation();
@@ -61,7 +64,7 @@ const CareerKnowledgePage: React.FC = () => {
             { raw_input: rawInput },
             {
                 onSuccess: () => {
-                    toaster.create({ title: "Knowledge base created", type: "success" });
+                    toaster.create({ title: t("toast.created"), type: "success" });
                     setRawInput("");
                 },
             }
@@ -72,14 +75,14 @@ const CareerKnowledgePage: React.FC = () => {
         e.preventDefault();
         updateMutation.mutate(
             { content },
-            { onSuccess: () => toaster.create({ title: "Knowledge base saved", type: "success" }) }
+            { onSuccess: () => toaster.create({ title: t("toast.saved"), type: "success" }) }
         );
     };
 
     const handleDeleteConfirm = () => {
         deleteMutation.mutate(undefined, {
             onSuccess: () => {
-                toaster.create({ title: "Knowledge base deleted", type: "success" });
+                toaster.create({ title: t("toast.deleted"), type: "success" });
                 setDeleteConfirmOpen(false);
             },
             onError: (error) => {
@@ -91,37 +94,35 @@ const CareerKnowledgePage: React.FC = () => {
     if (isLoading) {
         return (
             <PageContainer
-                title="Career Knowledge"
-                description="Your private source material for tailored resumes."
+                title={t("title")}
+                description={t("description")}
             >
-                <LoadingState message="Loading your knowledge base..." />
+                <LoadingState message={t("loading")} />
             </PageContainer>
         );
     }
 
     return (
         <PageContainer
-            title="Career Knowledge"
-            description="Your private source material — resume text, LinkedIn, projects, skills, achievements, and notes. Resume generation draws only from what's here."
+            title={t("title")}
+            description={t("fullDescription")}
         >
             <Stack gap={6} maxW="3xl">
-                {isError && <FormAlert status="error">Failed to load your knowledge base</FormAlert>}
+                {isError && <FormAlert status="error">{t("loadError")}</FormAlert>}
 
                 {!knowledgeBase ? (
                     <Card p={6}>
                         <Heading as="h2" size="md" mb={2}>
-                            Get started
+                            {t("getStarted.heading")}
                         </Heading>
                         <Text color="fg.muted" mb={4}>
-                            Paste everything you have — resume text, LinkedIn profile, GitHub projects, work
-                            experience, achievements, skills, and notes. This becomes your single source of truth;
-                            nothing beyond what you write here is ever added on your behalf.
+                            {t("getStarted.body")}
                         </Text>
                         <Stack as="form" onSubmit={handleCreate} gap={4}>
                             <Textarea
                                 value={rawInput}
                                 onChange={(e) => setRawInput(e.target.value)}
-                                placeholder="Paste your resume, LinkedIn text, projects, experience, skills, achievements, notes..."
+                                placeholder={t("getStarted.placeholder")}
                                 rows={16}
                             />
                             {createMutation.isError && (
@@ -132,23 +133,21 @@ const CareerKnowledgePage: React.FC = () => {
                                 colorPalette="brand"
                                 alignSelf="flex-start"
                                 loading={createMutation.isPending}
-                                loadingText="Structuring with AI..."
+                                loadingText={t("getStarted.submitLoading")}
                                 disabled={!rawInput.trim()}
                                 {...BRAND_SOLID_HOVER_PROPS}
                             >
-                                Create knowledge base
+                                {t("getStarted.submit")}
                             </Button>
                         </Stack>
                     </Card>
                 ) : (
                     <Card p={6}>
                         <Heading as="h2" size="md" mb={2}>
-                            Your knowledge base
+                            {t("existing.heading")}
                         </Heading>
                         <Text color="fg.muted" mb={4}>
-                            Structured by AI from what you pasted in, and directly editable any time. Tailored
-                            resumes are generated only from what's written here — nothing is ever added that
-                            wasn't in your original text.
+                            {t("existing.body")}
                         </Text>
                         <Stack as="form" onSubmit={handleSave} gap={4}>
                             <Textarea
@@ -165,11 +164,11 @@ const CareerKnowledgePage: React.FC = () => {
                                     type="submit"
                                     colorPalette="brand"
                                     loading={updateMutation.isPending}
-                                    loadingText="Saving..."
+                                    loadingText={t("existing.saveLoading")}
                                     disabled={!isDirty || !content.trim()}
                                     {...BRAND_SOLID_HOVER_PROPS}
                                 >
-                                    Save changes
+                                    {t("existing.save")}
                                 </Button>
                                 <Button
                                     variant="outline"
@@ -177,7 +176,7 @@ const CareerKnowledgePage: React.FC = () => {
                                     onClick={() => setDeleteConfirmOpen(true)}
                                     {...DESTRUCTIVE_OUTLINE_HOVER_PROPS}
                                 >
-                                    Start over
+                                    {t("existing.startOver")}
                                 </Button>
                             </Stack>
                         </Stack>
@@ -189,7 +188,7 @@ const CareerKnowledgePage: React.FC = () => {
                                 onClick={() => setShowOriginalInput((v) => !v)}
                                 {...SECONDARY_BUTTON_PROPS}
                             >
-                                {showOriginalInput ? "Hide" : "Show"} original text you pasted in
+                                {showOriginalInput ? t("existing.hideOriginal") : t("existing.showOriginal")}
                             </Button>
                             {showOriginalInput && (
                                 <Text color="fg.muted" fontFamily="mono" fontSize="sm" whiteSpace="pre-wrap">
@@ -203,9 +202,9 @@ const CareerKnowledgePage: React.FC = () => {
 
             <ConfirmDialog
                 isOpen={deleteConfirmOpen}
-                title="Delete knowledge base"
-                description="This permanently deletes your career knowledge base. You'll need to paste your information again to rebuild it."
-                confirmLabel="Delete"
+                title={t("deleteDialog.title")}
+                description={t("deleteDialog.description")}
+                confirmLabel={t("deleteDialog.confirm")}
                 isLoading={deleteMutation.isPending}
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setDeleteConfirmOpen(false)}

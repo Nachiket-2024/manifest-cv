@@ -1,0 +1,23 @@
+{
+    "loading": {
+        "checkingSession": "સત્ર તપાસાઈ રહ્યું છે...",
+        "loadingApp": "લોડ થઈ રહ્યું છે..."
+    },
+    "nav": {
+        "careerKnowledge": "કારકિર્દી માહિતી",
+        "resumes": "રિઝ્યુમ",
+        "applications": "અરજીઓ"
+    },
+    "pager": {
+        "page": "પૃષ્ઠ {{n}}",
+        "previous": "પાછળ",
+        "next": "આગળ"
+    },
+    "status": {
+        "applied": "અરજી કરી",
+        "interviewing": "ઇન્ટરવ્યુ ચાલુ",
+        "offered": "ઓફર મળી",
+        "rejected": "નકારાયું"
+    },
+    "delete": "કાઢી નાખો"
+}

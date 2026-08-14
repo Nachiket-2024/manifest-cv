@@ -1,0 +1,23 @@
+{
+    "loading": {
+        "checkingSession": "Checking session...",
+        "loadingApp": "Loading..."
+    },
+    "nav": {
+        "careerKnowledge": "Career Knowledge",
+        "resumes": "Resumes",
+        "applications": "Applications"
+    },
+    "pager": {
+        "page": "Page {{n}}",
+        "previous": "Previous",
+        "next": "Next"
+    },
+    "status": {
+        "applied": "applied",
+        "interviewing": "interviewing",
+        "offered": "offered",
+        "rejected": "rejected"
+    },
+    "delete": "Delete"
+}

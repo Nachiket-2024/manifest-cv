@@ -1,0 +1,23 @@
+{
+    "title": "Applications",
+    "description": "Every resume you've saved as a tracked application, with its status.",
+    "columns": {
+        "company": "Company",
+        "date": "Date",
+        "time": "Time",
+        "status": "Status",
+        "template": "Template"
+    },
+    "pdf": "PDF",
+    "loadError": "Failed to load applications",
+    "empty": "No applications saved yet — finalize a resume to save one",
+    "statusAriaLabel": "Status for {{company}}",
+    "toast": {
+        "deleted": "Application deleted"
+    },
+    "deleteDialog": {
+        "title": "Delete application",
+        "description": "Remove the tracked application for \"{{company}}\"? This only deletes the tracking record, not your resume drafts.",
+        "confirm": "Delete"
+    }
+}

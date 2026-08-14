@@ -6,13 +6,14 @@
 # one-shot containers that should exit 0 after startup work. This polls only
 # the long-running services.
 #
-# On success, tails only backend, frontend, and taskiq_worker logs. That keeps
-# request traffic, Vite output, and async email jobs visible without Postgres,
-# Redis, Alembic, or Bugsink health-check noise. Backend exceptions still go to
-# Bugsink at http://localhost:8010.
+# On success, tails only backend, frontend, taskiq_worker, and taskiq_scheduler
+# logs. That keeps request traffic, Vite output, and async email jobs (plus
+# their scheduled retries) visible without Postgres, Redis, Alembic, or
+# Bugsink health-check noise. Backend exceptions still go to Bugsink at
+# http://localhost:8010.
 #
-# backend and taskiq_worker are restarted after `up -d` so their startup
-# banners are fresh even when the stack was already running.
+# backend, taskiq_worker, and taskiq_scheduler are restarted after `up -d` so
+# their startup banners are fresh even when the stack was already running.
 #
 # This is the recommended day-to-day command. See README.md. Use plain
 # `docker compose up` instead when you actually want every service's full
@@ -28,7 +29,7 @@ cd "$REPO_ROOT"
 
 # frontend has no healthcheck in docker-compose.yml, so "Up" is as
 # ready as it gets. Every other long-running service does have one.
-LONG_RUNNING_SERVICES=(postgres redis bugsink backend taskiq_worker frontend)
+LONG_RUNNING_SERVICES=(postgres redis bugsink backend taskiq_worker taskiq_scheduler frontend)
 TIMEOUT_SECONDS=180
 POLL_INTERVAL=2
 TAIL_SINCE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -58,7 +59,7 @@ docker compose up -d --quiet-pull
 
 # Restart these services so the final tail always includes fresh startup
 # banners, even when Compose reused already-running containers.
-docker compose restart backend taskiq_worker
+docker compose restart backend taskiq_worker taskiq_scheduler
 
 echo
 printf "Waiting for services to come up"
@@ -97,7 +98,7 @@ elif [ "$not_ready" -ne 0 ]; then
     exit 1
 fi
 
-echo "--- Tailing backend + frontend + taskiq_worker (Ctrl+C stops watching, stack keeps running) ---"
+echo "--- Tailing backend + frontend + taskiq_worker + taskiq_scheduler (Ctrl+C stops watching, stack keeps running) ---"
 echo "Backend errors/exceptions: http://localhost:8010 (Bugsink)"
 echo
-exec docker compose logs --since "$TAIL_SINCE" -f backend frontend taskiq_worker
+exec docker compose logs --since "$TAIL_SINCE" -f backend frontend taskiq_worker taskiq_scheduler

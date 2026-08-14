@@ -109,6 +109,10 @@ export default defineConfig({
 
     setupFiles: [
       './src/mystic_auth/__tests__/setup.ts',
+      // Registers ManifestCV's own translation namespaces (see that file's
+      // own comment). Must run after the mystic_auth setup file above,
+      // since that's what actually calls i18next's init().
+      './src/app/__tests__/setup.ts',
     ],
 
     coverage: {

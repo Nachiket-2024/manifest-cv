@@ -12,11 +12,12 @@
 | `backend` | `docker/backend.Dockerfile` | FastAPI app (uvicorn). Also bundles `tectonic` (LaTeX engine) for PDF resume compilation. See [Document Generation](../document-generation/overview.md) |
 | `frontend` | `docker/frontend.Dockerfile` (`dev` target locally, `production` target in prod) | React SPA. Vite dev server locally, nginx-served static build in prod |
 | `taskiq_worker` | `docker/backend.Dockerfile` (same image as `backend`, different `command:`) | Consumes the email-sending task queue. See [Background Workers](../../mystic_auth/background-workers/taskiq.md) |
-| `alembic` | `docker/backend.Dockerfile` (same image, one-shot) | Runs `alembic upgrade head` then exits. Applies both mystic-auth's inherited migrations and ManifestCV's own four. `backend`/`taskiq_worker` wait on its success |
+| `taskiq_scheduler` | `docker/backend.Dockerfile` (same image, different `command:`) | Polls the Redis-backed retry schedule `SmartRetryMiddleware` writes to and re-enqueues due retries onto `taskiq_worker`'s broker with exponential backoff. Without this process, retry delay/backoff labels are inert. See [Background Workers](../../mystic_auth/background-workers/taskiq.md) |
+| `alembic` | `docker/backend.Dockerfile` (same image, one-shot) | Runs `alembic upgrade head` then exits. Applies both mystic-auth's inherited migrations and ManifestCV's own four. `backend`/`taskiq_worker`/`taskiq_scheduler` wait on its success |
 | `bugsink` | `bugsink/bugsink:2` | Self-hosted error monitoring. Starts by default with `docker compose up` (matches upstream's own template default). See [Error Monitoring](../../mystic_auth/error-monitoring/overview.md) |
 | `bugsink-seed` | `bugsink/bugsink:2` (same image, one-shot) | Runs once after `bugsink` reports healthy, then exits. Idempotently seeds a default Team + Project and writes the resulting DSN into the shared `bugsink_dsn` volume, which `backend`/`frontend` read at startup (bounded wait, gated on `BUGSINK_SUPERUSER_EMAIL`). See [Error Monitoring](../../mystic_auth/error-monitoring/overview.md) |
 
-`backend`, `taskiq_worker`, and `alembic` all build from the **same** `docker/backend.Dockerfile` image with different `command:` overrides. Keeps dependency versions and application code identical across all three roles by construction. `bugsink` and `bugsink-seed` share the same relationship using `bugsink/bugsink:2`.
+`backend`, `taskiq_worker`, `taskiq_scheduler`, and `alembic` all build from the **same** `docker/backend.Dockerfile` image with different `command:` overrides. Keeps dependency versions and application code identical across all four roles by construction. `bugsink` and `bugsink-seed` share the same relationship using `bugsink/bugsink:2`.
 
 ---
 
@@ -37,7 +38,7 @@
 | Restart policy | `restart: always` on postgres/redis/qdrant/bugsink (backend/frontend/worker/alembic/bugsink-seed have none) | `unless-stopped` on every long-running service | `unless-stopped` on every long-running service |
 | Ports exposed | 5433 (postgres), 6380 (redis), 6333 (qdrant), 8000 (backend), 5173 (frontend), 8010 (bugsink, mapped from its own internal 8000) all published to host. Non-default DB/cache host ports deliberately chosen to dodge the common local 5432/6379 collision. Containers still reach each other at `postgres:5432`/`redis:6379`/`qdrant:6333` over the Docker network regardless | 8000 (backend), 80 (frontend), and 8010 (bugsink, `127.0.0.1` only) published for local debugging. Qdrant is internal only at `qdrant:6333`. `cloudflared` needs no inbound port at all. It opens an outbound tunnel | Nothing published except `caddy`'s 80/443. `postgres`/`redis`/`qdrant`/`backend`/`frontend`/`bugsink` are reachable only container-to-container |
 | Public entrypoint | None (local only) | `cloudflared`, outbound tunnel to Cloudflare's edge, TLS terminates there | `caddy`, automatic Let's Encrypt TLS via `PUBLIC_DOMAIN`/`ACME_EMAIL`, reverse-proxies to `frontend:80` |
-| `backend`/`taskiq_worker` startup gate | `postgres`/`redis` healthy, `qdrant` started, `alembic: service_completed_successfully` | Same | Same |
+| `backend`/`taskiq_worker`/`taskiq_scheduler` startup gate | `postgres`/`redis` healthy, `qdrant` started, `alembic: service_completed_successfully` | Same | Same |
 
 See [Deployment Guide](../deployment/guide.md) for when to use which of the three files.
 
@@ -45,7 +46,7 @@ See [Deployment Guide](../deployment/guide.md) for when to use which of the thre
 
 ## Day-to-day: `dev-up` helpers
 
-`./scripts/docker/dev-up.sh` / `.\scripts\docker\dev-up.ps1` / `scripts\docker\dev-up.cmd`: upstream-owned wrappers around `docker compose up -d`. They poll long-running services until healthy, then tail fresh `backend`/`frontend`/`taskiq_worker` logs only so Postgres, Redis, Bugsink, and Alembic startup noise stays out of the way. Recommended over plain `docker compose up` for day-to-day work. See [mystic-auth's Docker overview](../../mystic_auth/docker/overview.md#day-to-day-dev-up-helpers) and root README's [Run the App](../../../README.md#-run-the-app).
+`./scripts/docker/dev-up.sh` / `.\scripts\docker\dev-up.ps1` / `scripts\docker\dev-up.cmd`: upstream-owned wrappers around `docker compose up -d`. They restart `backend`/`taskiq_worker`/`taskiq_scheduler` so their startup banners are fresh, poll long-running services until healthy, then tail fresh `backend`/`frontend`/`taskiq_worker`/`taskiq_scheduler` logs only so Postgres, Redis, Bugsink, and Alembic startup noise stays out of the way. Recommended over plain `docker compose up` for day-to-day work. See [mystic-auth's Docker overview](../../mystic_auth/docker/overview.md#day-to-day-dev-up-helpers) and root README's [Run the App](../../../README.md#-run-the-app).
 
 ---
 
@@ -66,6 +67,7 @@ See [Deployment Guide](../deployment/guide.md) for when to use which of the thre
 | `frontend` (prod) | `wget` against `/` | |
 | `frontend` (dev) | none | Acceptable for local dev, since Vite's own dev server failure is immediately visible in the terminal |
 | `taskiq_worker` | greps `/proc/*/cmdline` for `taskiq` | Overrides the inherited HTTP healthcheck from `backend.Dockerfile`, since the worker serves no HTTP and would otherwise always report unhealthy |
+| `taskiq_scheduler` | greps `/proc/*/cmdline` for `taskiq` | Same override reasoning as `taskiq_worker` |
 | `alembic` | none | One-shot; `service_completed_successfully` is the signal other services wait on, not a healthcheck |
 | `bugsink-seed` | none | One-shot, same reasoning as `alembic`: waits on `bugsink: service_healthy` rather than exposing its own check |
 
@@ -75,7 +77,7 @@ See [Deployment Guide](../deployment/guide.md) for when to use which of the thre
 
 Ran `docker compose up --build` (dev compose) from the repo root after vendoring mystic-auth's latest core and wiring ManifestCV's own domains on top, and verified the merged stack end-to-end:
 
-- All services (`postgres`, `redis`, `qdrant`, `backend`, `taskiq_worker`, `frontend`, `bugsink`, `bugsink-seed`) reached a running state, with `postgres`, `redis`, `backend`, `taskiq_worker`, `bugsink` reporting `healthy` on their respective healthchecks.
+- All services (`postgres`, `redis`, `qdrant`, `backend`, `taskiq_worker`, `taskiq_scheduler`, `frontend`, `bugsink`, `bugsink-seed`) reached a running state, with `postgres`, `redis`, `backend`, `taskiq_worker`, `taskiq_scheduler`, `bugsink` reporting `healthy` on their respective healthchecks.
 - `alembic` ran the full migration chain cleanly in one pass. `\dt` against the running Postgres confirmed all inherited tables plus `career_knowledge_bases`, `resume_drafts`, `resume_documents`, `application_records`.
 - `GET /` returned `{"message": "Welcome to ManifestCV!"}`, and `GET /health/ready` returned `{"status":"ok","checks":{"database":"ok","redis":"ok"}}`.
 - The full route inventory (`GET /openapi.json`) confirmed all four ManifestCV route groups mounted alongside every inherited mystic-auth route.
@@ -94,3 +96,17 @@ A later audit specifically targeting `docker-compose.prod.yml` and the productio
 - The resume template preview originally failed in production when rendered as a direct cross-origin `<iframe>`. The current implementation fetches the PDF with axios and renders a same-origin `blob:` URL, so the inherited `X-Frame-Options: DENY` header can stay untouched. See [Document Generation](../document-generation/overview.md).
 - Added rate limiting to the Gemini-triggering routes and the `tectonic` preview/finalize routes (`career_knowledge_routes.py`, `resume_routes.py`, `document_routes.py`), request-size caps on their text fields, and timeouts on both Gemini calls and `tectonic` compilation.
 - Re-ran the full test suite after all of the above (`tests/backend` and `tests/frontend`, including the ManifestCV-specific suites). All passing. See [Testing Overview](../testing/overview.md).
+
+### mystic-auth sync pass (multilingual support, `taskiq_scheduler`, `DEFAULT_APP_POLICIES`)
+
+Synced from `f56956e` to `d1ad975` (multilingual support, sidebar hover polish, `taskiq_scheduler`, `DEFAULT_APP_POLICIES`, PBAC permission revalidation) and re-verified end-to-end:
+
+- Four merge conflicts (`README.md`, `backend/app/main.py`, `backend/mystic_auth/core/settings.py`, `docker-compose.prod.yml`) resolved by hand, all additive (ManifestCV's own content preserved, upstream's new content merged in alongside it, nothing dropped). Single alembic head confirmed after the sync (`scripts/upstream-sync/check-alembic-heads.sh`).
+- `get_or_404()` gained a required `code` argument upstream (for translated 404 messages). ManifestCV's own 13 call sites across `application_routes.py`, `career_knowledge_routes.py`, `document_routes.py`, `resume_routes.py` updated with `code="RESUME_DRAFT_NOT_FOUND"`/`"APPLICATION_NOT_FOUND"`/`"CAREER_KNOWLEDGE_BASE_NOT_FOUND"`, plus matching `errors.json` entries in all four languages (see [Translations](../architecture/frontend.md#translations)). This was caught by the full `tests/backend` run below, not the mystic_auth-only suite, since it's ManifestCV's own code that broke.
+- Found and fixed one real frontend SDK-boundary gap while auditing for this sync (same class of issue as the backend `get_logger`/`rate_limiter_service` fix from an earlier sync, see [Auth & Authorization](../auth/overview.md)): `BRAND_SOLID_HOVER_PROPS`/`SECONDARY_BUTTON_PROPS` were imported directly from `mystic_auth/ui/styles/buttonStyles` by four ManifestCV page/component files instead of through `app_sdk.ts`. Fixed by adding both to `app_sdk.ts`'s re-export list.
+- Added ManifestCV's own translations (Hindi/Marathi/Gujarati, matching mystic-auth's newly-synced multilingual support) for career knowledge, resumes, applications, and the sidebar/pager, registered via `app_sdk.ts` + `addResourceBundle` rather than editing any `mystic_auth/` file. See [Translations](../architecture/frontend.md#translations).
+- `docker compose up -d --build` (dev compose): clean boot, all services healthy, `alembic` ran the full chain with no errors.
+- `tests/backend/mystic_auth/{unit,integration,security}`: 758/758 passed.
+- `tests/backend` (full suite, mystic_auth + app): 806/806 passed (one `real_tectonic` test flaked once under full-suite host contention — a 60s tectonic compile timeout — and passed cleanly in isolation immediately after; not a regression).
+- `tests/frontend` (full suite): 361/361 passed, `npm run typecheck`/`npm run lint`/`npm run build` all clean, coverage gate passed (90.57%/81.38%/83.18%/91.34% vs. the 85/78/79/86 thresholds).
+- `ruff check`, `mypy`, `bandit -r app mystic_auth`, `alembic check` all clean against the post-sync code.

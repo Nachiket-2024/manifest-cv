@@ -1,0 +1,23 @@
+{
+    "loading": {
+        "checkingSession": "सत्र जांचा जा रहा है...",
+        "loadingApp": "लोड हो रहा है..."
+    },
+    "nav": {
+        "careerKnowledge": "करियर जानकारी",
+        "resumes": "रिज्यूमे",
+        "applications": "आवेदन"
+    },
+    "pager": {
+        "page": "पृष्ठ {{n}}",
+        "previous": "पिछला",
+        "next": "अगला"
+    },
+    "status": {
+        "applied": "आवेदन किया",
+        "interviewing": "साक्षात्कार जारी",
+        "offered": "प्रस्ताव मिला",
+        "rejected": "अस्वीकृत"
+    },
+    "delete": "हटाएं"
+}

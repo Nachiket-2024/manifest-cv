@@ -23,6 +23,19 @@ import { queryClient } from "../mystic_auth/core/queryClient.ts";
 // chose dark mode.
 import '../mystic_auth/store/themeStore.ts';
 
+// Same reasoning as themeStore.ts above, for the persisted/browser language
+// preference: languageStore.ts itself eagerly imports and initializes
+// translations/translations.ts, so this one import both configures translations and applies the
+// chosen language before the first paint.
+import '../mystic_auth/store/languageStore.ts';
+
+// ManifestCV's own translation namespaces (career_knowledge, resumes,
+// applications, app_common), registered onto the same i18next instance via
+// addResourceBundle(). Must be imported after languageStore.ts above, since
+// that's what actually calls i18next's init() — addResourceBundle requires
+// an already-initialized instance. See translations/translations.ts.
+import './translations/translations.ts';
+
 // Must be called once, before the app renders, so every API call made
 // during the initial session check is already covered.
 import { setupAuthInterceptor } from "../mystic_auth/auth/session_lifecycle/setupAuthInterceptor.ts";

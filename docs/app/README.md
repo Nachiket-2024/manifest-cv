@@ -10,7 +10,7 @@ ManifestCV is built on [mystic-auth](https://github.com/Nachiket-2024/mystic-aut
 
 - [System Overview](architecture/system-overview.md): whole-stack component diagram, why the stack is split this way, request lifecycle
 - [Backend Architecture](architecture/backend.md): `backend/app/` (ManifestCV) + `backend/mystic_auth/` (inherited) module layout, request pipeline, middleware
-- [Frontend Architecture](architecture/frontend.md): `frontend/src/app/` (ManifestCV) + `frontend/src/mystic_auth/` (inherited) module layout, state management, routing, theming
+- [Frontend Architecture](architecture/frontend.md): `frontend/src/app/` (ManifestCV) + `frontend/src/mystic_auth/` (inherited) module layout, state management, routing, theming, and [translations](architecture/frontend.md#translations) (ManifestCV's own pages, in the same four languages as mystic-auth's chrome)
 
 ---
 

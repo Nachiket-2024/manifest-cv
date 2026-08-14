@@ -1,0 +1,23 @@
+{
+    "loading": {
+        "checkingSession": "सत्र तपासले जात आहे...",
+        "loadingApp": "लोड होत आहे..."
+    },
+    "nav": {
+        "careerKnowledge": "करिअर माहिती",
+        "resumes": "रिज्युमे",
+        "applications": "अर्ज"
+    },
+    "pager": {
+        "page": "पृष्ठ {{n}}",
+        "previous": "मागील",
+        "next": "पुढील"
+    },
+    "status": {
+        "applied": "अर्ज केला",
+        "interviewing": "मुलाखत सुरू",
+        "offered": "प्रस्ताव मिळाला",
+        "rejected": "नाकारले"
+    },
+    "delete": "हटवा"
+}

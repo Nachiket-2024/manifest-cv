@@ -65,7 +65,7 @@ Same variables as `.env.example`, with these called out specifically for product
 
 ## Database migrations
 
-The `alembic` service runs `alembic upgrade head` once and exits. `backend` and `taskiq_worker` both wait on it (`depends_on: alembic: condition: service_completed_successfully` in `docker-compose.prod.yml`) so nothing serves traffic against a schema that hasn't been migrated yet.
+The `alembic` service runs `alembic upgrade head` once and exits. `backend`, `taskiq_worker`, and `taskiq_scheduler` all wait on it (`depends_on: alembic: condition: service_completed_successfully` in `docker-compose.prod.yml`) so nothing serves traffic against a schema that hasn't been migrated yet.
 
 Before applying a migration in production, review the generated migration script under `backend/alembic/versions/`: especially anything that drops or alters a column/table. Alembic's autogenerate is a starting point, not a guarantee of safety. A destructive migration should be reviewed like any other schema change before `alembic upgrade head` runs against production data.
 
@@ -73,7 +73,7 @@ Before applying a migration in production, review the generated migration script
 
 Two independent things can go wrong with a release, and they're rolled back differently:
 
-- **Bad application code, schema unaffected**: redeploy the previous image tag/commit (`docker compose -f docker-compose.prod.yml up -d --build` against the prior revision, or `docker service update --rollback` / your orchestrator's equivalent if not using bare Compose). Since `backend`, `taskiq_worker`, and `alembic` all build from the same image, redeploying is a single image swap. No separate rollback step per service.
+- **Bad application code, schema unaffected**: redeploy the previous image tag/commit (`docker compose -f docker-compose.prod.yml up -d --build` against the prior revision, or `docker service update --rollback` / your orchestrator's equivalent if not using bare Compose). Since `backend`, `taskiq_worker`, `taskiq_scheduler`, and `alembic` all build from the same image, redeploying is a single image swap. No separate rollback step per service.
 - **Bad migration**: `alembic downgrade -1` (or a specific revision, `alembic downgrade <revision>`) reverses the most recent migration, run the same way `alembic upgrade head` is (`docker compose -f docker-compose.prod.yml run --rm alembic alembic downgrade -1`). This only works if the migration's own `downgrade()` is correct and non-destructive-in-reverse (e.g. a dropped column's data is gone regardless of downgrading the schema back), which is exactly why the migration review step above matters *before* `upgrade head` runs, not just after something breaks. If the migration already ran a destructive, `downgrade()`-unsafe change (e.g. a `DROP COLUMN`), the real recovery path is the database backup above, not `alembic downgrade`.
 
 In both cases, take a fresh `scripts/db/db_backup.sh` snapshot before attempting the rollback itself. A rollback that goes wrong should never be the only copy of "what the data looked like right before this."
@@ -121,11 +121,11 @@ Starts by default. `docker compose -f docker-compose.prod.yml up -d --build` bri
 
 ## Free / low-cost hosting options
 
-This stack has five pieces that need hosting: backend (containerized FastAPI), frontend (static SPA build), Postgres, Redis plus a background worker process, and Qdrant. None of the options below are endorsed as production-ready without your own evaluation of their limits (cold starts, storage caps, free-tier sleep policies). They're a reasonable starting point for a template/side-project deployment, not a guarantee.
+This stack has five pieces that need hosting: backend (containerized FastAPI), frontend (static SPA build), Postgres, Redis plus two background worker processes, and Qdrant. None of the options below are endorsed as production-ready without your own evaluation of their limits (cold starts, storage caps, free-tier sleep policies). They're a reasonable starting point for a template/side-project deployment, not a guarantee.
 
 ### Backend (FastAPI, containerized)
 
-- **Render** (free/hobby web service tier). Deploys directly from `docker/backend.Dockerfile`. Supports a separate "background worker" service type for `taskiq_worker` on the same repo. Free tier sleeps after inactivity (cold-start latency).
+- **Render** (free/hobby web service tier). Deploys directly from `docker/backend.Dockerfile`. Supports separate "background worker" service types for `taskiq_worker` and `taskiq_scheduler` on the same repo. Free tier sleeps after inactivity (cold-start latency).
 - **Fly.io**: deploys any Dockerfile. Has a small free allowance. Good fit since the app is already fully containerized.
 - **Railway**: Dockerfile-based deploys, usage-based free tier.
 
@@ -141,18 +141,21 @@ This stack has five pieces that need hosting: backend (containerized FastAPI), f
 
 - **Upstash**: serverless Redis with a free tier, reachable over TLS from any host. Set `REDIS_URL` accordingly. Note Upstash's free tier has request-count limits that matter here since Redis is used for rate limiting, lockout, and the taskiq broker (all high-frequency).
 
-### Background worker (taskiq)
+### Background workers (taskiq)
 
-Needs a long-running process, not a request-driven serverless function. Render's/Railway's "background worker" service type (pointed at the same image, `command: taskiq worker mystic_auth.taskiq_tasks.email_tasks:broker`) is the most direct fit among the free-tier options above.
+Two long-running processes, not request-driven serverless functions. Render's/Railway's "background worker" service type (pointed at the same image) fits both, among the free-tier options above:
+
+- **Worker**: `command: taskiq worker mystic_auth.taskiq_tasks.email_tasks:broker`. Consumes the email-sending queue.
+- **Scheduler**: `command: taskiq scheduler mystic_auth.taskiq_tasks.email_tasks:scheduler`. Polls Redis for due retries and re-enqueues them onto the worker. Deploying the worker without this second process leaves failed-email retries permanently stuck in Redis, never re-attempted — no error, no crash, just silence.
 
 ### Qdrant
 
-- **Self-hosted, same host as the backend**: the `qdrant/qdrant` image (see [Docker Overview](../docker/overview.md)) has no external dependencies and a small footprint. Running it as a fifth container alongside `backend`/`postgres`/`redis` on the same host (Render/Fly/Railway all support multi-container or sidecar deployments) avoids a separate provider entirely.
+- **Self-hosted, same host as the backend**: the `qdrant/qdrant` image (see [Docker Overview](../docker/overview.md)) has no external dependencies and a small footprint. Running it alongside `backend`/`taskiq_worker`/`taskiq_scheduler`/`postgres`/`redis` on the same host (Render/Fly/Railway all support multi-container or sidecar deployments) avoids a separate provider entirely.
 - **Qdrant Cloud**: a managed free tier exists if self-hosting isn't an option. Set `QDRANT_URL` to the provided cluster URL. Not evaluated as part of this stack's own validation (see [Docker Overview: Validation results](../docker/overview.md#validation-results)). Self-hosting alongside the backend is the tested path.
 
 ### Practical combination for a $0 deployment
 
-Backend + worker + Qdrant on Render (three services from the same repo, two from the same image), frontend on Vercel/Netlify, Postgres on Neon, Redis on Upstash, Gemini's free tier for AI calls. Set `TRUSTED_PROXY_IPS` appropriately if the chosen backend host places its own reverse proxy in front of your container (most of the above do). Otherwise per-IP rate limiting will silently collapse onto that proxy's IP for every request.
+Backend + worker + scheduler + Qdrant on Render (four services from the same repo, three from the same image), frontend on Vercel/Netlify, Postgres on Neon, Redis on Upstash, Gemini's free tier for AI calls. Set `TRUSTED_PROXY_IPS` appropriately if the chosen backend host places its own reverse proxy in front of your container (most of the above do). Otherwise per-IP rate limiting will silently collapse onto that proxy's IP for every request.
 
 ---
 

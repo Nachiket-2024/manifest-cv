@@ -36,7 +36,7 @@ async def _owned_approved_draft(draft_id: int, user_id: int, db: AsyncSession):
     Content is locked from that point on, so it's safe to compile.
     """
     draft = await get_or_404(
-        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found"
+        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found", code="RESUME_DRAFT_NOT_FOUND"
     )
     if draft.status != "approved":
         raise HTTPException(

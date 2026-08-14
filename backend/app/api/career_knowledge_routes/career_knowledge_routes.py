@@ -115,7 +115,7 @@ async def get_my_career_knowledge_base(
 ):
     user_id = await _current_user_id(current_user, db)
     return await get_or_404(
-        career_knowledge_repository.get_by_user_id(user_id, db), "Career knowledge base not found"
+        career_knowledge_repository.get_by_user_id(user_id, db), "Career knowledge base not found", code="CAREER_KNOWLEDGE_BASE_NOT_FOUND"
     )
 
 
@@ -143,7 +143,7 @@ async def update_my_career_knowledge_base(
     """
     user_id = await _current_user_id(current_user, db)
     entry = await get_or_404(
-        career_knowledge_repository.get_by_user_id(user_id, db), "Career knowledge base not found"
+        career_knowledge_repository.get_by_user_id(user_id, db), "Career knowledge base not found", code="CAREER_KNOWLEDGE_BASE_NOT_FOUND"
     )
 
     fields = update_data.model_dump(exclude_unset=True)
@@ -163,7 +163,7 @@ async def delete_my_career_knowledge_base(
 ):
     user_id = await _current_user_id(current_user, db)
     entry = await get_or_404(
-        career_knowledge_repository.get_by_user_id(user_id, db), "Career knowledge base not found"
+        career_knowledge_repository.get_by_user_id(user_id, db), "Career knowledge base not found", code="CAREER_KNOWLEDGE_BASE_NOT_FOUND"
     )
     await career_knowledge_repository.delete(entry, db)
     await _delete_index_best_effort(user_id)

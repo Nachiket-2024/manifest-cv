@@ -36,6 +36,11 @@ See [`docs/README.md`](docs/README.md) for architecture, product features, datab
 
 ---
 
+### Dashboard (Hindi)
+![Dashboard Hindi](screenshots/app/dashboard_hindi.png)
+
+---
+
 ### Career Knowledge
 ![Career Knowledge](screenshots/app/career_knowledge.png)
 
@@ -91,11 +96,15 @@ See [`docs/README.md`](docs/README.md) for architecture, product features, datab
 - **Document generation:** Markdown → LaTeX → `tectonic` (self-contained LaTeX engine, no TeX Live install)
 - **Authentication:** Email + Password (Argon2 hashing, JWT access & refresh tokens), Google OAuth2 with PKCE. Via mystic-auth
 - **Frontend:** TypeScript, React 19 + Vite, Chakra UI v3
+- **Translations:** English, Hindi, Marathi, and Gujarati via `react-i18next`, including mixed
+  English-chrome/translated-content modes. See
+  [Translations Overview](docs/mystic_auth/translations/overview.md)
 - **State Management:** Zustand (client/session state) + TanStack Query (server state/caching)
 - **Database:** PostgreSQL (async)
-- **Caching & Tasks:** Redis + Taskiq (async background email delivery)
+- **Caching & Tasks:** Redis + Taskiq (async background email delivery, with exponential-backoff retries via a dedicated `taskiq_scheduler` service)
 - **Error monitoring:** Sentry SDK protocol, self-hosted Bugsink by default (or Sentry's hosted free tier)
-- **Deployment:** Docker (dev and production Compose files)
+- **Deployment:** Docker (dev, self-hosted local-prod through Cloudflare Tunnel, and prod on your own server through Caddy)
+- **Authorization:** Policy-Based Access Control (PBAC); new accounts get the baseline `self_service` policy plus any policy names listed in `DEFAULT_APP_POLICIES`, with no template code to edit. See [Auth & Authorization](docs/app/auth/overview.md)
 
 ---
 
@@ -173,7 +182,7 @@ rem Command Prompt
 scripts\docker\dev-up.cmd
 ```
 
-Starts every service, waits for each to actually report healthy, then prints a one-line-per-service status table and settles into tailing fresh logs from just `backend`/`frontend`/`taskiq_worker`: their startup lines, API calls, the frontend dev server, and async email-task execution. Postgres/Redis/Bugsink/Alembic startup noise stays out of the way since they've already done their job by the time the tail starts. Backend exceptions still go to Bugsink ([http://localhost:8010](http://localhost:8010)), not this terminal. See [Docker Overview](docs/mystic_auth/docker/overview.md#day-to-day-dev-up-helpers) for the full rationale and what to do if a service fails to start.
+The helper starts every service, restarts `backend`, `taskiq_worker`, and `taskiq_scheduler` so their startup banners are fresh, waits for each to actually report healthy, then prints a one-line-per-service status table and settles into tailing fresh logs from just `backend`/`frontend`/`taskiq_worker`/`taskiq_scheduler`: their startup lines, API calls, the frontend dev server, and async email-task execution (including retries). Postgres/Redis/Bugsink/Alembic startup noise stays out of the way since they've already done their job by the time the tail starts. Backend exceptions still go to Bugsink ([http://localhost:8010](http://localhost:8010)), not this terminal. See [Docker Overview](docs/mystic_auth/docker/overview.md#day-to-day-dev-up-helpers) for the full rationale and what to do if a service fails to start.
 
 Want every service's full logs interleaved in one stream instead, for example while debugging Postgres, Bugsink, or Taskiq startup? Plain `docker compose up` still does exactly that:
 
@@ -189,7 +198,8 @@ Once the services are running:
 - **Redis:** `localhost:6380`. Cache, rate limiting, and Taskiq broker (non-default host port; containers reach it at `redis:6379` internally)
 - **Qdrant:** `localhost:6333`: Vector store for career knowledge retrieval
 - **Taskiq worker:** Automatically listens for async tasks (email sending)
-- **Alembic migrations:** Run automatically on stack startup via the dedicated `alembic` service (`alembic upgrade head`). Applies mystic-auth's inherited schema and ManifestCV's own tables in one pass
+- **Taskiq scheduler:** Retries failed email sends with exponential backoff, by polling a Redis-backed schedule and re-enqueueing due retries onto the worker
+- **Alembic migrations:** Run automatically on stack startup via the dedicated `alembic` service (`alembic upgrade head`). Applies mystic-auth's inherited schema and ManifestCV's own tables in one pass. In production Compose, `backend`, `taskiq_worker`, and `taskiq_scheduler` all wait for migrations before starting
 
 > **Self-hosted error monitoring (Bugsink) is part of both paths above**: `scripts/docker/dev-up.sh`, `scripts/docker/dev-up.ps1`, `scripts/docker/dev-up.cmd`, and plain `docker compose up` all start it by default at `localhost:8010`, matching mystic-auth's own template default. A one-shot seeding container creates a default project and wires its DSN into `backend`/`frontend` automatically, no setup needed. See [Error Monitoring](docs/mystic_auth/error-monitoring/overview.md) for how it works and how to point at Sentry's hosted tier instead if you'd rather not run it locally.
 
@@ -230,6 +240,13 @@ uvicorn backend.app.main:app --reload
 taskiq worker backend.mystic_auth.taskiq_tasks.email_tasks:broker --reload
 ```
 
+Also start the scheduler in a separate terminal, or backed-off email retries
+will sit in Redis and never fire:
+
+```bash
+PYTHONPATH=backend taskiq scheduler mystic_auth.taskiq_tasks.email_tasks:scheduler
+```
+
 #### 4. Run the React frontend
 
 ```bash
@@ -249,13 +266,20 @@ After starting the app for the first time, create the reserved system account: a
 
 > Commands below assume you're at the root of the repository, unless a `cd` is shown explicitly.
 
-### Dev Docker
+### Non-interactive (recommended for repeated resets)
+`local-scripts/{dev,local-prod,prod}/create-system-user.{sh,ps1,bat}` pipe the fresh-account prompts in for you against the matching Compose file, so you don't have to retype them every time you reset a local stack. Copy the `system-user.env.example` next to the script you're using, fill in real values, then run it. Each `system-user.env` is ignored by both `.gitignore` and `.dockerignore`, so filling it in never risks committing real credentials. See [System Superuser: Bootstrapping and Promotion](docs/mystic_auth/authentication/system-superuser.md#non-interactive-bootstrap-scripts) for details.
+
+---
+
+### Interactive, by run mode
+
+#### Dev Docker
 
 ```bash
 docker compose exec -it backend python -m mystic_auth.scripts.create_system_user
 ```
 
-### Local-prod Docker
+#### Local-prod Docker
 
 Use this when you started the self-hosted Cloudflare Tunnel stack:
 
@@ -263,7 +287,7 @@ Use this when you started the self-hosted Cloudflare Tunnel stack:
 docker compose -f docker-compose.local-prod.yml exec -it backend python -m mystic_auth.scripts.create_system_user
 ```
 
-### Prod Docker
+#### Prod Docker
 
 Run this on the server where `docker-compose.prod.yml` is running:
 
@@ -271,14 +295,14 @@ Run this on the server where `docker-compose.prod.yml` is running:
 docker compose -f docker-compose.prod.yml exec -it backend python -m mystic_auth.scripts.create_system_user
 ```
 
-### Local Backend Without Docker
+#### Local Backend Without Docker
 
 ```bash
 cd backend
 python -m mystic_auth.scripts.create_system_user
 ```
 
-You will be prompted to enter a name, email, and password interactively. This only needs to be run once. The system user persists in the database volume and can never be created, modified, or promoted via any API endpoint.
+You'll be asked for an email first, then prompted for a name and password to create the account. **If the email already belongs to an existing account**, the CLI promotes that account instead of refusing (password and passwordless accounts follow different promotion flows) — this covers the common case where you signed up or logged in with Google before bootstrapping the system user. This only needs to be run once per environment; the system user persists in the database volume and can never be created, modified, or promoted via any API endpoint, CLI-only by design. See [System Superuser: Bootstrapping and Promotion](docs/mystic_auth/authentication/system-superuser.md), [Authentication](docs/mystic_auth/README.md#authentication), and [Security](docs/mystic_auth/README.md#security) for the full mechanics.
 
 ---
 

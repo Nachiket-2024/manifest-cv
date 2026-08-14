@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Badge, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 import Pager from "../ui/Pager";
 import {
@@ -12,8 +13,8 @@ import {
     ConfirmDialog,
     TableActionButton,
     toaster,
+    BRAND_SOLID_HOVER_PROPS,
 } from "../app_sdk";
-import { BRAND_SOLID_HOVER_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
 import { useResumeDraftsQuery, RESUME_DRAFTS_PAGE_SIZE } from "./resumeQueries";
 import { useCreateResumeDraftMutation, useDeleteResumeDraftMutation } from "./resumeMutations";
 import type { ResumeDraftRead } from "../api/resume_api";
@@ -28,6 +29,7 @@ import type { ResumeDraftRead } from "../api/resume_api";
  * approval, and finalization.
  */
 const ResumeDraftsPage: React.FC = () => {
+    const { t } = useTranslation("resumes");
     const navigate = useNavigate();
     const [offset, setOffset] = useState(0);
     const { data: drafts, isLoading, isError } = useResumeDraftsQuery(RESUME_DRAFTS_PAGE_SIZE, offset);
@@ -43,7 +45,7 @@ const ResumeDraftsPage: React.FC = () => {
             { job_description: jobDescription },
             {
                 onSuccess: (data) => {
-                    toaster.create({ title: "Resume generated", type: "success" });
+                    toaster.create({ title: t("drafts.toast.generated"), type: "success" });
                     setJobDescription("");
                     navigate(`/resumes/${data.id}`);
                 },
@@ -59,7 +61,7 @@ const ResumeDraftsPage: React.FC = () => {
         const isLastRowOnThisPage = drafts?.length === 1 && offset > 0;
         deleteMutation.mutate(deletingDraft.id, {
             onSuccess: () => {
-                toaster.create({ title: "Resume deleted", type: "success" });
+                toaster.create({ title: t("drafts.toast.deleted"), type: "success" });
                 setDeletingDraft(null);
                 if (isLastRowOnThisPage) setOffset((prev) => Math.max(0, prev - RESUME_DRAFTS_PAGE_SIZE));
             },
@@ -70,7 +72,7 @@ const ResumeDraftsPage: React.FC = () => {
     const columns: DataTableColumn<ResumeDraftRead>[] = [
         {
             key: "job_description",
-            header: "Job description",
+            header: t("drafts.columns.jobDescription"),
             render: (d) => (
                 <Text lineClamp={2} maxW="lg">
                     {d.job_description}
@@ -79,16 +81,16 @@ const ResumeDraftsPage: React.FC = () => {
         },
         {
             key: "status",
-            header: "Status",
+            header: t("drafts.columns.status"),
             render: (d) => (
                 <Badge colorPalette={d.status === "approved" ? "green" : "yellow"} textTransform="capitalize">
-                    {d.status}
+                    {t(`status.${d.status}`, d.status)}
                 </Badge>
             ),
         },
         {
             key: "updated_at",
-            header: "Updated",
+            header: t("drafts.columns.updated"),
             render: (d) => new Date(d.updated_at).toLocaleString(),
         },
         {
@@ -97,11 +99,11 @@ const ResumeDraftsPage: React.FC = () => {
             align: "end",
             render: (d) => (
                 <HStack justify="flex-end" gap={2}>
-                    <TableActionButton onClick={() => navigate(`/resumes/${d.id}`)}>
-                        Open
+                    <TableActionButton colorPalette="blue" onClick={() => navigate(`/resumes/${d.id}`)}>
+                        {t("drafts.open")}
                     </TableActionButton>
                     <TableActionButton colorPalette="red" onClick={() => setDeletingDraft(d)}>
-                        Delete
+                        {t("app_common:delete")}
                     </TableActionButton>
                 </HStack>
             ),
@@ -110,19 +112,18 @@ const ResumeDraftsPage: React.FC = () => {
 
     return (
         <PageContainer
-            title="Resumes"
-            description="Paste a job description to generate a tailored resume from your knowledge base — nothing beyond what's already there is ever added."
+            title={t("drafts.title")}
+            description={t("drafts.description")}
         >
             <Card p={6} mb={6}>
                 <Text color="fg.muted" mb={4}>
-                    The AI matches this job description against your career knowledge base and drafts a resume
-                    from what it finds. You can then edit or ask for changes before approving it.
+                    {t("drafts.intro")}
                 </Text>
                 <Stack as="form" onSubmit={handleCreate} gap={4}>
                     <Textarea
                         value={jobDescription}
                         onChange={(e) => setJobDescription(e.target.value)}
-                        placeholder="Paste the job description here..."
+                        placeholder={t("drafts.placeholder")}
                         rows={8}
                     />
                     {createMutation.isError && <FormAlert status="error">{createMutation.error.message}</FormAlert>}
@@ -131,11 +132,11 @@ const ResumeDraftsPage: React.FC = () => {
                         colorPalette="brand"
                         alignSelf="flex-start"
                         loading={createMutation.isPending}
-                        loadingText="Generating resume..."
+                        loadingText={t("drafts.generateLoading")}
                         disabled={!jobDescription.trim()}
                         {...BRAND_SOLID_HOVER_PROPS}
                     >
-                        Generate resume
+                        {t("drafts.generate")}
                     </Button>
                 </Stack>
             </Card>
@@ -146,16 +147,16 @@ const ResumeDraftsPage: React.FC = () => {
                 rowKey={(d) => d.id}
                 isLoading={isLoading}
                 isError={isError}
-                errorMessage="Failed to load resumes"
-                emptyMessage="No resumes yet — paste a job description above to generate one"
+                errorMessage={t("drafts.loadError")}
+                emptyMessage={t("drafts.empty")}
             />
             <Pager offset={offset} limit={RESUME_DRAFTS_PAGE_SIZE} rowCount={drafts?.length} onOffsetChange={setOffset} />
 
             <ConfirmDialog
                 isOpen={!!deletingDraft}
-                title="Delete resume"
-                description="This permanently deletes this tailored resume draft."
-                confirmLabel="Delete"
+                title={t("drafts.deleteDialog.title")}
+                description={t("drafts.deleteDialog.description")}
+                confirmLabel={t("drafts.deleteDialog.confirm")}
                 isLoading={deleteMutation.isPending}
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setDeletingDraft(null)}

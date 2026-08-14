@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import { useTranslation } from "react-i18next";
 import {
     Badge,
     Box,
@@ -22,6 +23,8 @@ import {
     StyledSelect,
     toaster,
     useUnsavedChangesWarning,
+    BRAND_SOLID_HOVER_PROPS,
+    SECONDARY_BUTTON_PROPS,
 } from "../app_sdk";
 
 import {
@@ -37,7 +40,6 @@ import {
 } from "./resumeMutations";
 import { resumeDocumentDownloadUrl } from "../api/document_api";
 import { useCreateApplicationMutation } from "../applications/applicationMutations";
-import { BRAND_SOLID_HOVER_PROPS, SECONDARY_BUTTON_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
 
 const APPLICATION_STATUS_OPTIONS = ["applied", "interviewing", "offered", "rejected"] as const;
 
@@ -50,6 +52,8 @@ const APPLICATION_STATUS_OPTIONS = ["applied", "interviewing", "offered", "rejec
  * all against the one draft identified by the :draftId route param.
  */
 const ResumeEditorPage: React.FC = () => {
+    const { t } = useTranslation("resumes");
+    const { t: tCommon } = useTranslation("app_common");
     const { draftId: draftIdParam } = useParams<{ draftId: string }>();
     const draftId = Number(draftIdParam);
     const navigate = useNavigate();
@@ -122,7 +126,7 @@ const ResumeEditorPage: React.FC = () => {
         e.preventDefault();
         updateMutation.mutate(
             { content },
-            { onSuccess: () => toaster.create({ title: "Resume saved", type: "success" }) }
+            { onSuccess: () => toaster.create({ title: t("editor.toast.saved"), type: "success" }) }
         );
     };
 
@@ -132,7 +136,7 @@ const ResumeEditorPage: React.FC = () => {
             { refinement_prompt: refinementPrompt },
             {
                 onSuccess: () => {
-                    toaster.create({ title: "Resume updated", type: "success" });
+                    toaster.create({ title: t("editor.toast.updated"), type: "success" });
                     setRefinementPrompt("");
                 },
             }
@@ -141,7 +145,7 @@ const ResumeEditorPage: React.FC = () => {
 
     const handleApprove = () => {
         approveMutation.mutate(undefined, {
-            onSuccess: () => toaster.create({ title: "Resume approved — content is now locked", type: "success" }),
+            onSuccess: () => toaster.create({ title: t("editor.toast.approved"), type: "success" }),
             onError: (error) => toaster.create({ title: error.message, type: "error" }),
         });
     };
@@ -149,7 +153,7 @@ const ResumeEditorPage: React.FC = () => {
     const handleFinalize = () => {
         if (!selectedTemplateId) return;
         finalizeMutation.mutate(selectedTemplateId, {
-            onSuccess: () => toaster.create({ title: "PDF generated", type: "success" }),
+            onSuccess: () => toaster.create({ title: t("editor.toast.pdfGenerated"), type: "success" }),
             onError: (error) => toaster.create({ title: error.message, type: "error" }),
         });
     };
@@ -166,7 +170,7 @@ const ResumeEditorPage: React.FC = () => {
             },
             {
                 onSuccess: () => {
-                    toaster.create({ title: "Application saved", type: "success" });
+                    toaster.create({ title: t("editor.toast.applicationSaved"), type: "success" });
                     navigate("/applications");
                 },
                 onError: (error) => toaster.create({ title: error.message, type: "error" }),
@@ -176,42 +180,42 @@ const ResumeEditorPage: React.FC = () => {
 
     if (isLoading) {
         return (
-            <PageContainer title="Resume">
-                <LoadingState message="Loading resume..." />
+            <PageContainer title={t("editor.title")}>
+                <LoadingState message={t("editor.loading")} />
             </PageContainer>
         );
     }
 
     if (Number.isNaN(draftId)) {
         return (
-            <PageContainer title="Resume">
-                <FormAlert status="error">Invalid resume ID</FormAlert>
+            <PageContainer title={t("editor.title")}>
+                <FormAlert status="error">{t("editor.invalidId")}</FormAlert>
             </PageContainer>
         );
     }
 
     if (isError || !draft) {
         return (
-            <PageContainer title="Resume">
-                <FormAlert status="error">Failed to load this resume</FormAlert>
+            <PageContainer title={t("editor.title")}>
+                <FormAlert status="error">{t("editor.loadError")}</FormAlert>
             </PageContainer>
         );
     }
 
     return (
         <PageContainer
-            title="Resume"
-            description="Tailored from your knowledge base — nothing beyond what's already written there is ever added."
+            title={t("editor.title")}
+            description={t("editor.description")}
             actions={
                 <Badge colorPalette={isApproved ? "green" : "yellow"} textTransform="capitalize" fontSize="sm">
-                    {draft.status}
+                    {t(`status.${draft.status}`, draft.status)}
                 </Badge>
             }
         >
             <Stack gap={6} maxW="3xl">
                 <Card p={6}>
                     <Heading as="h3" size="sm" mb={2}>
-                        Job description
+                        {t("editor.jobDescriptionHeading")}
                     </Heading>
                     <Text color="fg.muted" whiteSpace="pre-wrap" fontSize="sm">
                         {draft.job_description}
@@ -220,7 +224,7 @@ const ResumeEditorPage: React.FC = () => {
 
                 <Card p={6}>
                     <Heading as="h3" size="sm" mb={4}>
-                        Resume content
+                        {t("editor.contentHeading")}
                     </Heading>
                     <Stack as="form" onSubmit={handleSave} gap={4}>
                         <Textarea
@@ -245,7 +249,7 @@ const ResumeEditorPage: React.FC = () => {
                                 disabled={!isDirty || !content.trim()}
                                 {...BRAND_SOLID_HOVER_PROPS}
                             >
-                                Save changes
+                                {t("editor.save")}
                             </Button>
                         )}
                     </Stack>
@@ -254,18 +258,16 @@ const ResumeEditorPage: React.FC = () => {
                 {!isApproved && (
                     <Card p={6}>
                         <Heading as="h3" size="sm" mb={2}>
-                            Ask for a change
+                            {t("editor.askForChange.heading")}
                         </Heading>
                         <Text color="fg.muted" mb={4} fontSize="sm">
-                            Tell the AI how to adjust this resume — e.g. "emphasize my backend experience" or
-                            "use the project section instead of the internship". It only rearranges what's
-                            already in your knowledge base.
+                            {t("editor.askForChange.body")}
                         </Text>
                         <Stack as="form" onSubmit={handleRefine} gap={4}>
                             <Textarea
                                 value={refinementPrompt}
                                 onChange={(e) => setRefinementPrompt(e.target.value)}
-                                placeholder="Describe the change you want..."
+                                placeholder={t("editor.askForChange.placeholder")}
                                 rows={3}
                             />
                             {refineMutation.isError && <FormAlert status="error">{refineMutation.error.message}</FormAlert>}
@@ -274,21 +276,21 @@ const ResumeEditorPage: React.FC = () => {
                                     type="submit"
                                     {...SECONDARY_BUTTON_PROPS}
                                     loading={refineMutation.isPending}
-                                    loadingText="Refining..."
+                                    loadingText={t("editor.askForChange.refineLoading")}
                                     disabled={!refinementPrompt.trim() || isDirty}
-                                    title={isDirty ? "Save your changes before refining — refining regenerates content from what's already saved" : undefined}
+                                    title={isDirty ? t("editor.askForChange.refineDisabledTitle") : undefined}
                                 >
-                                    Refine with AI
+                                    {t("editor.askForChange.refine")}
                                 </Button>
                                 <Button
                                     colorPalette="brand"
                                     onClick={handleApprove}
                                     loading={approveMutation.isPending}
                                     disabled={!content.trim() || isDirty}
-                                    title={isDirty ? "Save your changes before approving" : undefined}
+                                    title={isDirty ? t("editor.askForChange.approveDisabledTitle") : undefined}
                                     {...BRAND_SOLID_HOVER_PROPS}
                                 >
-                                    Approve resume
+                                    {t("editor.askForChange.approve")}
                                 </Button>
                             </HStack>
                         </Stack>
@@ -298,30 +300,30 @@ const ResumeEditorPage: React.FC = () => {
                 {isApproved && (
                     <Card p={6}>
                         <Heading as="h3" size="sm" mb={2}>
-                            Choose a template
+                            {t("editor.template.heading")}
                         </Heading>
                         <Text color="fg.muted" mb={4} fontSize="sm">
-                            Content is locked now that this resume is approved — only presentation changes from here.
+                            {t("editor.template.body")}
                         </Text>
 
-                        {templatesQuery.isLoading && <LoadingState message="Loading templates..." />}
+                        {templatesQuery.isLoading && <LoadingState message={t("editor.template.loading")} />}
 
                         {templatesQuery.isError && (
-                            <FormAlert status="error">Failed to load templates — try reloading the page</FormAlert>
+                            <FormAlert status="error">{t("editor.template.loadError")}</FormAlert>
                         )}
 
                         {templatesQuery.data && (
                             <Stack gap={4}>
                                 <StyledSelect
-                                    ariaLabel="Template"
+                                    ariaLabel={t("editor.template.selectLabel")}
                                     w="200px"
                                     value={selectedTemplateId ?? ""}
                                     onChange={(value) => setSelectedTemplateOverride(value)}
-                                    options={templatesQuery.data.map((t) => ({ label: t.label, value: t.id }))}
+                                    options={templatesQuery.data.map((tpl) => ({ label: tpl.label, value: tpl.id }))}
                                 />
 
                                 {selectedTemplateId && previewQuery.isFetching && (
-                                    <LoadingState message="Compiling preview..." />
+                                    <LoadingState message={t("editor.template.compiling")} />
                                 )}
 
                                 {selectedTemplateId && !previewQuery.isFetching && previewBlobUrl && (
@@ -344,7 +346,7 @@ const ResumeEditorPage: React.FC = () => {
                                         _dark={{ borderColor: "gray.500", boxShadow: "0 0 0 1px var(--chakra-colors-gray-500), 0 8px 24px rgba(0, 0, 0, 0.5)" }}
                                     >
                                         <iframe
-                                            title="Resume preview"
+                                            title={t("editor.template.previewTitle")}
                                             src={previewBlobUrl}
                                             style={{ width: "100%", height: "600px", border: "none", display: "block" }}
                                         />
@@ -356,11 +358,11 @@ const ResumeEditorPage: React.FC = () => {
                                     alignSelf="flex-start"
                                     onClick={handleFinalize}
                                     loading={finalizeMutation.isPending}
-                                    loadingText="Compiling PDF..."
+                                    loadingText={t("editor.template.compilingPdf")}
                                     disabled={!selectedTemplateId}
                                     {...BRAND_SOLID_HOVER_PROPS}
                                 >
-                                    Use this template
+                                    {t("editor.template.use")}
                                 </Button>
                             </Stack>
                         )}
@@ -369,29 +371,29 @@ const ResumeEditorPage: React.FC = () => {
 
                 {isApproved && documentQuery.isError && (
                     <Card p={6}>
-                        <FormAlert status="error">Failed to check for a finalized PDF — try reloading the page</FormAlert>
+                        <FormAlert status="error">{t("editor.final.documentLoadError")}</FormAlert>
                     </Card>
                 )}
 
                 {isApproved && documentQuery.data && (
                     <Card p={6}>
                         <Heading as="h3" size="sm" mb={2}>
-                            Final resume ready
+                            {t("editor.final.heading")}
                         </Heading>
                         <HStack mb={4}>
                             <Button asChild size="sm" {...SECONDARY_BUTTON_PROPS}>
                                 <a href={resumeDocumentDownloadUrl(draftId, settings.apiBaseUrl)} target="_blank" rel="noreferrer">
-                                    Download PDF
+                                    {t("editor.final.download")}
                                 </a>
                             </Button>
                         </HStack>
 
                         <Heading as="h4" size="xs" mb={3}>
-                            Save this application
+                            {t("editor.final.saveHeading")}
                         </Heading>
                         <Stack as="form" onSubmit={handleSaveApplication} gap={4} maxW="sm">
                             <Input
-                                placeholder="Company name"
+                                placeholder={t("editor.final.companyPlaceholder")}
                                 value={companyName}
                                 onChange={(e) => setCompanyName(e.target.value)}
                                 required
@@ -416,7 +418,7 @@ const ResumeEditorPage: React.FC = () => {
                                 >
                                     {APPLICATION_STATUS_OPTIONS.map((s) => (
                                         <option key={s} value={s}>
-                                            {s}
+                                            {tCommon(`status.${s}`)}
                                         </option>
                                     ))}
                                 </NativeSelect.Field>
@@ -433,7 +435,7 @@ const ResumeEditorPage: React.FC = () => {
                                 disabled={!companyName.trim()}
                                 {...BRAND_SOLID_HOVER_PROPS}
                             >
-                                Save application
+                                {t("editor.final.save")}
                             </Button>
                         </Stack>
                     </Card>

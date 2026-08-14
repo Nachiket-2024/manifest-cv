@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 // LoginPage is loaded eagerly since it's the most common entry point for an
 // unauthenticated visitor, so it shouldn't show a loading flash of its own
@@ -39,29 +40,38 @@ import { useSessionEventsStream } from "../mystic_auth/auth/session_lifecycle/us
 import { AppLayout, ProtectedRoute, PERMISSIONS, Toaster, useAuthStore, LoadingState } from "./sdk";
 import type { NavItem } from "./sdk";
 
-// ManifestCV's own sidebar links, added via AppLayout's extraNavItems prop
-// rather than editing mystic_auth/layout/navItems.ts directly (that file
-// stays upstream-owned. See
-// docs/mystic_auth/template-usage/overview.md#shared-chrome-extension-points).
-// No permission required on any of these: every authenticated user has
-// their own private knowledge base, resume drafts, and applications.
-// Ordered to land right after Dashboard (10) and before Users (20).
-const EXTRA_NAV_ITEMS: NavItem[] = [
-    { label: "Career Knowledge", to: "/career-knowledge", order: 12 },
-    { label: "Resumes", to: "/resumes", order: 14 },
-    { label: "Applications", to: "/applications", order: 16 },
-];
-
 const App: React.FC = () => {
+    const { t } = useTranslation("app_common");
     useAuthSession();
     useSessionEventsStream();
 
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
+    // ManifestCV's own sidebar links, added via AppLayout's extraNavItems prop
+    // rather than editing mystic_auth/layout/navItems.ts directly (that file
+    // stays upstream-owned. See
+    // docs/mystic_auth/template-usage/overview.md#shared-chrome-extension-points).
+    // No permission required on any of these: every authenticated user has
+    // their own private knowledge base, resume drafts, and applications.
+    // Ordered to land right after Dashboard (10) and before Users (20).
+    // Memoized on `t` (which itself changes identity when the active
+    // language changes) rather than a module-level constant, since labels
+    // are now translated — but still the same stable reference across
+    // re-renders within one language, matching AppLayout's "same reference
+    // on every route" guidance above.
+    const extraNavItems: NavItem[] = React.useMemo(
+        () => [
+            { label: t("nav.careerKnowledge"), to: "/career-knowledge", order: 12 },
+            { label: t("nav.resumes"), to: "/resumes", order: 14 },
+            { label: t("nav.applications"), to: "/applications", order: 16 },
+        ],
+        [t]
+    );
+
     // isAuthenticated is null until the session check resolves. Showing a
     // loading screen until then avoids a flash of unauthenticated content.
     if (isAuthenticated === null) {
-        return <LoadingState message="Checking session..." fullScreen />;
+        return <LoadingState message={t("loading.checkingSession")} fullScreen />;
     }
 
     return (
@@ -70,7 +80,7 @@ const App: React.FC = () => {
                 Portal internally, so placement here doesn't affect layout) */}
             <Toaster />
 
-            <Suspense fallback={<LoadingState message="Loading..." fullScreen />}>
+            <Suspense fallback={<LoadingState message={t("loading.loadingApp")} fullScreen />}>
             <Routes>
                 {/* Protected routes require authentication. Each is wrapped
                     in AppLayout (sidebar + top bar) inside ProtectedRoute, so
@@ -95,7 +105,7 @@ const App: React.FC = () => {
                     path="/dashboard"
                     element={
                         <ProtectedRoute>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <DashboardPage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -105,7 +115,7 @@ const App: React.FC = () => {
                     path="/users"
                     element={
                         <ProtectedRoute permission={PERMISSIONS.USERS_LIST_ALL}>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <UsersPage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -115,7 +125,7 @@ const App: React.FC = () => {
                     path="/policies"
                     element={
                         <ProtectedRoute permission={PERMISSIONS.POLICIES_READ}>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <PoliciesPage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -127,8 +137,17 @@ const App: React.FC = () => {
                         // No permission prop: every authenticated user can see
                         // their own audit trail (see AuditLogPage's docstring
                         // for how the "All users" tab is gated separately).
+                        //
+                        // Added your own PBAC resource types or actions for
+                        // your own business domain? Give AuditLogPage
+                        // `extraResourceTypes`/`extraActions` (string[]) so
+                        // they show up in the "Authorization decisions"
+                        // filter dropdowns too, instead of hand-editing
+                        // mystic_auth/audit_log/authorization_log/authorizationLogResourceTypes.ts.
+                        // See
+                        // docs/mystic_auth/template-usage/overview.md#shared-chrome-extension-points.
                         <ProtectedRoute>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <AuditLogPage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -138,7 +157,7 @@ const App: React.FC = () => {
                     path="/account-settings"
                     element={
                         <ProtectedRoute>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <AccountSettingsPage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -153,7 +172,7 @@ const App: React.FC = () => {
                     path="/career-knowledge"
                     element={
                         <ProtectedRoute>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <CareerKnowledgePage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -163,7 +182,7 @@ const App: React.FC = () => {
                     path="/resumes"
                     element={
                         <ProtectedRoute>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <ResumeDraftsPage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -173,7 +192,7 @@ const App: React.FC = () => {
                     path="/resumes/:draftId"
                     element={
                         <ProtectedRoute>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <ResumeEditorPage />
                             </AppLayout>
                         </ProtectedRoute>
@@ -183,7 +202,7 @@ const App: React.FC = () => {
                     path="/applications"
                     element={
                         <ProtectedRoute>
-                            <AppLayout extraNavItems={EXTRA_NAV_ITEMS}>
+                            <AppLayout extraNavItems={extraNavItems}>
                                 <ApplicationsPage />
                             </AppLayout>
                         </ProtectedRoute>

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-FastAPI application (`backend/`), async throughout. SQLAlchemy async engine, async Redis client, async SMTP, async Qdrant client. One codebase, three container roles (`backend`, `taskiq_worker`, `alembic`) built from the same image with different `command:` overrides. See [Docker Overview](../docker/overview.md).
+FastAPI application (`backend/`), async throughout. SQLAlchemy async engine, async Redis client, async SMTP, async Qdrant client. One codebase, four container roles (`backend`, `taskiq_worker`, `taskiq_scheduler`, `alembic`) built from the same image with different `command:` overrides. See [Docker Overview](../docker/overview.md).
 
 The app is two layers, kept in physically separate top-level Python packages: an identity/authorization foundation vendored from [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) (`backend/mystic_auth/`: `api/auth_routes/`, `api/pbac_routes/`, `api/user_routes/`, `auth/`, `authorization/`, `user_crud/`, `user_table/`, `audit_log/`), and ManifestCV's own product domains built on top of it (`backend/app/`: `career_knowledge_*`, `resume_*`, `application_*`, `document_generation/`, `ai_integration/`, `retrieval/`, plus the extension-surface files below).
 

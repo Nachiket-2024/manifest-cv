@@ -22,5 +22,14 @@ export { default as LoadingState } from "../mystic_auth/ui/LoadingState";
 export { default as TableActionButton } from "../mystic_auth/ui/TableActionButton";
 export { default as StyledSelect } from "../mystic_auth/ui/StyledSelect";
 export { toaster } from "../mystic_auth/ui/toaster/toasterInstance";
+export { BRAND_SOLID_HOVER_PROPS, SECONDARY_BUTTON_PROPS } from "../mystic_auth/ui/styles/buttonStyles";
 
 export { useUnsavedChangesWarning } from "../mystic_auth/account_settings/useUnsavedChangesWarning";
+
+// The shared i18next instance. sdk.ts deliberately doesn't re-export this
+// (it's a fixed, upstream-maintained file — see its own docstring), so
+// ManifestCV's own translations/translations.ts registers its own
+// namespaces onto it via addResourceBundle() through here instead of
+// reaching into mystic_auth/translations directly. Same pattern as
+// get_logger/rate_limiter_service in backend/app/app_sdk.py.
+export { default as translations } from "../mystic_auth/translations/translations";

@@ -38,7 +38,7 @@ async def create_application(
     user_id = await _current_user_id(current_user, db)
 
     draft = await get_or_404(
-        resume_repository.get_by_id_and_user(payload.resume_draft_id, user_id, db), "Resume draft not found"
+        resume_repository.get_by_id_and_user(payload.resume_draft_id, user_id, db), "Resume draft not found", code="RESUME_DRAFT_NOT_FOUND"
     )
     document = await resume_document_repository.get_by_draft_id(draft.id, db)
     if document is None:
@@ -75,7 +75,7 @@ async def get_my_application(
 ):
     user_id = await _current_user_id(current_user, db)
     return await get_or_404(
-        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found"
+        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found", code="APPLICATION_NOT_FOUND"
     )
 
 
@@ -87,7 +87,7 @@ async def download_my_application_pdf(
 ):
     user_id = await _current_user_id(current_user, db)
     application = await get_or_404(
-        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found"
+        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found", code="APPLICATION_NOT_FOUND"
     )
     return Response(
         content=application.pdf_snapshot,
@@ -110,7 +110,7 @@ async def update_my_application(
     """
     user_id = await _current_user_id(current_user, db)
     application = await get_or_404(
-        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found"
+        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found", code="APPLICATION_NOT_FOUND"
     )
     fields = update_data.model_dump(exclude_unset=True)
     return await application_repository.update(application, fields, db)
@@ -124,7 +124,7 @@ async def delete_my_application(
 ):
     user_id = await _current_user_id(current_user, db)
     application = await get_or_404(
-        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found"
+        application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found", code="APPLICATION_NOT_FOUND"
     )
     await application_repository.delete(application, db)
     return {"detail": "Application deleted"}

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Badge, HStack, NativeSelect, Text } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 
 import Pager from "../ui/Pager";
 import { settings } from "../sdk";
@@ -26,34 +27,35 @@ const STATUS_OPTIONS = ["applied", "interviewing", "offered", "rejected"] as con
  * docstring).
  */
 const ApplicationsPage: React.FC = () => {
+    const { t } = useTranslation("applications");
     const [offset, setOffset] = useState(0);
     const { data: applications, isLoading, isError } = useApplicationsQuery(APPLICATIONS_PAGE_SIZE, offset);
     const deleteMutation = useDeleteApplicationMutation();
     const [deletingApp, setDeletingApp] = useState<ApplicationRead | null>(null);
 
     const columns: DataTableColumn<ApplicationRead>[] = [
-        { key: "company_name", header: "Company", render: (a) => <Text fontWeight="medium">{a.company_name}</Text> },
-        { key: "application_date", header: "Date", render: (a) => a.application_date },
-        { key: "application_time", header: "Time", render: (a) => a.application_time ?? "—" },
+        { key: "company_name", header: t("columns.company"), render: (a) => <Text fontWeight="medium">{a.company_name}</Text> },
+        { key: "application_date", header: t("columns.date"), render: (a) => a.application_date },
+        { key: "application_time", header: t("columns.time"), render: (a) => a.application_time ?? "—" },
         {
             key: "status",
-            header: "Status",
+            header: t("columns.status"),
             render: (a) => <StatusCell application={a} />,
         },
-        { key: "template", header: "Template", render: (a) => <Badge textTransform="capitalize">{a.template_id_snapshot}</Badge> },
+        { key: "template", header: t("columns.template"), render: (a) => <Badge textTransform="capitalize">{a.template_id_snapshot}</Badge> },
         {
             key: "row_actions",
             header: "",
             align: "end",
             render: (a) => (
                 <HStack justify="flex-end" gap={2}>
-                    <TableActionButton asChild>
+                    <TableActionButton asChild colorPalette="blue">
                         <a href={applicationPdfDownloadUrl(a.id, settings.apiBaseUrl)} target="_blank" rel="noreferrer">
-                            PDF
+                            {t("pdf")}
                         </a>
                     </TableActionButton>
                     <TableActionButton colorPalette="red" onClick={() => setDeletingApp(a)}>
-                        Delete
+                        {t("app_common:delete")}
                     </TableActionButton>
                 </HStack>
             ),
@@ -67,7 +69,7 @@ const ApplicationsPage: React.FC = () => {
         const isLastRowOnThisPage = applications?.length === 1 && offset > 0;
         deleteMutation.mutate(deletingApp.id, {
             onSuccess: () => {
-                toaster.create({ title: "Application deleted", type: "success" });
+                toaster.create({ title: t("toast.deleted"), type: "success" });
                 setDeletingApp(null);
                 if (isLastRowOnThisPage) setOffset((prev) => Math.max(0, prev - APPLICATIONS_PAGE_SIZE));
             },
@@ -76,23 +78,23 @@ const ApplicationsPage: React.FC = () => {
     };
 
     return (
-        <PageContainer title="Applications" description="Every resume you've saved as a tracked application, with its status.">
+        <PageContainer title={t("title")} description={t("description")}>
             <DataTable
                 columns={columns}
                 rows={applications}
                 rowKey={(a) => a.id}
                 isLoading={isLoading}
                 isError={isError}
-                errorMessage="Failed to load applications"
-                emptyMessage="No applications saved yet — finalize a resume to save one"
+                errorMessage={t("loadError")}
+                emptyMessage={t("empty")}
             />
             <Pager offset={offset} limit={APPLICATIONS_PAGE_SIZE} rowCount={applications?.length} onOffsetChange={setOffset} />
 
             <ConfirmDialog
                 isOpen={!!deletingApp}
-                title="Delete application"
-                description={`Remove the tracked application for "${deletingApp?.company_name}"? This only deletes the tracking record, not your resume drafts.`}
-                confirmLabel="Delete"
+                title={t("deleteDialog.title")}
+                description={t("deleteDialog.description", { company: deletingApp?.company_name })}
+                confirmLabel={t("deleteDialog.confirm")}
                 isLoading={deleteMutation.isPending}
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setDeletingApp(null)}
@@ -102,6 +104,8 @@ const ApplicationsPage: React.FC = () => {
 };
 
 const StatusCell: React.FC<{ application: ApplicationRead }> = ({ application }) => {
+    const { t } = useTranslation("applications");
+    const { t: tCommon } = useTranslation("app_common");
     const updateMutation = useUpdateApplicationMutation(application.id);
     // A native <select> immediately shows whatever the user picks, in the
     // browser's own DOM, regardless of whether the mutation it triggers
@@ -141,13 +145,13 @@ const StatusCell: React.FC<{ application: ApplicationRead }> = ({ application })
     return (
         <NativeSelect.Root size="sm" w="140px" disabled={updateMutation.isPending}>
             <NativeSelect.Field
-                aria-label={`Status for ${application.company_name}`}
+                aria-label={t("statusAriaLabel", { company: application.company_name })}
                 value={localStatus}
                 onChange={handleChange}
             >
                 {STATUS_OPTIONS.map((s) => (
                     <option key={s} value={s}>
-                        {s}
+                        {tCommon(`status.${s}`)}
                     </option>
                 ))}
             </NativeSelect.Field>

@@ -1,7 +1,8 @@
 import React from "react";
 import { Button, HStack, Text } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 
-import { SECONDARY_BUTTON_PROPS } from "../../mystic_auth/ui/styles/buttonStyles";
+import { SECONDARY_BUTTON_PROPS } from "../app_sdk";
 
 interface PagerProps {
     offset: number;
@@ -19,6 +20,7 @@ interface PagerProps {
  * inherited audit-log endpoints (see backend/app/api/audit_log_routes/).
  */
 const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }) => {
+    const { t } = useTranslation("app_common");
     const hasPreviousPage = offset > 0;
     const hasNextPage = rowCount !== undefined && rowCount === limit;
 
@@ -30,7 +32,7 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
     return (
         <HStack justify="flex-end" gap={3} mt={4}>
             <Text color="fg.muted" fontSize="sm">
-                Page {Math.floor(offset / limit) + 1}
+                {t("pager.page", { n: Math.floor(offset / limit) + 1 })}
             </Text>
             <Button
                 size="sm"
@@ -38,7 +40,7 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
                 onClick={() => onOffsetChange(Math.max(0, offset - limit))}
                 disabled={!hasPreviousPage}
             >
-                Previous
+                {t("pager.previous")}
             </Button>
             <Button
                 size="sm"
@@ -46,7 +48,7 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
                 onClick={() => onOffsetChange(offset + limit)}
                 disabled={!hasNextPage}
             >
-                Next
+                {t("pager.next")}
             </Button>
         </HStack>
     );

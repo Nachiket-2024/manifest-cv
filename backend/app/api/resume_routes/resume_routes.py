@@ -91,7 +91,7 @@ async def get_my_resume_draft(
 ):
     user_id = await _current_user_id(current_user, db)
     return await get_or_404(
-        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found"
+        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found", code="RESUME_DRAFT_NOT_FOUND"
     )
 
 
@@ -117,7 +117,7 @@ async def update_my_resume_draft(
     """
     user_id = await _current_user_id(current_user, db)
     draft = await get_or_404(
-        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found"
+        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found", code="RESUME_DRAFT_NOT_FOUND"
     )
 
     if draft.status == "approved":
@@ -156,7 +156,7 @@ async def approve_my_resume_draft(
     """
     user_id = await _current_user_id(current_user, db)
     draft = await get_or_404(
-        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found"
+        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found", code="RESUME_DRAFT_NOT_FOUND"
     )
 
     if not draft.resume_content:
@@ -178,7 +178,7 @@ async def delete_my_resume_draft(
 ):
     user_id = await _current_user_id(current_user, db)
     draft = await get_or_404(
-        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found"
+        resume_repository.get_by_id_and_user(draft_id, user_id, db), "Resume draft not found", code="RESUME_DRAFT_NOT_FOUND"
     )
     await resume_repository.delete(draft, db)
     return {"detail": "Resume draft deleted"}
