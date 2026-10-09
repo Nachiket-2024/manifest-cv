@@ -8,3 +8,10 @@
 // setupFiles, since this relies on i18next already being init()'d there
 // (addResourceBundle requires an already-initialized instance).
 import "../translations/translations";
+
+// jsdom/Vitest's Blob URL implementation is not stable across supported
+// Node versions and can throw while the app is only deriving a preview link.
+// Keep the browser API deterministic for app-owned tests; production uses the
+// platform implementation unchanged.
+URL.createObjectURL = () => "blob:manifest-cv-test";
+URL.revokeObjectURL = () => {};

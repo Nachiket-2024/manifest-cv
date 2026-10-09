@@ -27,10 +27,10 @@ else:
 class ApplicationRecord(Base):
     """
     A tracked job application. Fully self-contained snapshot of the resume
-    actually sent, copied at save time from the ResumeDraft/ResumeDocument
+    actually sent, copied at save time from the approved Resume Studio revision
     that produced it rather than referencing them by foreign key. This is
     deliberate: a tracked application must survive the user later editing
-    or deleting the draft/document it came from, unlike CareerKnowledgeBase,
+    or deleting the workspace revision it came from, unlike CareerKnowledgeBase,
     which has no meaning without its owner and so cascades instead. This
     data's whole purpose is outliving its source.
 
@@ -47,13 +47,20 @@ class ApplicationRecord(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     company_name = Column(String, nullable=False)
+    role = Column(String(200), nullable=True)
     application_date = Column(Date, nullable=False)
     application_time = Column(Time, nullable=True)
     status = Column(String, nullable=False)
 
     resume_content_snapshot = Column(Text, nullable=False)
     template_id_snapshot = Column(String, nullable=False)
+    template_version_snapshot = Column(String(80), nullable=True)
     pdf_snapshot = Column(LargeBinary, nullable=False)
+    resume_workspace_id = Column(Integer, ForeignKey("resume_workspaces.id", ondelete="SET NULL"), nullable=True, index=True)
+    resume_revision_id = Column(Integer, ForeignKey("resume_revisions.id", ondelete="SET NULL"), nullable=True, index=True)
+    document_snapshot = Column(Text, nullable=True)
+    pdf_storage_key_snapshot = Column(String(500), nullable=True)
+    pdf_sha256_snapshot = Column(String(64), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(

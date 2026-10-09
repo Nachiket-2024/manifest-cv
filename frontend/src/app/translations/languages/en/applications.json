@@ -1,6 +1,6 @@
 {
     "title": "Applications",
-    "description": "Every resume you've saved as a tracked application, with its status.",
+    "description": "Every workspace you've saved as a tracked application, with its status.",
     "columns": {
         "company": "Company",
         "date": "Date",
@@ -10,14 +10,14 @@
     },
     "pdf": "PDF",
     "loadError": "Failed to load applications",
-    "empty": "No applications saved yet — finalize a resume to save one",
+    "empty": "No applications saved yet. Approve a workspace to save one.",
     "statusAriaLabel": "Status for {{company}}",
     "toast": {
         "deleted": "Application deleted"
     },
     "deleteDialog": {
         "title": "Delete application",
-        "description": "Remove the tracked application for \"{{company}}\"? This only deletes the tracking record, not your resume drafts.",
+        "description": "Remove the tracked application for \"{{company}}\"? This only deletes the tracking record, not your resume workspace.",
         "confirm": "Delete"
     }
 }

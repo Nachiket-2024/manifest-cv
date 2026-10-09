@@ -8,6 +8,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from backend.app.app_sdk import get_user_id_by_email
 
 MODULE = "backend.app.app_sdk"

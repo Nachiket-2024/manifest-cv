@@ -1,8 +1,7 @@
 import React from "react";
-import { Button, HStack, Text } from "@chakra-ui/react";
 import { useTranslation } from "react-i18next";
 
-import { SECONDARY_BUTTON_PROPS } from "../app_sdk";
+import { Button } from "../sdk";
 
 interface PagerProps {
     offset: number;
@@ -30,13 +29,13 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
     }
 
     return (
-        <HStack justify="flex-end" gap={3} mt={4}>
-            <Text color="fg.muted" fontSize="sm">
+        <div className="mt-4 flex items-center justify-end gap-3">
+            <span className="text-sm text-fg-muted">
                 {t("pager.page", { n: Math.floor(offset / limit) + 1 })}
-            </Text>
+            </span>
             <Button
                 size="sm"
-                {...SECONDARY_BUTTON_PROPS}
+                variant="outline"
                 onClick={() => onOffsetChange(Math.max(0, offset - limit))}
                 disabled={!hasPreviousPage}
             >
@@ -44,13 +43,13 @@ const Pager: React.FC<PagerProps> = ({ offset, limit, rowCount, onOffsetChange }
             </Button>
             <Button
                 size="sm"
-                {...SECONDARY_BUTTON_PROPS}
+                variant="outline"
                 onClick={() => onOffsetChange(offset + limit)}
                 disabled={!hasNextPage}
             >
                 {t("pager.next")}
             </Button>
-        </HStack>
+        </div>
     );
 };
 

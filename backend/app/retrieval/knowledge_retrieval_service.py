@@ -5,7 +5,7 @@ import uuid
 from qdrant_client.models import FieldCondition, Filter, MatchValue, PointStruct
 
 from ..ai_integration.gemini_client import embed_text
-from ..sdk import redis_client
+from ..sdk import valkey_client
 from .exceptions import RetrievalError
 from .qdrant_client import COLLECTION_NAME, get_client
 
@@ -21,7 +21,7 @@ _REQUEST_TIMEOUT_SECONDS = 15
 # concurrent re-index for the *same* user interleaving with it (e.g. a
 # rapid double-submit of PUT /career-knowledge/). Without this, two
 # racing calls could each delete the other's freshly-upserted points,
-# leaving Qdrant reflecting neither save cleanly. A Redis lock (not an
+# leaving Qdrant reflecting neither save cleanly. A Valkey lock (not an
 # in-process asyncio.Lock) since the backend isn't assumed to run as a
 # single process/replica. Postgres itself is never at risk. This only
 # protects Qdrant's derived index (see index_knowledge_base's docstring).
@@ -29,7 +29,7 @@ _REINDEX_LOCK_TIMEOUT_SECONDS = 30
 
 
 def _reindex_lock(user_id: int):
-    return redis_client.lock(
+    return valkey_client.lock(
         f"career_knowledge_reindex_lock:{user_id}",
         timeout=_REINDEX_LOCK_TIMEOUT_SECONDS,
     )

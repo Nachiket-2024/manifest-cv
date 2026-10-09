@@ -1,19 +1,19 @@
 {
     "title": "Career Knowledge",
     "description": "Your private source material for tailored resumes.",
-    "fullDescription": "Your private source material — resume text, LinkedIn, projects, skills, achievements, and notes. Resume generation draws only from what's here.",
+    "fullDescription": "Your private source material for resume text, LinkedIn, projects, skills, achievements, and notes. Resume generation draws only from what is here.",
     "loading": "Loading your knowledge base...",
     "loadError": "Failed to load your knowledge base",
     "getStarted": {
         "heading": "Get started",
-        "body": "Paste everything you have — resume text, LinkedIn profile, GitHub projects, work experience, achievements, skills, and notes. This becomes your single source of truth; nothing beyond what you write here is ever added on your behalf.",
+        "body": "Paste everything you have, including resume text, LinkedIn profile, GitHub projects, work experience, achievements, skills, and notes. This becomes your single source of truth. Nothing beyond what you write here is ever added on your behalf.",
         "placeholder": "Paste your resume, LinkedIn text, projects, experience, skills, achievements, notes...",
         "submit": "Create knowledge base",
         "submitLoading": "Structuring with AI..."
     },
     "existing": {
         "heading": "Your knowledge base",
-        "body": "Structured by AI from what you pasted in, and directly editable any time. Tailored resumes are generated only from what's written here — nothing is ever added that wasn't in your original text.",
+        "body": "Structured by AI from what you pasted in, and directly editable any time. Tailored resumes are generated only from what is written here. Nothing is ever added that was not in your original text.",
         "save": "Save changes",
         "saveLoading": "Saving...",
         "startOver": "Start over",

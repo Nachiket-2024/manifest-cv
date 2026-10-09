@@ -18,18 +18,17 @@ _MAX_COMPANY_NAME_LENGTH = 200
 
 class ApplicationCreate(BaseModel):
     """
-    Saves a tracked application from an already-finalized resume document.
-    `resume_draft_id` identifies which finalized document to snapshot.
-    The actual content/PDF are copied server-side, never supplied
-    directly by the client.
+    Saves a tracked application from an approved Resume Studio workspace.
+    The actual content and PDF are copied server-side, never supplied by the
+    client.
     """
 
-    resume_draft_id: int
+    workspace_id: int
     company_name: str = Field(min_length=1, max_length=_MAX_COMPANY_NAME_LENGTH)
+    role: str | None = Field(default=None, max_length=200)
     application_date: date
     application_time: time | None = None
     status: ApplicationStatus
-
 
 class ApplicationUpdate(BaseModel):
     """
@@ -50,12 +49,15 @@ class ApplicationRead(BaseModel):
 
     id: int
     company_name: str
+    role: str | None
     application_date: date
     application_time: time | None
     status: ApplicationStatus
     template_id_snapshot: str
     created_at: datetime
     updated_at: datetime
+    resume_workspace_id: int | None = None
+    resume_revision_id: int | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,3 +66,6 @@ class ApplicationDetailRead(ApplicationRead):
     """Full schema for a single application. Includes the resume Markdown snapshot (not the PDF bytes)."""
 
     resume_content_snapshot: str
+    document_snapshot: str | None = None
+    pdf_storage_key_snapshot: str | None = None
+    pdf_sha256_snapshot: str | None = None

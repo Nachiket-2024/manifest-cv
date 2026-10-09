@@ -1,83 +1,81 @@
 # API Reference
 
-Full route inventory for ManifestCV's own routes, grouped by `APIRouter` module under `backend/app/api/`. All routers are mounted in `backend/app/main.py`. Interactive docs (`/docs`, `/redoc`, `/openapi.json`) are available whenever `ENVIRONMENT != "production"`.
-
-Every request/response body is a Pydantic schema (`*_schema.py` beside each feature). FastAPI validates the body and returns `422` with a field-by-field error list on a bad payload. No route does its own manual validation.
-
 ---
 
-## Conventions
+ManifestCV's app owned routes are mounted from `backend/app/main.py`. Every route requires a valid session and scopes product data to the current user. Mystic Auth routes are documented separately in [`docs/mystic_auth/api/reference.md`](../../mystic_auth/api/reference.md).
 
-- **Auth requirement** `session` means "a valid `access_token` cookie, no specific permission" (`Depends(get_current_user)`, imported from `app.sdk`: see [Auth & Authorization](../auth/overview.md)). None of ManifestCV's own routes use PBAC (`permission:action`). Every one is `session` + server-side `user_id` scoping.
-- All cookies are httpOnly. The API is never called with a bearer token/header.
-- **Rate limited** (marked below) routes are gated by `auth.security.rate_limiter_service.rate_limited(...)`, keyed per-account. See each route's own feature doc for why.
-
----
-
-## Inherited from mystic-auth
-
-`/auth/*`, `/auth/refresh/`, `/users/*`, `/authorization/*`, `/audit/*`, `/health/*` are mystic-auth's own routes, vendored unmodified. See [mystic-auth's own API reference](../../mystic_auth/api/reference.md) (mirrored locally at `docs/mystic_auth/`, see [Auth & Authorization](../auth/overview.md)) for the full, permission-annotated inventory.
-
----
+```mermaid
+%%{init: {"themeVariables": {"lineColor": "#334155"}} }%%
+sequenceDiagram
+    participant Client as Frontend
+    participant API as ManifestCV route
+    participant Auth as Mystic Auth session dependency
+    participant DB as Product database
+    Client->>API: Request with session cookies
+    API->>Auth: Validate session
+    Auth-->>API: Current user identity
+    API->>DB: Query with current user_id scope
+    DB-->>API: Product data
+    API-->>Client: Response
+```
 
 ## Career Knowledge
 
-`/career-knowledge`: `api/career_knowledge_routes/career_knowledge_routes.py`. See [Career Knowledge](../career-knowledge/overview.md) for the full flow.
+---
 
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| POST | `/career-knowledge/` | session, **rate limited** | Structures `raw_input` via Gemini, indexes in Qdrant. `409` if one already exists |
-| GET | `/career-knowledge/` | session | `404` if none exists yet |
-| PUT | `/career-knowledge/` | session, **rate limited** | `raw_input` re-structures via AI. `content` alone is a direct edit |
-| DELETE | `/career-knowledge/` | session | Also removes the user's indexed Qdrant points |
-| GET | `/career-knowledge/search?query=&top_k=` | session, **rate limited** | Semantic search over the caller's own indexed chunks (`top_k` 1-20, default 5). Embeds `query` via Gemini, same cost profile as the create/update routes above |
+The `/career-knowledge` routes manage the private source material used by Resume Studio.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/career-knowledge/` | Create and index the user's knowledge base |
+| GET | `/career-knowledge/` | Read the user's knowledge base |
+| PUT | `/career-knowledge/` | Edit and reindex the knowledge base |
+| DELETE | `/career-knowledge/` | Remove the knowledge base and its index |
+| GET | `/career-knowledge/search` | Search indexed knowledge for a query |
+
+## Resume Studio
 
 ---
 
-## Resumes
+The `/resume-workspaces` routes are the active resume product API. The frontend uses them through `frontend/src/app/api/resume_builder_api.ts`.
 
-`/resumes`: `api/resume_routes/resume_routes.py`. See [Resumes](../resumes/overview.md) for the full flow.
-
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| POST | `/resumes/` | session, **rate limited** | Retrieves matching knowledge base excerpts, generates via Gemini. `400` if the knowledge base has no matching content |
-| GET | `/resumes/?limit=&offset=` | session | Caller's own drafts, newest first, paginated (`limit` 1-100, default 20. `offset` default 0). See [Resumes: pagination](../resumes/overview.md#pagination) |
-| GET | `/resumes/{draft_id}` | session | `404` if not found or not owned by the caller |
-| PUT | `/resumes/{draft_id}` | session, **rate limited** | `refinement_prompt` re-matches + regenerates via AI. `content` alone is a direct edit. `400` if the draft is already approved |
-| POST | `/resumes/{draft_id}/approve` | session | Locks content. `400` if there's no content to approve |
-| DELETE | `/resumes/{draft_id}` | session | Cascades to any finalized document |
-
----
-
-## Document Generation
-
-Nested under `/resumes/{draft_id}`: `api/document_routes/document_routes.py`. See [Document Generation](../document-generation/overview.md) for the full pipeline. Every route below requires the draft to be **approved** first (`400` otherwise).
-
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| GET | `/resumes/{draft_id}/templates` | session | Static catalog, no compilation |
-| GET | `/resumes/{draft_id}/templates/{template_id}/preview` | session, **rate limited** | Compiles on the fly, returns PDF directly. Nothing persisted |
-| POST | `/resumes/{draft_id}/finalize` | session, **rate limited** | Compiles and persists. Overwrites any previous finalization for this draft |
-| GET | `/resumes/{draft_id}/finalize` | session | Persisted document metadata. `404` if not yet finalized |
-| GET | `/resumes/{draft_id}/finalize/download` | session | Raw PDF bytes as an attachment |
-
----
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/resume-workspaces/templates` | List available layouts |
+| GET | `/resume-workspaces/templates/{template_key}` | Read a layout and its document structure |
+| POST | `/resume-workspaces` | Create a workspace from a title, job description, and template |
+| GET | `/resume-workspaces` | List the user's workspaces |
+| GET | `/resume-workspaces/{workspace_id}` | Read a workspace and its current revision |
+| DELETE | `/resume-workspaces/{workspace_id}` | Delete a workspace and its revisions |
+| PUT | `/resume-workspaces/{workspace_id}/document` | Save a structured document revision |
+| POST | `/resume-workspaces/{workspace_id}/generate` | Generate tailored content from Career Knowledge |
+| POST | `/resume-workspaces/{workspace_id}/refine` | Apply an AI refinement and save a revision |
+| POST | `/resume-workspaces/{workspace_id}/refine/preview` | Preview an AI refinement without saving |
+| GET | `/resume-workspaces/{workspace_id}/revisions` | List saved revisions |
+| POST | `/resume-workspaces/{workspace_id}/revisions/{revision_id}/restore` | Restore a previous revision |
+| POST | `/resume-workspaces/{workspace_id}/approve` | Lock the workspace for export and application tracking |
+| GET | `/resume-workspaces/{workspace_id}/preview` | Render a workspace preview |
+| POST | `/resume-workspaces/{workspace_id}/generate-job` | Queue background content generation |
+| POST | `/resume-workspaces/{workspace_id}/export-job` | Queue background PDF export |
+| GET | `/resume-workspaces/{workspace_id}/export` | Download an exported PDF |
+| GET | `/resume-jobs/{job_id}` | Read a background job status |
+| GET | `/resume-jobs/{job_id}/download` | Download a completed export job |
 
 ## Applications
 
-`/applications`: `api/application_routes/application_routes.py`. See [Applications](../applications/overview.md) for the full flow.
-
-| Method | Path | Auth | Notes |
-|---|---|---|---|
-| POST | `/applications/` | session | Snapshots the finalized resume for `resume_draft_id`. `400` if that draft has no finalized document yet |
-| GET | `/applications/?limit=&offset=` | session | Summary schema (excludes the resume/PDF snapshot), newest first, paginated (`limit` 1-100, default 20. `offset` default 0). See [Applications: pagination](../applications/overview.md#pagination) |
-| GET | `/applications/{application_id}` | session | Full schema. Includes the Markdown snapshot |
-| GET | `/applications/{application_id}/pdf` | session | Raw PDF snapshot bytes as an attachment |
-| PATCH | `/applications/{application_id}` | session | Tracking fields only (company/date/time/status). The resume snapshot is read-only |
-| DELETE | `/applications/{application_id}` | session | |
-
 ---
 
-## Error responses
+The `/applications` routes track opportunities and store an immutable snapshot of the approved Resume Studio document used for each application.
 
-Every route shares one global exception handler (`main.py`'s `@app.exception_handler(Exception)`): any unhandled exception is logged with a stack trace and returned as a generic `500 {"detail": "Internal Server Error"}`: no internal exception detail ever reaches the client. Expected failures (`400`/`401`/`404`/`409`/`422`) use mystic-auth's `AppError` (`main.py`'s `@app.exception_handler(AppError)`), the same mechanism its own routes use, returning `{"detail": ..., "code": ..., "params": ...}` rather than a bare FastAPI `HTTPException` — the `code` lets the frontend look up a translated message (see [Translations](../architecture/frontend.md#translations)) instead of showing the raw English `detail`. The four `404`s ManifestCV's own routes raise via `get_or_404(..., code=...)` are `RESUME_DRAFT_NOT_FOUND`, `APPLICATION_NOT_FOUND`, and `CAREER_KNOWLEDGE_BASE_NOT_FOUND`. ManifestCV's AI-backed routes additionally return `502 Bad Gateway` when Gemini (`AIIntegrationError`) or Qdrant (`RetrievalError`) fails on a call the request can't proceed without (structuring/generation/refinement/search). Indexing/deletion failures after a successful save are handled differently (best-effort, never surfaced as an error). See [AI & Retrieval](../ai-and-retrieval/overview.md#failure-modes).
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/applications/` | Create an application from an approved workspace |
+| GET | `/applications/` | List application records |
+| GET | `/applications/{application_id}` | Read an application and its snapshot |
+| GET | `/applications/{application_id}/pdf` | Download the stored PDF snapshot |
+| PATCH | `/applications/{application_id}` | Update tracking fields |
+| DELETE | `/applications/{application_id}` | Delete an application record |
+
+## Errors and authentication
+
+The API uses the shared cookie based session from Mystic Auth. App owned resources are ownership scoped and do not require PBAC permissions. Invalid payloads return `422`; missing or inaccessible resources return `404`; generation and export failures return an appropriate service error. Error responses use the shared application error shape so the frontend can translate known codes.

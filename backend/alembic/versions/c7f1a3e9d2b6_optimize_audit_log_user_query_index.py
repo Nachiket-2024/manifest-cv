@@ -10,7 +10,7 @@ container (postgres:15) seeded with ~10k users, ~30k policy assignments,
 and ~220k audit log rows (one user seeded with ~20k rows to model a
 heavily-audited account):
 
-  EXPLAIN ANALYZE on AuditLogRepository.get_for_user's actual query
+  EXPLAIN ANALYZE on AuthorizationAuditLogRepository.get_for_user's actual query
   (`WHERE user_email = :email ORDER BY created_at DESC, id DESC LIMIT
   :limit OFFSET :offset`) showed, for the heavily-audited user: an
   Incremental Sort over a created_at-backward index scan with a
@@ -27,9 +27,9 @@ heavily-audited account):
 The old single-column `ix_authorization_audit_log_user_email` index is
 dropped as part of this same migration: grep confirmed user_email is
 never queried anywhere in this codebase without this exact ORDER BY (see
-audit_log_repository.py's get_for_user, the only place that filters by
-user_email at all), so the composite index's leftmost prefix (user_email
-alone) already serves that access pattern. Keeping the old index would be
+authorization_audit_log_repository.py's get_for_user, the only place that
+filters by user_email at all), so the composite index's leftmost prefix (user_email
+alone) already serves that access pattern; keeping the old index would be
 pure redundant write overhead on audit log inserts, which happen on
 *every* real authorize()/require() call, the hottest write path in the
 whole application.
@@ -41,7 +41,7 @@ policy_history's realistic scale (history entries accumulate only from
 infrequent admin policy edits, not per-request traffic), EXPLAIN ANALYZE
 showed Postgres's planner declined to use that composite index even when
 it was present, continuing to prefer the existing created_at-backward-
-scan-and-filter plan, i.e., no demonstrated benefit at that table's
+scan-and-filter plan, i.e. no demonstrated benefit at that table's
 actual usage pattern. That index was therefore NOT added here, per
 the project rule to add indexes only with demonstrated need. See this
 migration's absence of any policy_history change as the direct evidence

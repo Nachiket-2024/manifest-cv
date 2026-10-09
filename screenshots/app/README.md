@@ -1,9 +1,20 @@
-# Your Screenshots Go Here
-
-This mirrors the `app/` + `mystic_auth/` split used elsewhere in this repo (`backend/app/` vs `backend/mystic_auth/`, `frontend/src/app/` vs `frontend/src/mystic_auth/`, `docs/app/` vs `docs/mystic_auth/`): `screenshots/mystic_auth/` is this template's own screenshots, upstream-owned; `screenshots/app/` (this folder) is yours.
-
-Put your own project's screenshots here, and reference them from your `README.md` as `screenshots/app/whatever.png`. Since upstream never adds files here and never will, a `scripts/upstream-sync/sync-upstream.sh` sync can never collide with anything you put in this folder, no matter what you name your files.
-
-This file only exists so the otherwise-empty folder shows up on GitHub (git doesn't track empty directories). Delete it once you've added your own screenshots, or leave it: either is fine.
+# ManifestCV Screenshots
 
 ---
+
+These are current screenshots of the running ManifestCV app. They are captured in dark mode at a fixed `1440 × 900` laptop viewport with the Docker stack running.
+
+## Screenshot set
+
+| File | Current screen |
+|---|---|
+| `landing.png` | Product landing page |
+| `career_knowledge.png` | Career Knowledge |
+| `resumes.png` | Resume Studio workspace list |
+| `resume_setup.png` | Resume Studio setup |
+| `resume_templates.png` | Resume Studio template selection |
+| `resume_builder.png` | Resume Studio builder |
+| `resume_builder_lower.png` | Resume Studio revisions and application snapshot controls |
+| `applications.png` | Applications |
+
+Login and Mystic Auth administration screenshots are intentionally kept under `screenshots/mystic_auth/` and are not duplicated here.

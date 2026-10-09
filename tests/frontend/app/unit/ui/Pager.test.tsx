@@ -2,17 +2,12 @@ import type { ComponentProps } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 
 import Pager from '@app/ui/Pager';
 
 function renderPager(props: Partial<ComponentProps<typeof Pager>> = {}) {
   const onOffsetChange = vi.fn();
-  const utils = render(
-    <ChakraProvider value={defaultSystem}>
-      <Pager offset={0} limit={20} rowCount={20} onOffsetChange={onOffsetChange} {...props} />
-    </ChakraProvider>
-  );
+  const utils = render(<Pager offset={0} limit={20} rowCount={20} onOffsetChange={onOffsetChange} {...props} />);
   return { onOffsetChange, ...utils };
 }
 

@@ -5,3 +5,12 @@
 # when checked out on Windows with core.autocrlf=true and no override like
 # this one in place.
 *.sh text eol=lf
+
+# Read by scripts/upstream-sync/sync-upstream.sh as a raw git-rev string via
+# `cat`; a CRLF here leaves a trailing \r on the SHA and breaks every git
+# revision-range argument built from it.
+.mystic-auth-sync-state text eol=lf
+# Keep source and test files normalized across editors and operating systems.
+*.py   text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf

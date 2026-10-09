@@ -1,4 +1,5 @@
 # Career Knowledge
+---
 
 One private knowledge base per user. The single source of truth every tailored resume is generated from. Backend: `career_knowledge_table/`, `career_knowledge_crud/`, `api/career_knowledge_routes/`. Frontend: `frontend/src/app/career_knowledge/`.
 
@@ -19,10 +20,31 @@ Kept as one row, not a collection of entries. This is deliberately "the whole pi
 
 ## Flow
 
+```mermaid
+%%{init: {"themeVariables": {"lineColor": "#334155"}} }%%
+flowchart TD
+    Input["Raw career material"] --> Structure["Gemini structures content"]
+    Structure --> Store["Store one private knowledge base"]
+    Store --> Index["Embed and index in Qdrant"]
+    Edit["Direct Markdown edit"] --> Store
+    Query["Search request"] --> Embed["Embed query"]
+    Embed --> Index
+    Index --> Results["Relevant sections"]
+    classDef success fill:#dcfce7,stroke:#16a34a
+    classDef blocked fill:#fee2e2,stroke:#dc2626
+    classDef decision fill:#eff6ff,stroke:#3b82f6
+    class Results success
+    class Structure decision
+```
+
+The diagram shows the durable Markdown record and its rebuildable search index. A failed Gemini call stops before the new content is stored.
+
+---
+
 1. **Bootstrap** (`POST /career-knowledge/`). The user pastes their raw career dump. Gemini (`ai_integration.gemini_client.structure_knowledge_base`) reorganizes it into clean Markdown: rewrite, summarize, and reorganize are allowed, inventing anything not present in the input is not (enforced via the prompt, not code, since an LLM call can't be made to structurally guarantee this). The result is embedded and indexed into Qdrant (see [AI & Retrieval](../ai-and-retrieval/overview.md)) so it's searchable immediately.
 2. **Direct editing** (`PUT /career-knowledge/` with `content`). The user edits the Markdown by hand, no AI involved. Re-indexed in Qdrant so search stays in sync with what's actually stored.
 3. **Re-structuring** (`PUT /career-knowledge/` with `raw_input`). A fresh raw dump regenerates `content` from scratch via Gemini, same as step 1.
-4. **Search** (`GET /career-knowledge/search?query=...&top_k=...`). Semantic search over the caller's own indexed chunks. Powers resume generation/refinement's own retrieval step (see [Resumes](../resumes/overview.md)) as well as this standalone endpoint, exposed separately so retrieval correctness can be verified independently.
+4. **Search** (`GET /career-knowledge/search?query=...&top_k=...`). Semantic search over the caller's own indexed chunks. Powers Resume Studio generation and refinement (see [Resume Studio](../resumes/overview.md)) as well as the standalone search endpoint.
 5. **Delete** (`DELETE /career-knowledge/`). Removes the row and every indexed Qdrant point for the user.
 
 Only one knowledge base per user: a second `POST` while one already exists is a `409 Conflict`, and the caller should `PUT` instead.

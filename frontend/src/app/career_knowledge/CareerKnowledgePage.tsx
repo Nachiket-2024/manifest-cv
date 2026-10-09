@@ -1,19 +1,9 @@
 import React, { useState } from "react";
-import { Button, Heading, Stack, Text, Textarea } from "@chakra-ui/react";
+import { BookOpen, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-import {
-    PageContainer,
-    Card,
-    LoadingState,
-    FormAlert,
-    ConfirmDialog,
-    toaster,
-    useUnsavedChangesWarning,
-    BRAND_SOLID_HOVER_PROPS,
-    SECONDARY_BUTTON_PROPS,
-} from "../app_sdk";
-import { DESTRUCTIVE_OUTLINE_HOVER_PROPS } from "../ui/buttonStyles";
+import { Button, Card, ConfirmDialog, FormAlert, LoadingState, PageContainer, Textarea, toaster } from "../sdk";
+import { useUnsavedChangesWarning } from "../app_sdk";
 import { useCareerKnowledgeBaseQuery } from "./careerKnowledgeQueries";
 import {
     useCreateCareerKnowledgeBaseMutation,
@@ -96,6 +86,7 @@ const CareerKnowledgePage: React.FC = () => {
             <PageContainer
                 title={t("title")}
                 description={t("description")}
+                icon={BookOpen}
             >
                 <LoadingState message={t("loading")} />
             </PageContainer>
@@ -106,99 +97,95 @@ const CareerKnowledgePage: React.FC = () => {
         <PageContainer
             title={t("title")}
             description={t("fullDescription")}
+            icon={BookOpen}
         >
-            <Stack gap={6} maxW="3xl">
+            <div className="max-w-5xl space-y-6">
                 {isError && <FormAlert status="error">{t("loadError")}</FormAlert>}
 
                 {!knowledgeBase ? (
-                    <Card p={6}>
-                        <Heading as="h2" size="md" mb={2}>
-                            {t("getStarted.heading")}
-                        </Heading>
-                        <Text color="fg.muted" mb={4}>
+                    <Card className="border-t-[3px] border-t-brand-solid p-5 md:p-7">
+                        <div className="mb-2 flex items-start gap-3">
+                            <FileText size={20} className="mt-0.5 text-brand-solid" aria-hidden="true" />
+                            <h2 className="text-lg font-semibold text-fg-default">{t("getStarted.heading")}</h2>
+                        </div>
+                        <p className="mb-5 max-w-3xl text-sm leading-6 text-fg-muted">
                             {t("getStarted.body")}
-                        </Text>
-                        <Stack as="form" onSubmit={handleCreate} gap={4}>
+                        </p>
+                        <form className="space-y-4" onSubmit={handleCreate}>
                             <Textarea
+                                className="min-h-[24rem] font-mono text-sm leading-6"
                                 value={rawInput}
                                 onChange={(e) => setRawInput(e.target.value)}
                                 placeholder={t("getStarted.placeholder")}
-                                rows={16}
                             />
                             {createMutation.isError && (
                                 <FormAlert status="error">{createMutation.error.message}</FormAlert>
                             )}
                             <Button
                                 type="submit"
-                                colorPalette="brand"
-                                alignSelf="flex-start"
+                                variant="brand"
+                                className="self-start"
                                 loading={createMutation.isPending}
-                                loadingText={t("getStarted.submitLoading")}
                                 disabled={!rawInput.trim()}
-                                {...BRAND_SOLID_HOVER_PROPS}
                             >
                                 {t("getStarted.submit")}
                             </Button>
-                        </Stack>
+                        </form>
                     </Card>
                 ) : (
-                    <Card p={6}>
-                        <Heading as="h2" size="md" mb={2}>
-                            {t("existing.heading")}
-                        </Heading>
-                        <Text color="fg.muted" mb={4}>
+                    <Card className="border-t-[3px] border-t-brand-solid p-5 md:p-7">
+                        <div className="mb-2 flex items-start gap-3">
+                            <FileText size={20} className="mt-0.5 text-brand-solid" aria-hidden="true" />
+                            <h2 className="text-lg font-semibold text-fg-default">{t("existing.heading")}</h2>
+                        </div>
+                        <p className="mb-5 max-w-3xl text-sm leading-6 text-fg-muted">
                             {t("existing.body")}
-                        </Text>
-                        <Stack as="form" onSubmit={handleSave} gap={4}>
+                        </p>
+                        <form className="space-y-4" onSubmit={handleSave}>
                             <Textarea
+                                className="min-h-[30rem] font-mono text-sm leading-6"
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
-                                rows={20}
-                                fontFamily="mono"
                             />
                             {updateMutation.isError && (
                                 <FormAlert status="error">{updateMutation.error.message}</FormAlert>
                             )}
-                            <Stack direction="row" gap={3}>
+                            <div className="flex flex-wrap gap-3">
                                 <Button
                                     type="submit"
-                                    colorPalette="brand"
+                                    variant="brand"
                                     loading={updateMutation.isPending}
-                                    loadingText={t("existing.saveLoading")}
                                     disabled={!isDirty || !content.trim()}
-                                    {...BRAND_SOLID_HOVER_PROPS}
                                 >
                                     {t("existing.save")}
                                 </Button>
                                 <Button
-                                    variant="outline"
-                                    colorPalette="red"
+                                    variant="destructive-outline"
                                     onClick={() => setDeleteConfirmOpen(true)}
-                                    {...DESTRUCTIVE_OUTLINE_HOVER_PROPS}
                                 >
                                     {t("existing.startOver")}
                                 </Button>
-                            </Stack>
-                        </Stack>
+                            </div>
+                        </form>
 
-                        <Stack gap={2} mt={6} pt={4} borderTopWidth="1px" borderColor="border.default">
+                        <div className="mt-6 border-t border-border-card pt-4">
                             <Button
                                 size="sm"
-                                alignSelf="flex-start"
+                                variant="outline"
+                                className="self-start"
                                 onClick={() => setShowOriginalInput((v) => !v)}
-                                {...SECONDARY_BUTTON_PROPS}
                             >
                                 {showOriginalInput ? t("existing.hideOriginal") : t("existing.showOriginal")}
                             </Button>
                             {showOriginalInput && (
-                                <Text color="fg.muted" fontFamily="mono" fontSize="sm" whiteSpace="pre-wrap">
+                                <pre className="mt-3 whitespace-pre-wrap rounded-md border border-border-card bg-bg-muted p-4 font-mono text-sm leading-6 text-fg-muted">
                                     {knowledgeBase.raw_input}
-                                </Text>
+                                </pre>
                             )}
-                        </Stack>
+                        </div>
                     </Card>
                 )}
-            </Stack>
+            </div>
 
             <ConfirmDialog
                 isOpen={deleteConfirmOpen}

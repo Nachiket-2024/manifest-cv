@@ -1,0 +1,1 @@
+"""Structured resume builder API."""

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import MockAdapter from 'axios-mock-adapter';
 
 import api from '@/api/axiosInstance';
@@ -16,9 +15,7 @@ function renderAppAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ChakraProvider value={defaultSystem}>
-        <App />
-      </ChakraProvider>
+      <App />
     </QueryClientProvider>
   );
 }
@@ -40,7 +37,7 @@ describe('App routing', () => {
     mock.onGet('/auth/me').reply(401);
     renderAppAt('/login');
 
-    expect(await screen.findByRole('button', { name: 'Login' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument();
   });
 
   it('redirects an unauthenticated visitor away from a protected route, to /login', async () => {
@@ -50,7 +47,7 @@ describe('App routing', () => {
     await waitFor(() => {
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
-    expect(await screen.findByRole('button', { name: 'Login' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Log in' })).toBeInTheDocument();
   });
 
   it('renders the dashboard for an authenticated visitor', async () => {
@@ -60,12 +57,16 @@ describe('App routing', () => {
       role: 'user',
       permissions: [],
     });
+    mock.onGet('/auth/sessions').reply(200, []);
+    mock.onGet('/audit/security-log/me').reply(200, []);
     renderAppAt('/dashboard');
 
-    // "Manage Sessions" (not a page title) is the landmark here: the
+    // "Active Sessions" card heading is the landmark here: the
     // Dashboard's own welcome banner is a compact identity/stats/actions
     // row with no unique static heading of its own.
-    expect(await screen.findByText('Manage Sessions')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Active Sessions' }, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(screen.getByText('user@example.com')).toBeInTheDocument();
   });
 

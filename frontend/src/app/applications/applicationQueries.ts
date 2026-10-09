@@ -4,7 +4,7 @@ import { listApplicationsApi, getApplicationApi, type ApplicationRead, type Appl
 
 export const APPLICATIONS_QUERY_KEY = ["applications"] as const;
 // "list" disambiguates this from applicationQueryKey(applicationId) below.
-// See resumeQueries.ts's identical comment for why.
+// Keep list and detail cache keys distinct.
 export const applicationsListQueryKey = (limit: number, offset: number) =>
     ["applications", "list", limit, offset] as const;
 export const applicationQueryKey = (applicationId: number) => ["applications", applicationId] as const;

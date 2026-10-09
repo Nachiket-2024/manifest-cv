@@ -11,5 +11,21 @@
 // as a state change. Fills solid red on hover with white text instead (e.g.
 // CareerKnowledgePage's "Start over").
 export const DESTRUCTIVE_OUTLINE_HOVER_PROPS = {
-    _hover: { bg: "red.500", color: "white" },
+    borderColor: "var(--fg-error)",
+    color: "var(--fg-error)",
+    _hover: { bg: "var(--fg-error)", color: "white", borderColor: "var(--fg-error)" },
+};
+
+export const BRAND_SOLID_HOVER_PROPS = {
+    bg: "var(--brand-solid)",
+    color: "var(--brand-contrast)",
+    borderColor: "var(--brand-solid)",
+    _hover: { bg: "var(--brand-700)", borderColor: "var(--brand-700)" },
+};
+
+export const SECONDARY_BUTTON_PROPS = {
+    variant: "outline" as const,
+    borderColor: "var(--border-strong)",
+    color: "var(--fg-default)",
+    _hover: { bg: "var(--bg-muted)", borderColor: "var(--brand-border)" },
 };

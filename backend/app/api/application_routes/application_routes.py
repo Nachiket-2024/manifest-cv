@@ -1,5 +1,12 @@
+# SQLAlchemy's dynamically imported declarative base is runtime-correct but
+# opaque to mypy; the repository's model boundaries validate these values.
+# mypy: disable-error-code=arg-type
+
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...app_sdk import get_user_id_by_email
@@ -10,9 +17,12 @@ from ...application_table.application_schema import (
     ApplicationRead,
     ApplicationUpdate,
 )
-from ...resume_crud.resume_repository import resume_repository
-from ...resume_document_crud.resume_document_repository import resume_document_repository
+from ...resume_builder.artifact_model import ResumeRenderArtifact
+from ...resume_builder.document_schema import validate_document
+from ...resume_builder.models import ResumeRevision, ResumeWorkspace
+from ...resume_builder.render_service import render_document_pdf
 from ...sdk import database, get_current_user, get_or_404
+from ...storage.object_store import get_verified_bytes, put_bytes
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -37,20 +47,42 @@ async def create_application(
     """
     user_id = await _current_user_id(current_user, db)
 
-    draft = await get_or_404(
-        resume_repository.get_by_id_and_user(payload.resume_draft_id, user_id, db), "Resume draft not found", code="RESUME_DRAFT_NOT_FOUND"
+    fields = payload.model_dump(exclude={"workspace_id"})
+    workspace_result = await db.execute(select(ResumeWorkspace).where(ResumeWorkspace.id == payload.workspace_id, ResumeWorkspace.user_id == user_id))
+    workspace = workspace_result.scalar_one_or_none()
+    if workspace is None:
+        raise HTTPException(status_code=404, detail="Resume workspace not found")
+    if workspace.status != "approved":
+        raise HTTPException(status_code=400, detail="Approve the resume before creating an application")
+    revision = await db.get(ResumeRevision, workspace.current_revision_id)
+    if revision is None:
+        raise HTTPException(status_code=400, detail="Resume revision not found")
+    document_json = revision.document_json
+    document = validate_document(json.loads(document_json))
+    artifact_result = await db.execute(
+        select(ResumeRenderArtifact)
+        .where(ResumeRenderArtifact.revision_id == revision.id, ResumeRenderArtifact.status == "succeeded")
+        .order_by(ResumeRenderArtifact.id.desc())
+        .limit(1)
     )
-    document = await resume_document_repository.get_by_draft_id(draft.id, db)
-    if document is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Finalize this resume (select a template) before saving an application",
+    artifact = artifact_result.scalar_one_or_none()
+    if artifact is None:
+        pdf = render_document_pdf(document)
+        key = f"users/{user_id}/workspaces/{workspace.id}/revisions/{revision.id}/resume.pdf"
+        byte_size, sha256 = put_bytes(key, pdf)
+        artifact = ResumeRenderArtifact(
+            revision_id=revision.id, storage_key=key, content_type="application/pdf",
+            byte_size=byte_size, sha256=sha256,
         )
-
-    fields = payload.model_dump(exclude={"resume_draft_id"})
-    fields["resume_content_snapshot"] = draft.resume_content
-    fields["template_id_snapshot"] = document.template_id
-    fields["pdf_snapshot"] = document.pdf_bytes
+        db.add(artifact)
+        await db.flush()
+    else:
+        pdf = get_verified_bytes(artifact.storage_key, artifact.sha256)
+    fields.update({"resume_content_snapshot": document_json, "template_id_snapshot": workspace.template_key, "template_version_snapshot": "1",
+                   "pdf_snapshot": pdf, "pdf_storage_key_snapshot": artifact.storage_key,
+                   "pdf_sha256_snapshot": artifact.sha256,
+                   "resume_workspace_id": workspace.id, "resume_revision_id": revision.id,
+                   "document_snapshot": document_json})
 
     return await application_repository.create(user_id, fields, db)
 
@@ -89,8 +121,9 @@ async def download_my_application_pdf(
     application = await get_or_404(
         application_repository.get_by_id_and_user(application_id, user_id, db), "Application not found", code="APPLICATION_NOT_FOUND"
     )
+    pdf = get_verified_bytes(application.pdf_storage_key_snapshot, application.pdf_sha256_snapshot) if application.pdf_storage_key_snapshot and application.pdf_sha256_snapshot else application.pdf_snapshot
     return Response(
-        content=application.pdf_snapshot,
+        content=pdf,
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="application-{application_id}.pdf"'},
     )

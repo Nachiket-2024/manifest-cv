@@ -1,10 +1,11 @@
 # Security Policy
-
 ---
 
 ## Supported versions
 
-There is one line of development, `main`: security fixes land there, no separate release branches to track.
+There is one line of development, `main`: security fixes land there, no separate release branches to track. This app is itself built on the [mystic-auth](https://github.com/Nachiket-2024/mystic-auth) template; identity/authorization fixes land upstream first and are pulled in via `scripts/mystic_auth/upstream-sync/sync-upstream.sh` (see [Staying in Sync with Upstream Template Updates](docs/mystic_auth/template-usage/syncing-upstream/README.md)).
+
+---
 
 ## Reporting a vulnerability
 
@@ -31,3 +32,5 @@ Both layers of this app are in scope:
 ## Known, already-tracked gaps
 
 Not every limitation is a vulnerability to report. Some are deliberate, documented scope boundaries. Check [Known Issues, Limitations & Technical Debt](docs/app/concerns/README.md) (ManifestCV's own) and [mystic-auth's own list](docs/mystic_auth/concerns/README.md) first. Between the two, that's the running list of what's already known and why it's not (yet, or ever) fixed.
+
+---

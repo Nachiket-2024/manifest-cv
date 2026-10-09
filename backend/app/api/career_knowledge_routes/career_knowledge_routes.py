@@ -97,7 +97,7 @@ async def create_career_knowledge_base(
     if await career_knowledge_repository.get_by_user_id(user_id, db) is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Career knowledge base already exists — use PUT to update it",
+            detail="Career knowledge base already exists - use PUT to update it",
         )
 
     content = await _structure_or_502(payload.raw_input)
@@ -187,7 +187,7 @@ async def search_my_career_knowledge_base(
     """
     Semantic search over the caller's own indexed knowledge base chunks.
     Powers resume generation/refinement's own retrieval step (see
-    resume_routes.py) as well as this standalone endpoint, exposed
+    Resume Studio routes) as well as this standalone endpoint, exposed
     separately so retrieval correctness can be verified independently.
     """
     user_id = await _current_user_id(current_user, db)

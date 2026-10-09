@@ -14,14 +14,14 @@ personal notes.
 Your ONLY job is to reorganize this text into a clean, well-structured \
 Markdown document. Use headings for logical sections (e.g. Experience, \
 Projects, Skills, Achievements, Education) based on whatever the input \
-actually contains — do not invent sections with no corresponding content.
+actually contains - do not invent sections with no corresponding content.
 
 Strict rules, no exceptions:
 - Rewrite, summarize, and reorganize freely for clarity.
 - NEVER invent, infer, or add any company, employer, project, achievement, \
 metric, skill, date, or fact that is not explicitly present in the input.
 - NEVER fill in gaps with plausible-sounding details.
-- If the input is sparse or ambiguous, keep the output sparse too — do not \
+- If the input is sparse or ambiguous, keep the output sparse too - do not \
 pad it out.
 - Output ONLY the Markdown document. No preamble, no explanation, no code \
 fences around it.
@@ -48,7 +48,7 @@ NEVER invent, infer, or add any company, employer, project, achievement, \
 metric, skill, date, or fact that is not explicitly present in them.
 - You MAY rewrite, summarize, reorder, and choose which existing items to \
 emphasize or omit based on relevance to the job description.
-- NEVER fabricate a fit that isn't supported by the excerpts — if the \
+- NEVER fabricate a fit that isn't supported by the excerpts - if the \
 knowledge base is sparse for what the job asks, keep the resume sparse \
 too rather than padding it out.
 - Output ONLY the Markdown resume document. No preamble, no explanation, \
@@ -74,7 +74,7 @@ def build_refine_resume_prompt(
     """
     Iterative refinement: re-matches the knowledge base against the user's
     instruction while regenerating from
-    the previous draft, so unrelated sections stay stable across a
+    the previous revision, so unrelated sections stay stable across a
     refinement instead of being rewritten wholesale each time.
     """
     excerpts = "\n\n".join(knowledge_chunks) if knowledge_chunks else "(no matching excerpts found)"

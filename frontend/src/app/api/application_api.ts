@@ -9,6 +9,9 @@ export interface ApplicationRead {
     template_id_snapshot: string;
     created_at: string;
     updated_at: string;
+    role: string | null;
+    resume_workspace_id: number | null;
+    resume_revision_id: number | null;
 }
 
 export interface ApplicationDetailRead extends ApplicationRead {
@@ -16,8 +19,9 @@ export interface ApplicationDetailRead extends ApplicationRead {
 }
 
 export interface ApplicationCreatePayload {
-    resume_draft_id: number;
+    workspace_id: number;
     company_name: string;
+    role?: string;
     application_date: string;
     application_time?: string | null;
     status: string;
@@ -49,7 +53,7 @@ export const deleteApplicationApi = (applicationId: number) => api.delete(`/appl
 // instead, at the point the URL is actually needed.
 export const applicationPdfDownloadUrl = (applicationId: number, apiBaseUrl: string) => {
     if (!apiBaseUrl) {
-        throw new Error("VITE_API_BASE_URL is not configured — set it before building the frontend");
+        throw new Error("VITE_API_BASE_URL is not configured. Set it before building the frontend.");
     }
     return `${apiBaseUrl}/applications/${applicationId}/pdf`;
 };

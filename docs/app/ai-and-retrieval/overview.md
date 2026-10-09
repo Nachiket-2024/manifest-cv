@@ -1,10 +1,12 @@
-﻿# AI & Retrieval
+# AI & Retrieval
+---
 
-In plain terms: this is the machinery that turns a user's raw career history into a tailored resume for a specific job. One piece (`ai_integration/`) talks to Google's Gemini models to read, write, and rewrite text. Structuring a messy career dump into clean notes, drafting a resume, revising it on request. The other piece (`retrieval/`) is a small search engine (Qdrant) that finds which of a user's own notes are actually relevant to the job description in front of it, so Gemini only ever sees the excerpts that matter rather than a user's entire career history crammed into one prompt. Together they're what [Career Knowledge](../career-knowledge/overview.md) and [Resumes](../resumes/overview.md) build on.
+In plain terms: this is the machinery that turns a user's raw career history into a tailored Resume Studio workspace. One piece (`ai_integration/`) talks to Google's Gemini models to read, write, and refine text. The other piece (`retrieval/`) uses Qdrant to find which of a user's own notes are relevant to the target job, so Gemini sees the excerpts that matter rather than the entire knowledge base. Together they power [Career Knowledge](../career-knowledge/overview.md) and [Resume Studio](../resumes/overview.md).
 
 The rest of this document is the technical reference for those two pieces. Backend: `ai_integration/` (Gemini) and `retrieval/` (Qdrant).
 
 ```mermaid
+%%{init: {"themeVariables": {"lineColor": "#334155"}} }%%
 flowchart LR
     subgraph Indexing[On career knowledge save]
         RawInput["raw_input"] --> Structure["structure_knowledge_base()"]
@@ -20,7 +22,7 @@ flowchart LR
         Qdrant --> Search
         Search --> Chunks["matched knowledge_chunks"]
         Chunks --> Generate["generate_resume() /<br/>refine_resume()"]
-        Generate --> Resume["resume draft content"]
+        Generate --> Resume["structured resume workspace content"]
     end
 ```
 
@@ -33,8 +35,8 @@ Wraps Google's Gemini API (`google-genai` SDK) behind a small, purpose-specific 
 | Function | Used by | Purpose |
 |---|---|---|
 | `structure_knowledge_base(raw_input)` | [Career Knowledge](../career-knowledge/overview.md) | Reorganizes a raw text dump into clean Markdown. Rewrite/summarize/reorganize allowed, inventing new facts is not (a prompt-level constraint, not code-enforced) |
-| `generate_resume(job_description, knowledge_chunks)` | [Resumes](../resumes/overview.md) | Generates an initial tailored resume from retrieved knowledge base excerpts only |
-| `refine_resume(job_description, knowledge_chunks, previous_resume, refinement_prompt)` | [Resumes](../resumes/overview.md) | Regenerates a resume per a refinement instruction, re-matching the knowledge base rather than only editing the previous text verbatim |
+| `generate_structured_document(job_description, knowledge_chunks, template)` | [Resume Studio](../resumes/overview.md) | Generates tailored structured document content from retrieved knowledge excerpts |
+| `refine_resume(job_description, knowledge_chunks, previous_resume, refinement_prompt)` | [Resume Studio](../resumes/overview.md) | Refines a workspace document while re matching the knowledge base |
 | `embed_text(text)` | `retrieval/` | Generates a semantic embedding vector for one chunk of text |
 
 The `genai.Client` is constructed lazily, on first use. Importing `ai_integration` never requires a valid `GEMINI_API_KEY`, so the rest of the app (and its tests) can import modules that transitively reference it without needing a real key.
@@ -65,7 +67,7 @@ Splits a knowledge base's Markdown on headings (`#` through `######`), so a sear
 
 ### Indexing (`index_knowledge_base(user_id, content)`)
 
-Re-indexes a user's **entire** knowledge base on every save. It chunks and embeds the current content first, then deletes and upserts that user's points under a per-user Redis lock. If embedding fails, the old Qdrant index remains in place. Full re-indexing is simpler than diffing old vs. new chunks, and a shrinking section count cannot leave stale orphaned points behind. Point ids are deterministic (`uuid5` of `user_id` + chunk index), so re-indexing overwrites in place rather than accumulating duplicates when the chunk count is unchanged.
+Re-indexes a user's **entire** knowledge base on every save. It chunks and embeds the current content first, then deletes and upserts that user's points under a per-user Valkey lock. If embedding fails, the old Qdrant index remains in place. Full re-indexing is simpler than diffing old vs. new chunks, and a shrinking section count cannot leave stale orphaned points behind. Point ids are deterministic (`uuid5` of `user_id` + chunk index), so re-indexing overwrites in place rather than accumulating duplicates when the chunk count is unchanged.
 
 ### Search (`search_knowledge_base(user_id, query, top_k)`)
 

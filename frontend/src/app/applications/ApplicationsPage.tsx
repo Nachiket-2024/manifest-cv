@@ -1,17 +1,10 @@
 import React, { useState } from "react";
-import { Badge, HStack, NativeSelect, Text } from "@chakra-ui/react";
+import { BriefcaseBusiness, FileDown, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import Pager from "../ui/Pager";
 import { settings } from "../sdk";
-import {
-    PageContainer,
-    DataTable,
-    type DataTableColumn,
-    ConfirmDialog,
-    TableActionButton,
-    toaster,
-} from "../app_sdk";
+import { Badge, PageContainer, DataTable, type DataTableColumn, ConfirmDialog, StyledSelect, TableActionIconButton, toaster } from "../sdk";
 import { useApplicationsQuery, APPLICATIONS_PAGE_SIZE } from "./applicationQueries";
 import { useUpdateApplicationMutation, useDeleteApplicationMutation } from "./applicationMutations";
 import { applicationPdfDownloadUrl, type ApplicationRead } from "../api/application_api";
@@ -34,30 +27,33 @@ const ApplicationsPage: React.FC = () => {
     const [deletingApp, setDeletingApp] = useState<ApplicationRead | null>(null);
 
     const columns: DataTableColumn<ApplicationRead>[] = [
-        { key: "company_name", header: t("columns.company"), render: (a) => <Text fontWeight="medium">{a.company_name}</Text> },
-        { key: "application_date", header: t("columns.date"), render: (a) => a.application_date },
-        { key: "application_time", header: t("columns.time"), render: (a) => a.application_time ?? "—" },
+        { key: "company_name", header: t("columns.company"), width: "13rem", render: (a) => <span className="font-medium text-fg-default">{a.company_name}</span> },
+        { key: "application_date", header: t("columns.date"), width: "9rem", render: (a) => <span className="whitespace-nowrap text-fg-muted">{a.application_date}</span> },
+        { key: "application_time", header: t("columns.time"), width: "8rem", render: (a) => <span className="whitespace-nowrap text-fg-muted">{a.application_time ?? "-"}</span> },
         {
             key: "status",
             header: t("columns.status"),
+            width: "10rem",
             render: (a) => <StatusCell application={a} />,
         },
-        { key: "template", header: t("columns.template"), render: (a) => <Badge textTransform="capitalize">{a.template_id_snapshot}</Badge> },
+        { key: "template", header: t("columns.template"), width: "13rem", render: (a) => <Badge colorPalette="gray" variant="subtle" size="sm" className="capitalize">{a.template_id_snapshot}</Badge> },
         {
             key: "row_actions",
             header: "",
             align: "end",
+            width: "8rem",
             render: (a) => (
-                <HStack justify="flex-end" gap={2}>
-                    <TableActionButton asChild colorPalette="blue">
+                <div className="flex justify-end gap-2 whitespace-nowrap">
+                    <TableActionIconButton asChild colorPalette="blue" label={t("pdf")}>
                         <a href={applicationPdfDownloadUrl(a.id, settings.apiBaseUrl)} target="_blank" rel="noreferrer">
-                            {t("pdf")}
+                            <FileDown size={16} />
+                            <span className="sr-only">{t("pdf")}</span>
                         </a>
-                    </TableActionButton>
-                    <TableActionButton colorPalette="red" onClick={() => setDeletingApp(a)}>
-                        {t("app_common:delete")}
-                    </TableActionButton>
-                </HStack>
+                    </TableActionIconButton>
+                    <TableActionIconButton colorPalette="red" label={t("app_common:delete")} onClick={() => setDeletingApp(a)}>
+                        <Trash2 size={16} />
+                    </TableActionIconButton>
+                </div>
             ),
         },
     ];
@@ -65,7 +61,7 @@ const ApplicationsPage: React.FC = () => {
     const handleDeleteConfirm = () => {
         if (!deletingApp) return;
         // Same "step back a page instead of leaving the pager stuck on an
-        // empty page" handling as ResumeDraftsPage.
+        // empty page handling used by the workspace flow.
         const isLastRowOnThisPage = applications?.length === 1 && offset > 0;
         deleteMutation.mutate(deletingApp.id, {
             onSuccess: () => {
@@ -78,7 +74,7 @@ const ApplicationsPage: React.FC = () => {
     };
 
     return (
-        <PageContainer title={t("title")} description={t("description")}>
+        <PageContainer title={t("title")} description={t("description")} icon={BriefcaseBusiness}>
             <DataTable
                 columns={columns}
                 rows={applications}
@@ -87,6 +83,7 @@ const ApplicationsPage: React.FC = () => {
                 isError={isError}
                 errorMessage={t("loadError")}
                 emptyMessage={t("empty")}
+                emptyIcon={<BriefcaseBusiness size={26} aria-hidden="true" />}
             />
             <Pager offset={offset} limit={APPLICATIONS_PAGE_SIZE} rowCount={applications?.length} onOffsetChange={setOffset} />
 
@@ -118,7 +115,7 @@ const StatusCell: React.FC<{ application: ApplicationRead }> = ({ application })
     const [localStatus, setLocalStatus] = useState(application.status);
     const [prevServerStatus, setPrevServerStatus] = useState(application.status);
 
-    // Same render-time sync pattern ResumeEditorPage uses for its content
+    // Same render-time sync pattern used by the workspace editor
     // field, not an effect: adopt the server's status when it actually
     // changes (a successful update landing, a background refetch). But
     // never while a mutation this cell itself started is still in flight.
@@ -143,20 +140,16 @@ const StatusCell: React.FC<{ application: ApplicationRead }> = ({ application })
     };
 
     return (
-        <NativeSelect.Root size="sm" w="140px" disabled={updateMutation.isPending}>
-            <NativeSelect.Field
-                aria-label={t("statusAriaLabel", { company: application.company_name })}
-                value={localStatus}
-                onChange={handleChange}
-            >
-                {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                        {tCommon(`status.${s}`)}
-                    </option>
-                ))}
-            </NativeSelect.Field>
-            <NativeSelect.Indicator />
-        </NativeSelect.Root>
+        <StyledSelect
+            ariaLabel={t("statusAriaLabel", { company: application.company_name })}
+            value={localStatus}
+            onChange={(value) => handleChange({ target: { value } } as React.ChangeEvent<HTMLSelectElement>)}
+            options={STATUS_OPTIONS.map((s) => ({ value: s, label: tCommon(`status.${s}`) }))}
+            size="sm"
+            className="w-36"
+            textTransform="capitalize"
+            disabled={updateMutation.isPending}
+        />
     );
 };
 

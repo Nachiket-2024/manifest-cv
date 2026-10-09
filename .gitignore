@@ -3,16 +3,32 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-.env
-.env.*
-!.env.example
-!.env.local-prod.example
-!.env.prod.example
+env/mystic_auth/.env
+env/mystic_auth/.env.*
+!env/mystic_auth/.env.example
+!env/mystic_auth/.env.dev.example
+!env/mystic_auth/.env.local-prod-cloudflare.example
+!env/mystic_auth/.env.local-prod-ngrok.example
+!env/mystic_auth/.env.local-prod-tailscale.example
+!env/mystic_auth/.env.prod.example
+env/app/.env
+env/app/.env.*
+!env/app/.env.example
+!env/app/.env.dev.example
+!env/app/.env.local-prod-cloudflare.example
+!env/app/.env.local-prod-ngrok.example
+!env/app/.env.local-prod-tailscale.example
+!env/app/.env.prod.example
 *.venv/
 venv/
 .envrc
 .Python
 *.sqlite3
+# Private keys and exported key containers must stay local.
+*.pem
+*.key
+*.p12
+*.pfx
 
 # ---------------------------- IDEs / Editors ----------------------------
 .vscode/
@@ -36,6 +52,7 @@ docker-compose.override.yml
 backend/__pycache__/
 backend/*.pyc
 backend/*.db
+backend/.cache/
 
 # ---------------------------- Frontend ----------------------------
 node_modules/
@@ -43,13 +60,20 @@ frontend/node_modules/
 frontend/dist/
 frontend/build/
 frontend/.env
+frontend/.env.bak
+frontend/.env.*
+!frontend/.env*.example
 frontend/.DS_Store
 frontend/.cache/
-frontend/coverage/
+frontend/.cache/playwright/
 
 # ---------------------------- Testing / Coverage ----------------------------
-.coverage
+.coverage*
 htmlcov/
+**/coverage/
+**/test-results/
+**/playwright-report/
+**/blob-report/
 .tox/
 nosetests.xml
 coverage.xml
@@ -65,8 +89,8 @@ __pypackages__/
 .dmypy.json
 dmypy.json
 
-# ---------------------------- Redis ----------------------------
-redis-data/
+# ---------------------------- Valkey ----------------------------
+valkey-data/
 dump.rdb
 *.rdb
 
@@ -77,13 +101,22 @@ logs/
 # ---------------------------- Database backups ----------------------------
 backups/
 
+# ---------------------------- Local SBOM output ----------------------------
+sbom/
+
 # ---------------------------- Local scripts (system user bootstrap) ----------------------------
-# Real credentials for local-scripts/{dev,local-prod,prod}/create-system-user.*;
+# Real credentials for local-scripts/mystic_auth/{dev,local-prod-*,prod}/create-system-user.*;
 # the .example templates alongside them stay tracked.
 local-scripts/**/system-user.env
+scripts/mystic_auth/env-tools/set-env-field/shared-values.env
+scripts/mystic_auth/**/env-tools/set-env-field/shared-values.env
+scripts/app/env-tools/set-env-field/shared-values.env
+scripts/app/env-tools/rotate-secrets/fields.env
 
 # ---------------------------- Local Development Tools ----------------------------
 .claude/
+.codex/
+.local/
 # Git matching is case-sensitive on Linux CI, unlike Windows and macOS.
 claude.md
 CLAUDE.md
@@ -91,3 +124,9 @@ AGENTS.md
 
 # ---------------------------- Qdrant (local dev storage) ----------------------------
 /qdrant_storage/
+.project/
+design/
+
+# Raw evidence files (ZAP/nikto/sqlmap/ffuf output, screenshots) from a manual
+# audit pass, dated per run.
+audit-evidence/

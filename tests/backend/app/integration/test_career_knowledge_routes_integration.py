@@ -9,12 +9,19 @@
 import uuid
 
 import pytest
-from backend.mystic_auth.auth.verify_account.account_verification_service import account_verification_service
-from backend.mystic_auth.authorization.policies.default_policies import SELF_SERVICE_POLICY_NAME
-from backend.mystic_auth.authorization.repositories.policy_repository import policy_repository
+
+from backend.app.sdk import valkey_client
+from backend.mystic_auth.auth.verify_account.account_verification_service import (
+    account_verification_service,
+)
+from backend.mystic_auth.authorization.policies.default_policies import (
+    SELF_SERVICE_POLICY_NAME,
+)
+from backend.mystic_auth.authorization.repositories.policy_repository import (
+    policy_repository,
+)
 from backend.mystic_auth.database.connection import database
-from backend.mystic_auth.redis.client import redis_client
-from backend.mystic_auth.user_crud.user_crud_collector import user_crud
+from backend.mystic_auth.user.user_crud_collector import user_crud
 
 ROUTES_MODULE = "backend.app.api.career_knowledge_routes.career_knowledge_routes"
 PASSWORD = "StrongPass123!"
@@ -32,7 +39,7 @@ async def _create_verified_user(client, created_emails, email: str):
     created_emails.append(email)
 
     token = await account_verification_service.create_verification_token(email)
-    await redis_client.set(f"verify:{token}", "1", ex=600)
+    await valkey_client.set(f"verify:{token}", "1", ex=600)
     verify_resp = await client.post("/auth/verify-account", json={"token": token})
     assert verify_resp.status_code == 200
 

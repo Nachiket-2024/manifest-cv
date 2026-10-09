@@ -1,26 +1,45 @@
-﻿# Testing Overview
+# Testing Overview
 
 ---
 
 ## Backend (pytest)
 
-Config: `pytest.ini` (repo root). `testpaths = tests/backend`, no `pythonpath` override, since the suite runs from the repo root and imports modules as `backend.app.*`/`backend.mystic_auth.*`, the same dual-context convention `backend/app/sdk.py` itself uses (see [Auth & Authorization](../auth/overview.md)). `addopts = -v --cov=backend/app --cov=backend/mystic_auth --cov-report=html` measures coverage and generates an HTML report (`htmlcov/`) on every invocation. **`--cov-fail-under` is deliberately not set in `pytest.ini`**, since it would apply to every invocation including partial local runs (`pytest tests/backend/mystic_auth/unit` alone covers only a slice of `backend/app`/`backend/mystic_auth` and would false-fail well under any sensible whole-project threshold). CI enforces an 85% cumulative-coverage gate once instead. See below.
+Config: `pytest.ini` (repo root). `testpaths = tests/backend`, no `pythonpath` override, since the suite runs from the repo root and imports modules as `backend.app.*`/`backend.mystic_auth.*`, the same dual-context convention `backend/app/sdk.py` itself uses (see [Auth & Authorization](../auth/overview.md)). `addopts = -v --cov=backend/app --cov=backend/mystic_auth --cov-report=html` measures coverage and generates an HTML report (`htmlcov/`) on every invocation. **`--cov-fail-under` is deliberately not set in `pytest.ini`**, since it would apply to every invocation including partial local runs (`pytest tests/backend/mystic_auth/unit` alone covers only a slice of `backend/app`/`backend/mystic_auth` and would false-fail well under any sensible whole-project threshold). CI enforces a 90% cumulative-coverage gate once instead. See below.
+
+```mermaid
+%%{init: {"themeVariables": {"lineColor": "#334155"}} }%%
+flowchart TD
+    Change["Code change"] --> Backend["Backend lint, type, security and tests"]
+    Change --> Frontend["Frontend typecheck, lint, tests and build"]
+    Change --> Docker["Docker build, smoke and browser E2E"]
+    Backend --> Gate{"Required CI checks pass?"}
+    Frontend --> Gate
+    Docker --> Gate
+    Gate -->|Yes| Merge["Ready to merge"]
+    Gate -->|No| Fix["Review failure and update code"]
+    classDef success fill:#dcfce7,stroke:#16a34a
+    classDef blocked fill:#fee2e2,stroke:#dc2626
+    classDef decision fill:#eff6ff,stroke:#3b82f6
+    class Merge success
+    class Fix blocked
+    class Gate decision
+```
 
 | Suite | Path | Covers |
 |---|---|---|
 | Unit | `tests/backend/mystic_auth/unit/` | Auth (login/signup/logout/refresh/password reset/JWT/OAuth2/account verification), authorization (service, cache, dependency, evaluator, condition validator/schema consistency, policy routes/history/repository caching), rate limiter, login lockout, correlation ID middleware, security headers, route helpers, logging config, email tasks, user email CRUD |
-| Integration | `tests/backend/mystic_auth/integration/` | Audit log, authorization routes, auth API, health, OAuth, security audit log, security headers, user routes. Real DB/Redis, real HTTP client |
+| Integration | `tests/backend/mystic_auth/integration/` | Audit log, authorization routes, auth API, health, OAuth, security audit log, security headers, user routes. Real DB/Valkey, real HTTP client |
 | Security | `tests/backend/mystic_auth/security/` | Batch authorization abuse, context spoofing, invalid condition payload, policy tampering, privilege escalation |
 | Performance | `tests/backend/mystic_auth/performance/` | Authorization performance |
 | **ManifestCV unit** | `tests/backend/app/unit/` | `app_sdk.py`: the id-lookup helper ManifestCV routes depend on to turn mystic-auth's `get_current_user` into a DB `user_id`. The global exception handler. The knowledge-retrieval service |
-| **ManifestCV integration** | `tests/backend/app/integration/` | Career knowledge, resumes, document generation, and applications routes. Real DB/Redis/HTTP client, Gemini/Qdrant/tectonic mocked at each route module's import site (see each file's module docstring for why). Exception: `test_document_routes_integration.py`'s `test_real_tectonic_*` tests skip the mock and compile with the real `tectonic` binary. See [Document Generation: Testing](../document-generation/overview.md#testing) |
+| **ManifestCV integration** | `tests/backend/app/integration/` | Career knowledge, Resume Studio, and applications routes. Real DB/Valkey/HTTP client, Gemini/Qdrant/tectonic mocked at each route module's import site. Real PDF compilation is covered by the dedicated Docker image smoke test. |
 
 ManifestCV's suites live in their own subtree (`tests/backend/app/`) mirroring the upstream template's own `tests/backend/app/` (its demo consumer app's tests). Keeps "does the inherited foundation still work" and "does ManifestCV's own code work" independently runnable and independently attributable when either fails.
 
 **Running:**
 
 ```bash
-# From repo root, against local Postgres/Redis (see .env)
+# From repo root, against local Postgres/Valkey (see the env files)
 python -m pytest tests/backend/app/unit -q
 python -m pytest tests/backend/app/integration -q
 python -m pytest tests/backend/mystic_auth/unit -q
@@ -32,22 +51,22 @@ python -m pytest tests/backend/mystic_auth/performance -q
 docker compose exec -w /repo backend python -m pytest tests/backend/
 ```
 
-CI (`.github/workflows/ci.yml`) runs `ruff check`, `mypy`, `bandit`, and `alembic check` first, then unit, integration, and security suites against GitHub Actions service containers (Postgres 15, Redis 7) on every push/PR to `main`. The integration and security steps pass `--cov-append` so coverage accumulates across all three suites, and the security step (running last) adds `--cov-fail-under=85`: a regression alarm against *cumulative* unit+integration+security coverage (currently ~92%), not any single suite in isolation. Performance tests also run in CI, as a **non-blocking** (`continue-on-error: true`) informational step. Their thresholds are deliberately generous regression alarms rather than a strict SLA, but timing can still be noisier on shared runners than locally, hence non-blocking rather than a hard gate.
+CI (`.github/workflows/ci.yml`) runs `ruff check`, `mypy`, `bandit`, and `alembic check` first, then unit, integration, and security suites against GitHub Actions service containers (Postgres 15, Valkey 9.1.2) on every push/PR to `main`. The integration and security steps pass `--cov-append` so coverage accumulates across all three suites, and the security step adds the 90% cumulative gate. Performance tests remain non-blocking because timing is host-dependent.
 
-A separate `real-tectonic` CI job builds `docker/backend.Dockerfile` and runs just the `real_tectonic`-marked tests from it inside a container from that image (the only place `tectonic` is installed). See [CI/CD Overview](../cicd/overview.md#real-tectonic--real-tectonic-pdf-compilation).
+A separate `real-tectonic` CI job builds `docker/mystic_auth/dockerfiles/backend.Dockerfile` and runs just the `real_tectonic`-marked tests from it inside a container from that image (the only place `tectonic` is installed). See [CI/CD Overview](../cicd/overview.md#real-tectonic--real-tectonic-pdf-compilation).
 
 ---
 
 ## Frontend (Vitest)
 
-Config: `frontend/vitest.config.ts`. Tests physically live in `tests/frontend/` (outside `frontend/src/`) via a custom Vite resolver plugin, not co-located with source. Coverage provider `v8`, reporters `text`/`json`/`html`, same as the backend. `coverage.thresholds` (statements 85 / branches 78 / functions 79 / lines 86, a few points below the current whole-project average of ~89/82/84/90%) are enforced, but **only when coverage is actually collected** (`vitest run --coverage`, i.e. the `test:coverage` script). Plain `vitest run` (`npm run test`) never evaluates them on its own, which is why CI runs `test:coverage` specifically (see below).
+Config: `frontend/vitest.config.ts`. Tests physically live in `tests/frontend/` (outside `frontend/src/`) via a custom Vite resolver plugin, not co-located with source. Coverage provider `v8`, reporters `text`/`json`/`html`, same as the backend. `coverage.thresholds` (statements 85 / branches 78 / functions 79 / lines 86) are enforced only when coverage is collected (`vitest run --coverage`, i.e. the `test:coverage` script). Plain `vitest run` never evaluates them, which is why CI runs `test:coverage` specifically.
 
 | Suite | Path | Covers |
 |---|---|---|
 | Unit | `tests/frontend/mystic_auth/unit/` | API clients (`auth`/`users`/`account_settings`/`policies`/`audit` endpoints, `apiError`, the refresh interceptor), `useAuthSession`, `Authorized`/`ProtectedRoute`/`Sidebar`/`Navbar`/`AppLayout` components, `useAuthorization`/`useCan`/`passwordRules`/`useUnsavedChangesWarning`, `authorizationService`, `themeStore`, `errorMonitoring`, `ui/*` (`DataTable`, `ConfirmDialog`, `FormAlert`, `PasswordRulesChecklist`, `LoadingState`, `Toaster`, `ErrorBoundary`) |
 | Integration | `tests/frontend/mystic_auth/integration/` | Audit log page, auth flow, dashboard, login page, password policy consistency, PBAC authorization flow, policies page (list, permission gating, create/edit/delete, conditions-JSON validation, unsaved-changes discard prompt), users page (list, permission gating, delete/purge/reactivate/role-change, assign/revoke via the Policies dialog), account settings page (including the self-service current-password requirement) |
-| **ManifestCV unit** | `tests/frontend/app/unit/api/`, `tests/frontend/app/unit/ui/` | The four ManifestCV API client modules (`application_api`, `career_knowledge_api`, `document_api`, `resume_api`). Request shape and response passthrough, mocked via `axios-mock-adapter`, same pattern as mystic-auth's own `tests/frontend/mystic_auth/unit/api/*` files. Plus `Pager.tsx`, ManifestCV's own generic pagination component |
-| **ManifestCV integration** | `tests/frontend/app/integration/` | App routing (including ManifestCV's own routes), `applications_page`, `career_knowledge_page`, `resume_drafts_page`, `resume_editor_page`: pagination, draft save/approve/finalize, and tracked-application-save flows. Lives in the same `tests/frontend/app/` subtree as upstream's own `app_routing.test.tsx`, mirroring `tests/backend/app/`'s split |
+| **ManifestCV unit** | `tests/frontend/app/unit/api/`, `tests/frontend/app/unit/ui/` | ManifestCV API clients, Resume Studio editor state, and shared app controls. Request shape and response passthrough use the same mocking pattern as mystic-auth's own API tests. |
+| **ManifestCV integration** | `tests/frontend/app/integration/` | App routing (including ManifestCV's own routes), applications, career knowledge, and the Resume Studio builder flow. Lives in the same `tests/frontend/app/` subtree as upstream's own `app_routing.test.tsx`, mirroring `tests/backend/app/`'s split |
 
 **Running:**
 
@@ -77,6 +96,6 @@ A handful of integration tests type a non-trivial amount of text (a full signup 
 
 ## Troubleshooting
 
-- **A test hangs / can't connect to Postgres from the host**: a native Postgres install or another project's container on the host can still intercept whatever port is configured, even though this stack maps Postgres to the non-default host port `5433` specifically to avoid the common case. See [PBAC Troubleshooting](../../mystic_auth/authorization/troubleshooting.md#database-connection-issues) for the inherited foundation's specific failure modes.
+- **A test hangs / can't connect to Postgres from the host**: a native Postgres install or another project's container on the host can still intercept whatever port is configured, even though this stack maps Postgres to the non-default host port `5433` specifically to avoid the common case. See [PBAC Troubleshooting](../../mystic_auth/authorization/troubleshooting/database-connection.md) for the inherited foundation's specific failure modes.
 - **Frontend test can't resolve a `tests/frontend/...` import**: confirm `frontend/vitest.config.ts`'s custom resolver plugin is active. It's what makes the split `frontend/src` / `tests/frontend` layout work. Running vitest from anywhere other than `frontend/` bypasses it.
-- **`docker compose exec frontend npm test` can't find any test files**: the frontend container needs `./tests/frontend:/tests/frontend` mounted (see `docker-compose.yml`'s `frontend` service).
+- **`docker compose exec frontend npm test` can't find any test files**: the frontend container needs `./tests/frontend:/tests/frontend` mounted (see `docker/mystic_auth/compose/docker-compose.dev.yml`'s `frontend` service).

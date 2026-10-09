@@ -39,7 +39,7 @@ describe('getApplicationApi', () => {
 describe('createApplicationApi', () => {
   it('sends a POST request to /applications/ with the payload', async () => {
     const payload = {
-      resume_draft_id: 1,
+      workspace_id: 1,
       company_name: 'Acme Corp',
       application_date: '2026-07-19',
       status: 'applied',
@@ -53,6 +53,25 @@ describe('createApplicationApi', () => {
 
     expect(response.status).toBe(201);
   });
+});
+
+it('accepts the resume-builder workspace snapshot payload', async () => {
+  const payload = {
+    workspace_id: 42,
+    company_name: 'Acme Corp',
+    role: 'Senior Engineer',
+    application_date: '2026-10-08',
+    status: 'applied',
+  };
+
+  mock.onPost('/applications/').reply((config) => {
+    expect(JSON.parse(config.data)).toEqual(payload);
+    return [201, { id: 42, ...payload }];
+  });
+
+  const response = await createApplicationApi(payload);
+
+  expect(response.status).toBe(201);
 });
 
 describe('updateApplicationApi', () => {
@@ -82,6 +101,12 @@ describe('applicationPdfDownloadUrl', () => {
   it('builds the download URL from the base URL and application id', () => {
     expect(applicationPdfDownloadUrl(42, 'http://localhost:8000')).toBe(
       'http://localhost:8000/applications/42/pdf'
+    );
+  });
+
+  it('rejects an empty API base URL instead of creating a broken link', () => {
+    expect(() => applicationPdfDownloadUrl(42, '')).toThrow(
+      'VITE_API_BASE_URL is not configured',
     );
   });
 });

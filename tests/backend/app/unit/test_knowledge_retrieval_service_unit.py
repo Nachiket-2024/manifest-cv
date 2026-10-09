@@ -9,6 +9,7 @@ import asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
 from backend.app.ai_integration.exceptions import AIIntegrationError
 from backend.app.retrieval import knowledge_retrieval_service as service
 from backend.app.retrieval.exceptions import RetrievalError

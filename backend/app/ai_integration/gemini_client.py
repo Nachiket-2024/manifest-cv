@@ -3,7 +3,7 @@ import asyncio
 from google import genai
 from google.genai import types
 
-from ..sdk import settings
+from ..app_settings import settings
 from .exceptions import AIIntegrationError
 from .prompts import (
     build_generate_resume_prompt,
@@ -97,7 +97,7 @@ async def refine_resume(
     refinement_prompt: str,
 ) -> str:
     """
-    Regenerates a resume draft per the user's refinement instruction (flow
+    Refines a Resume Studio document per the user's refinement instruction (flow
     steps 9-11), re-matching the knowledge base rather than only editing
     the previous text verbatim, so a request to "use different parts of
     the knowledge base" can actually pull in different excerpts.

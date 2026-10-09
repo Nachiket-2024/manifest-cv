@@ -7,7 +7,8 @@
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
-    "types": ["vitest/globals"],
+    "types": ["node", "vitest/globals"],
+    "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/mystic_auth/*"],
       "@app/*": ["./src/app/*"],
@@ -73,5 +74,5 @@
   // augments Vitest's Assertion type with jest-dom's matchers; without
   // it in this compilation, `tsc` never sees that augmentation and
   // `.not`/`.toBeInTheDocument()` etc. type-check as missing.
-  "include": ["../tests/frontend", "src/mystic_auth/vite-env.d.ts", "src/mystic_auth/__tests__/setup.ts"]
+  "include": ["../tests/frontend", "src/app/__tests__/setup.ts", "src/app/__tests__/vitest.d.ts", "src/mystic_auth/vite-env.d.ts"]
 }

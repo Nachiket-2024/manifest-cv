@@ -6,6 +6,11 @@ building blocks, this file is where a project built on this template adds
 its own re-exports for its own domain code, kept separate so template
 updates never conflict with app-specific additions here.
 
+Ships empty upstream on purpose, so it never conflicts on a
+`scripts/mystic_auth/upstream-sync/sync-upstream.sh` sync. If a sync ever shows a change to this file
+coming from upstream anyway, keep YOUR version: upstream's is only ever the
+empty starting point.
+
 ManifestCV's own additions:
 - get_user_id_by_email: the translation every owner-scoped ManifestCV route
   depends on to turn mystic-auth's get_current_user (email-only) into a DB
@@ -28,11 +33,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # same module identity either way.
 _pkg_parent = __package__.rsplit(".", 1)[0] if __package__ and "." in __package__ else ""
 _mystic_auth_root = f"{_pkg_parent}.mystic_auth" if _pkg_parent else "mystic_auth"
-user_crud = importlib.import_module(f"{_mystic_auth_root}.user_crud.user_crud_collector").user_crud
+user_crud = importlib.import_module(f"{_mystic_auth_root}.user.user_crud_collector").user_crud
 get_logger = importlib.import_module(f"{_mystic_auth_root}.logging.logging_config").get_logger
 rate_limiter_service = importlib.import_module(
-    f"{_mystic_auth_root}.auth.security.rate_limiter_service"
+    f"{_mystic_auth_root}.auth.security.rate_limiting.rate_limiter_service"
 ).rate_limiter_service
+
+
+def register_extensions() -> None:
+    """Register downstream condition handlers before requests are served."""
+    # ManifestCV currently has no custom MysticAuth condition handlers.
+    # Keep this hook app-owned so future extensions do not modify MysticAuth.
 
 
 async def get_user_id_by_email(email: str, db: AsyncSession) -> int | None:

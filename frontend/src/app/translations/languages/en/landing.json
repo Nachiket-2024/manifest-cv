@@ -1,0 +1,73 @@
+{
+    "logIn": "Log in",
+    "signUp": "Create your workspace",
+    "skipToContent": "Skip to main content",
+    "brandHome": "Go to {{appName}} home",
+    "primaryNavigation": "Primary navigation",
+    "footerNavigation": "Footer navigation",
+    "hero": {
+        "title": "Make your next move feel unmistakably yours.",
+        "subtitle": "{{appName}} turns your experience into a private career workspace, then helps you shape the right resume for every opportunity.",
+        "getStarted": "Build your workspace",
+        "trust": {
+            "private": "Private by design",
+            "control": "You stay in control"
+        }
+    },
+    "preview": {
+        "workspace": "Career workspace",
+        "workspaceStatus": "Your source of truth",
+        "ready": "Ready to tailor",
+        "matchLabel": "Resume match",
+        "role": "Senior Product Designer",
+        "company": "Northstar Labs · Product team",
+        "matchingExperience": "Relevant experience found",
+        "skills": {
+            "discovery": "Product discovery and user research",
+            "systems": "Design systems and accessible workflows",
+            "leadership": "Cross functional product leadership"
+        },
+        "pipeline": {
+            "source": "Knowledge",
+            "draft": "Resume workspace",
+            "sent": "Application",
+            "active": "In progress",
+            "done": "Ready"
+        }
+    },
+    "highlights": {
+        "eyebrow": "A better starting point",
+        "heading": "Your experience, finally working together",
+        "description": "Keep the context behind your career close, so every tailored resume starts from something real.",
+        "knowledgeBase": {
+            "title": "Build your source of truth",
+            "description": "Keep experience, skills, projects, and achievements in one editable career knowledge base."
+        },
+        "aiTailoring": {
+            "title": "Match the opportunity",
+            "description": "Turn each job description into a focused workspace built from the experience that matters most."
+        },
+        "refineExport": {
+            "title": "Refine with intention",
+            "description": "Edit the workspace, make targeted changes, and approve the version you are ready to send."
+        },
+        "trackApplications": {
+            "title": "Keep momentum visible",
+            "description": "Track status, dates, and the exact resume you sent from one calm workspace."
+        }
+    },
+    "workflow": {
+        "eyebrow": "One clear workflow",
+        "heading": "From experience to next step",
+        "description": "A focused loop for turning your real experience into a confident application, without losing the thread between them.",
+        "capture": { "title": "Capture", "description": "Give your experience a durable home." },
+        "shape": { "title": "Shape", "description": "Create a resume that fits the opportunity." },
+        "followThrough": { "title": "Follow through", "description": "Send confidently and keep the pipeline visible." }
+    },
+    "footer": {
+        "tagline": "A clearer way to move forward",
+        "privacyPolicy": "Privacy Policy",
+        "termsOfService": "Terms of Service",
+        "support": "Contact support"
+    }
+}
